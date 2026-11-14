@@ -26,6 +26,7 @@
 #include "Buildables/FGBuildableRailroadStation.h"
 #include "Buildables/FGBuildableTrainPlatformCargo.h"
 #include "Buildables/FGBuildableDockingStation.h"
+#include "Buildables/FGBuildableDroneStation.h"
 #include "Buildables/FGBuildablePowerStorage.h"
 
 namespace
@@ -254,7 +255,7 @@ namespace
 			|| Object->IsA<AFGBuildablePipelinePump>() || Object->IsA<AFGBuildablePipeReservoir>()
 			|| Object->IsA<AFGBuildableResourceSink>() || Object->IsA<AFGBuildableRailroadSignal>()
 			|| Object->IsA<AFGBuildableRailroadStation>() || Object->IsA<AFGBuildableTrainPlatformCargo>()
-			|| Object->IsA<AFGBuildableDockingStation>() || Object->IsA<AFGBuildablePowerStorage>());
+			|| Object->IsA<AFGBuildableDockingStation>() || Object->IsA<AFGBuildableDroneStation>() || Object->IsA<AFGBuildablePowerStorage>());
 	}
 
 	void AMWD_CheckWorld(UWorld* World)

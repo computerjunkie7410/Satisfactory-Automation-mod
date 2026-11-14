@@ -335,3 +335,8 @@ Test of the Automation tab: open a Smelter and a Constructor, click Automation, 
 
 - `AMClipboard.cpp`: the per-build-gun sample (`AMCB_Samples`) is removed by `AMCB_ForgetSample` on `UFGBuildGunStateBuild::SetActiveRecipe` (a building picked in the menu; client call, so for a client the server's sample is not reached: multiplayer test) and on `EndState_Implementation` (virtual hook, build mode left). Not within 1 s of sampling (a middle click sets the recipe too).
 
+
+## Drone Port (rules, 14 Nov 2026)
+- `AFGBuildableDroneStation` added to `CanAutomate` and the widget dump.
+- Drone arrives/leaves = `GetDockedDrone()`; busy/idle = `IsTransferringItems()`; input/output full = input/output inventory fill >= 100% (`AMAS_InventoryFill`); fuel via `GetFuelInventory()`; power as usual. No actions (the port has no settings).
+- Tab not hooked yet: needs the window layout from the log ("===== begin ...").

@@ -279,3 +279,6 @@ The glow under automated machines is now a **circuit-board pattern**: cyan trace
 - **HUB and MAM glow too** (7 Nov 2026): the HUB while it has alarms or world actions in its Automation tab, every MAM while the MAM tab has alarms.
 - **Glow on surfaces facing down** (7 Nov 2026): a decal lights nothing (global illumination ignores it), and a real light per machine was judged too expensive. Instead a second decal projects the old soft glow (no circuit lines) **up** from the floor, over the same footprint, to 3 m above the machine's top: only surfaces facing down take it (machine overhangs, the ceiling or floor above), fading out with height, so the glow seems to light them.
 
+
+### Drone Port
+Alarms only: drone arrives / leaves, busy / idle, input full / not full, output full / not full, fuel empty / available / below, loses / gets power. No actions.

@@ -23,6 +23,7 @@
 #include "Buildables/FGBuildableRailroadStation.h"
 #include "Buildables/FGBuildableTrainPlatformCargo.h"
 #include "Buildables/FGBuildableDockingStation.h"
+#include "Buildables/FGBuildableDroneStation.h"
 #include "Buildables/FGBuildablePowerStorage.h"
 #include "FGTrainStationIdentifier.h"
 #include "FGTextRenderer.h"
@@ -940,7 +941,7 @@ bool AAMAutomationSubsystem::CanAutomate(const AActor* Machine)
 		|| AMRules::IsValve(Machine) || Machine->IsA<AFGBuildablePipeReservoir>() || Machine->IsA<AFGBuildableResourceSink>()
 		|| Machine->IsA<AFGBuildableRailroadSignal>() || Machine->IsA<AFGBuildableRailroadStation>()
 		|| Machine->IsA<AFGBuildableTrainPlatformCargo>() || Machine->IsA<AFGBuildableDockingStation>()
-		|| Machine->IsA<AFGBuildablePowerStorage>());
+		|| Machine->IsA<AFGBuildablePowerStorage>() || Machine->IsA<AFGBuildableDroneStation>());
 }
 
 bool AAMAutomationSubsystem::RemoveInvalidEntries()
@@ -1319,12 +1320,23 @@ bool AAMAutomationSubsystem::IsConditionTrue(const AFGBuildableFactory* Factory,
 			const bool bBusy = TruckStation->GetDockedActor() && TruckStation->IsLoadUnloading();
 			return Rule.Condition == EAMCondition::PlatformBusy ? bBusy : !bBusy;
 		}
+		if (const AFGBuildableDroneStation* DronePort = Cast<AFGBuildableDroneStation>(Factory))
+		{
+			// Busy: a drone is exchanging items with the port.
+			const bool bBusy = DronePort->IsTransferringItems();
+			return Rule.Condition == EAMCondition::PlatformBusy ? bBusy : !bBusy;
+		}
 		return false;
 	case EAMCondition::VehicleArrives:
 	case EAMCondition::VehicleLeaves:
 		if (const AFGBuildableDockingStation* TruckStation = Cast<AFGBuildableDockingStation>(Factory))
 		{
 			const bool bDocked = TruckStation->GetDockedActor() != nullptr;
+			return Rule.Condition == EAMCondition::VehicleArrives ? bDocked : !bDocked;
+		}
+		if (const AFGBuildableDroneStation* DronePort = Cast<AFGBuildableDroneStation>(Factory))
+		{
+			const bool bDocked = DronePort->GetDockedDrone() != nullptr;
 			return Rule.Condition == EAMCondition::VehicleArrives ? bDocked : !bDocked;
 		}
 		return false;
@@ -1524,7 +1536,7 @@ float AAMAutomationSubsystem::GetFillLevel(const AFGBuildableFactory* Factory)
 
 bool AAMAutomationSubsystem::IsOutOfFuel(const AFGBuildableFactory* Factory)
 {
-	if (Cast<AFGBuildableDockingStation>(Factory))
+	if (Cast<AFGBuildableDockingStation>(Factory) || Cast<AFGBuildableDroneStation>(Factory))
 	{
 		return CountFuel(Factory) <= 0;
 	}
@@ -1534,10 +1546,12 @@ bool AAMAutomationSubsystem::IsOutOfFuel(const AFGBuildableFactory* Factory)
 
 int32 AAMAutomationSubsystem::CountFuel(const AFGBuildableFactory* Factory)
 {
-	// Truck stations: every item in the fuel slot(s).
-	if (const AFGBuildableDockingStation* TruckStation = Cast<AFGBuildableDockingStation>(Factory))
+	// Truck stations and drone ports: every item in the fuel slot(s).
+	const AFGBuildableDockingStation* TruckStation = Cast<AFGBuildableDockingStation>(Factory);
+	const AFGBuildableDroneStation* DronePort = Cast<AFGBuildableDroneStation>(Factory);
+	if (TruckStation || DronePort)
 	{
-		const UFGInventoryComponent* StationFuel = TruckStation->GetFuelInventory();
+		const UFGInventoryComponent* StationFuel = TruckStation ? TruckStation->GetFuelInventory() : DronePort->GetFuelInventory();
 		int32 Count = 0;
 		for (int32 SlotIndex = 0; StationFuel && SlotIndex < StationFuel->GetSizeLinear(); ++SlotIndex)
 		{
@@ -1601,8 +1615,36 @@ bool AAMAutomationSubsystem::IsBeltBlocked(const AFGBuildableFactory* Factory)
 	return false;
 }
 
+namespace
+{
+	// 0..1: each slot counts as (items / stack size).
+	float AMAS_InventoryFill(const UFGInventoryComponent* Inventory)
+	{
+		if (!Inventory || Inventory->GetSizeLinear() <= 0)
+		{
+			return 0.f;
+		}
+		double Filled = 0.0;
+		for (int32 SlotIndex = 0; SlotIndex < Inventory->GetSizeLinear(); ++SlotIndex)
+		{
+			FInventoryStack Stack;
+			if (Inventory->GetStackFromIndex(SlotIndex, Stack) && Stack.HasItems())
+			{
+				const int32 SlotSize = Inventory->GetSlotSize(SlotIndex, Stack.Item.GetItemClass());
+				Filled += SlotSize > 0 ? FMath::Min(1.0, static_cast<double>(Stack.NumItems) / SlotSize) : 1.0;
+			}
+		}
+		return static_cast<float>(Filled / Inventory->GetSizeLinear());
+	}
+}
+
 bool AAMAutomationSubsystem::IsInputFull(const AFGBuildableFactory* Factory)
 {
+	// A drone port: its input inventory (what drones will carry) is full.
+	if (const AFGBuildableDroneStation* DronePort = Cast<AFGBuildableDroneStation>(Factory))
+	{
+		return AMAS_InventoryFill(DronePort->GetInputInventory()) >= 0.9999f;
+	}
 	// A generator: its fuel slot has no room for one more of the fuel it holds.
 	if (const AFGBuildableGeneratorFuel* Generator = Cast<AFGBuildableGeneratorFuel>(Factory))
 	{
@@ -1843,6 +1885,11 @@ bool AAMAutomationSubsystem::IsInputMissing(const AFGBuildableFactory* Factory)
 
 bool AAMAutomationSubsystem::IsOutputFull(const AFGBuildableFactory* Factory)
 {
+	// A drone port: its output inventory (what drones brought) is full.
+	if (const AFGBuildableDroneStation* DronePort = Cast<AFGBuildableDroneStation>(Factory))
+	{
+		return AMAS_InventoryFill(DronePort->GetOutputInventory()) >= 0.9999f;
+	}
 	// Full = the output has no room for one more production cycle (the machine would stop for that).
 	if (const AFGBuildableResourceExtractor* Extractor = Cast<AFGBuildableResourceExtractor>(Factory))
 	{

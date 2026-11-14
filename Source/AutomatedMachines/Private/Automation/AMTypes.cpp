@@ -15,6 +15,7 @@
 #include "Buildables/FGBuildableRailroadStation.h"
 #include "Buildables/FGBuildableTrainPlatformCargo.h"
 #include "Buildables/FGBuildableDockingStation.h"
+#include "Buildables/FGBuildableDroneStation.h"
 #include "Buildables/FGBuildablePowerStorage.h"
 #include "FGPipeConnectionComponent.h"
 #include "FGPowerConnectionComponent.h"
@@ -740,6 +741,29 @@ bool AMRules::IsConditionAvailable(EAMCondition Condition, const UObject* Machin
 			return bStorageEvent || bPlatformEvent || bVehicleEvent;
 		}
 	}
+	if (Machine->IsA<AFGBuildableDroneStation>())
+	{
+		// Drones come and go, fuel slot, input / output full, power (no actions: the port has no settings).
+		switch (Condition)
+		{
+		case EAMCondition::VehicleArrives:
+		case EAMCondition::VehicleLeaves:
+		case EAMCondition::PlatformBusy:
+		case EAMCondition::PlatformIdle:
+		case EAMCondition::InputFull:
+		case EAMCondition::InputNotFull:
+		case EAMCondition::OutputFull:
+		case EAMCondition::OutputNotFull:
+		case EAMCondition::FuelEmpty:
+		case EAMCondition::FuelAvailable:
+		case EAMCondition::FuelBelow:
+		case EAMCondition::LosesPower:
+		case EAMCondition::GetsPower:
+			return true;
+		default:
+			return false;
+		}
+	}
 	if (bVehicleEvent)
 	{
 		return false;
@@ -864,6 +888,10 @@ bool AMRules::IsActionAvailable(EAMAction Action, const UObject* Machine)
 		return IsSignalAction(Action);
 	}
 	if ((Action == EAMAction::OverflowOn || Action == EAMAction::OverflowOff) && !HasPassWrongItems(Machine))
+	{
+		return false;
+	}
+	if (Machine->IsA<AFGBuildableDroneStation>())
 	{
 		return false;
 	}

@@ -39,7 +39,7 @@ Done and tested: production machines (production window), miners, Water / Oil Ex
 - Dimensional Depot uplink: upload events (maybe).
 
 **Transport:**
-- Drone Port: vehicle arrives / leaves, fuel low, input / output full.
+- Drone Port: rules done (drone arrives / leaves, busy / idle, input / output full, fuel, power); its tab waits for the window layout dump.
 
 **Other buildings:**
 - Doors: open / closed / locked (actions: lock, unlock).
