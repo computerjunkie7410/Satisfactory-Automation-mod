@@ -1587,6 +1587,13 @@ bool AAMAutomationSubsystem::IsFuseBlown(const AFGBuildableFactory* Factory)
 
 int32 AAMAutomationSubsystem::CountItem(const AFGBuildableFactory* Factory, TSubclassOf<UFGItemDescriptor> Item)
 {
+	if (const AFGBuildableDroneStation* DronePort = Cast<AFGBuildableDroneStation>(Factory))
+	{
+		// Both buffers: what waits to be carried and what the drones brought.
+		const UFGInventoryComponent* In = DronePort->GetInputInventory();
+		const UFGInventoryComponent* Out = DronePort->GetOutputInventory();
+		return Item ? (In ? In->GetNumItems(Item) : 0) + (Out ? Out->GetNumItems(Item) : 0) : 0;
+	}
 	const UFGInventoryComponent* Inventory = AMAS_StorageInventory(Factory);
 	return Inventory && Item ? Inventory->GetNumItems(Item) : 0;
 }

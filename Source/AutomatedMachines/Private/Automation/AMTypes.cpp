@@ -754,6 +754,8 @@ bool AMRules::IsConditionAvailable(EAMCondition Condition, const UObject* Machin
 		case EAMCondition::InputNotFull:
 		case EAMCondition::OutputFull:
 		case EAMCondition::OutputNotFull:
+		case EAMCondition::ItemCountAbove:
+		case EAMCondition::ItemCountBelow:
 		case EAMCondition::FuelEmpty:
 		case EAMCondition::FuelAvailable:
 		case EAMCondition::FuelBelow:

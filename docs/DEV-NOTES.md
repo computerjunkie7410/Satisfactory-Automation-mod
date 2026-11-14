@@ -340,3 +340,4 @@ Test of the Automation tab: open a Smelter and a Constructor, click Automation, 
 - `AFGBuildableDroneStation` added to `CanAutomate` and the widget dump.
 - Drone arrives/leaves = `GetDockedDrone()`; busy/idle = `IsTransferringItems()`; input/output full = input/output inventory fill >= 100% (`AMAS_InventoryFill`); fuel via `GetFuelInventory()`; power as usual. No actions (the port has no settings).
 - Tab not hooked yet: needs the window layout from the log ("===== begin ...").
+- Item count above/below added: counts the chosen item in the input and output inventories together.

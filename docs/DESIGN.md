@@ -281,4 +281,4 @@ The glow under automated machines is now a **circuit-board pattern**: cyan trace
 
 
 ### Drone Port
-Alarms only: drone arrives / leaves, busy / idle, input full / not full, output full / not full, fuel empty / available / below, loses / gets power. No actions.
+Alarms only (item count above / below counts both buffers): drone arrives / leaves, busy / idle, input full / not full, output full / not full, fuel empty / available / below, loses / gets power. No actions.
