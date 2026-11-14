@@ -405,6 +405,9 @@ private:
 	/** The MAM's tab (a world tab like the HUB's): its world events' alarms only, no actions. */
 	bool bMamMode = false;
 
+	/** The Power Storage's tab: alarms only (a battery has nothing to switch), shared by every battery of its grid. */
+	bool bAlarmsOnlyMode = false;
+
 	/**
 	 * Sliding pages (production window, HUB): our page as high as the game's tallest page, so our
 	 * lists scroll instead of making the window (and with it every tab) taller.

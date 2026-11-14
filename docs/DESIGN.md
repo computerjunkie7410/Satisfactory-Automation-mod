@@ -64,6 +64,12 @@ Do                     when event
 - Both: **Busy** / **Not busy** (a docked train being loaded / unloaded, not finished yet).
 - Actions: **Load mode** with the on / off switch (on = load into trains, off = unload them), Delete contents.
 
+### Power Storage (14 Nov 2026, to test)
+
+- Automation tab in the Power Storage window (one page). **Alarms only**: a battery has nothing to switch, so the Actions section is hidden.
+- Alarms read the batteries of the **power grid** together (the totals of the game's power graph): **Charge above / below** N %, **Batteries full**, **Batteries empty**, **Charging**, **Discharging**, **Empties within** N min (while discharging, the game's own time-left).
+- **One alarm list per grid.** Editing one battery's alarms replaces the others' of its grid; when grids join, every battery gets all their alarms together (duplicates removed), and the player deletes what is not wanted. Each alarm rings **once per grid** (the first battery by name checks for all).
+
 ### Truck stations (7 Nov 2026, not tested yet)
 
 - Automation tab in the truck station window (one page). The window has **no standby button**: no Running action, no Paused / Resumed.

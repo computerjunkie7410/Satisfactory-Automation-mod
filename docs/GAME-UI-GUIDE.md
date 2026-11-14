@@ -187,6 +187,12 @@ Items: `Widget_Train_DockingStation` (`/Game/FactoryGame/Buildable/-Shared/Widge
 hooked as Indirect_Child of its background image `bg`. Fluids: `BPW_Train_DockingStation_Fluid` (same folder),
 one page `CanvasPanel_0`, hooked through `BPW_PipeModule` like the fluid buffer.
 
+### Power Storage window (14 Nov 2026, to test)
+
+`BPW_PowerStorage` (`/Game/FactoryGame/Buildable/Factory/PowerStorage/UI/`): Kind B, one canvas page `CanvasPanel_103` in
+`WindowBody` (battery bar `BPW_PowerStorageInfo`, power graph `mPowerCircuitGraph`, inventory slot). One tab button
+("Power Storage"). Hooked as Indirect_Child of the page background `mWindowBG` (unique name).
+
 ### Truck station window (7 Nov 2026, to test)
 
 `Widget_DockingStation` (`/Game/FactoryGame/Buildable/-Shared/Widgets/`): Kind B, one canvas page `CanvasPanel_68`

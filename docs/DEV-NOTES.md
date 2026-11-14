@@ -325,3 +325,9 @@ Test of the Automation tab: open a Smelter and a Constructor, click Automation, 
 - HUB / MAM glows: `AAMMarkers::AddWorldBuildings` (TActorIterator over `AFGBuildableTradingPost` when there are non-MAM world fires or world actions, `AFGBuildableMAM` when there are MAM fires).
 - Point lights per glow were tried (7 Nov 2026) and dropped: too expensive (and `bAffectsTranslucentLighting` is not a member of `UPointLightComponent`, C2039). Instead `M_AM_Overglow`: a second decal per glow, pitched +90 (projects up), from 20 cm below the floor to the machine's top + `AMMK_UpReach` (3 m); parameters `FadeStart`, `BaseZ`, `Reach`; the Custom node keeps surfaces whose camera-facing normal (from `ddx/ddy` of the camera-relative position) has `-N.z` over 0.3 (full at 0.7), fading with height (squared). Optional: no material, no up decal.
 
+## Power Storage (14 Nov 2026, untested)
+
+- Conditions `BatteryAbove/Below/Full/Empty/Charging/Discharging/EmptiesWithin` (appended): `UFGPowerCircuit` sums (`GetBatterySumPowerStore/Capacity/Input/Output`, `GetTimeToBatteriesEmpty`), circuit from `Factory->GetPowerInfo()->GetPowerCircuit()`. No actions (`IsActionAvailable` false); the tab hides its Actions panel (`bAlarmsOnlyMode`, host class `BPW_PowerStorage_C`).
+- Shared list: `SetRules` on a battery calls `ShareBatteryAlarms` (overwrites the other batteries of the circuit via `StoreBatteryAlarms`); `MergeBatteryGrids` every 2 s unions the lists of batteries on one circuit (first battery by name first). `EvaluateFireRules`: one leader per circuit (lowest `FName`) checks and rings.
+- `TArray<T*>::Sort` hands the predicate the objects (dereferenced), not the pointers (C2664 otherwise).
+

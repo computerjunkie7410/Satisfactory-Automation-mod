@@ -67,6 +67,7 @@ namespace
 	const FName AMAT_TabTitleWidget(TEXT("mTitleObject"));
 	const TCHAR* const AMAT_HubWindowClass = TEXT("BPW_Hub_C");
 	const TCHAR* const AMAT_MamWindowClass = TEXT("BPW_MAM_C");
+	const TCHAR* const AMAT_PowerStorageWindowClass = TEXT("BPW_PowerStorage_C");
 	const FName AMAT_ActiveTabChangedProperty(TEXT("OnActiveTabChanged"));
 	const FName AMAT_ProductionPageName(TEXT("mManufacturingTab"));
 	const FName AMAT_WindowBodyProperty(TEXT("WindowBody"));
@@ -519,12 +520,12 @@ void UAMAutomationTab::BuildLayout()
 		MakePanel(TEXT("Alarms"), TEXT("Alarm Name"), AMRowLayout::AlarmName, TEXT("Machine Event"), AMRowLayout::MachineEvent,
 			TEXT("+ Add alarm"), mFireRowsBox, 0.f, AMAT_AlarmsWidth)->OnClicked.AddDynamic(this, &UAMAutomationTab::OnAddFireClicked);
 	}
-	if (!bOverviewMode && !bMamMode)
+	if (!bOverviewMode && !bMamMode && !bAlarmsOnlyMode)
 	{
 		MakePanel(TEXT("Actions"), TEXT("On Alarm / Do"), AMRowLayout::Do + AMRowLayout::Gap + AMRowLayout::OnAlarm, TEXT(""), AMRowLayout::Remove,
 			TEXT("+ Listen to an alarm"), mReactionRowsBox, AMAT_PanelGap, AMAT_ActionsWidth)->OnClicked.AddDynamic(this, &UAMAutomationTab::OnAddReactionClicked);
 	}
-	else if (bMamMode)
+	else if (bMamMode || bAlarmsOnlyMode)
 	{
 		// No actions here (the HUB has the world's actions, machines their own): the list exists, hidden.
 		mReactionRowsBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass());
@@ -1683,6 +1684,11 @@ void UAMAutomationTab::UpdateMachineName()
 		}
 		return;
 	}
+	if (bAlarmsOnlyMode && mMachineText)
+	{
+		mMachineText->SetText(FText::FromString(TEXT("The batteries of this power grid, all together, ring these alarms. The list is the same on every Power Storage of the grid, and each alarm rings once for the grid.")));
+		return;
+	}
 	const UObject* Machine = GetMachine();
 	const FTextProperty* NameProperty = Machine ? FindFProperty<FTextProperty>(Machine->GetClass(), AMAT_MachineNameProperty) : nullptr;
 	if (mMachineText && NameProperty)
@@ -1781,6 +1787,7 @@ void UAMAutomationTab::NativeOnInitialized()
 	const UUserWidget* Host = GetHostWindow();
 	bMamMode = Host && Host->GetClass()->GetName() == AMAT_MamWindowClass;
 	bWorldMode = Host && (Host->GetClass()->GetName() == AMAT_HubWindowClass || bMamMode);
+	bAlarmsOnlyMode = Host && !bWorldMode && Host->GetClass()->GetName() == AMAT_PowerStorageWindowClass;
 	bOverviewMode = bWorldMode && GetFName() == FName(TEXT("AM_OverviewTab"));
 	// No sliding pages (the miner's window): we make our own switch between its page and ours.
 	bSinglePageMode = Host && !bWorldMode && !FindFProperty<FObjectPropertyBase>(Host->GetClass(), AMAT_SlidingTabsProperty);
