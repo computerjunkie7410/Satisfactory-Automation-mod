@@ -474,6 +474,8 @@ bool UAMSignTabs::ReadBeltEditor(FAMBeltSetting& OutSetting, const FString& Even
 		return false;
 	}
 	OutSetting = AMBelt::Read(Machine, Event);
+	UE_LOG(LogAutomatedMachines, Log, TEXT("Belt settings: read %s from the machine: %d rules, %d priorities"),
+		Event.IsEmpty() ? TEXT("Default") : *Event, OutSetting.RuleItems.Num(), OutSetting.Priorities.Num());
 	return true;
 }
 
@@ -484,10 +486,34 @@ void UAMSignTabs::LoadBeltEditor(const FAMBeltSetting& Setting)
 	{
 		return;
 	}
-	// On the machine (the server); the game's window shows what the machine has.
+	// On the machine (the server), then the game's window reads it again: it does not do that by itself.
 	UAMRemoteCallObject::RequestPreviewBelt(GetOwningPlayer(), Machine, Setting);
-	UE_LOG(LogAutomatedMachines, Log, TEXT("Belt settings: loaded %s (%d rules, %d priorities)"),
-		Setting.Event.IsEmpty() ? TEXT("Default") : *Setting.Event, Setting.RuleItems.Num(), Setting.Priorities.Num());
+	FString Described;
+	for (int32 Index = 0; Index < Setting.Priorities.Num(); ++Index)
+	{
+		Described += FString::Printf(TEXT(" in%d=%d"), Index, Setting.Priorities[Index]);
+	}
+	for (int32 Index = 0; Index < Setting.RuleItems.Num(); ++Index)
+	{
+		Described += FString::Printf(TEXT(" [%s -> out%d]"), Setting.RuleItems[Index] ? *Setting.RuleItems[Index]->GetName() : TEXT("none"),
+			Setting.RuleOutputs.IsValidIndex(Index) ? Setting.RuleOutputs[Index] : -1);
+	}
+	UE_LOG(LogAutomatedMachines, Log, TEXT("Belt settings: loaded %s:%s"), Setting.Event.IsEmpty() ? TEXT("Default") : *Setting.Event, *Described);
+	if (UWorld* World = GetWorld())
+	{
+		const bool bMerger = AMBelt::IsMerger(Machine);
+		for (const float Delay : { 0.05f, 0.4f })
+		{
+			FTimerHandle Later;
+			World->GetTimerManager().SetTimer(Later, FTimerDelegate::CreateWeakLambda(this, [this, bMerger]()
+			{
+				if (UUserWidget* Host = GetHostWindow())
+				{
+					AMST_CallNoParams(Host, bMerger ? TEXT("UpdatePriorities") : TEXT("OnSortRulesChanged"));
+				}
+			}), Delay, false);
+		}
+	}
 }
 
 FAMLightSetting& UAMSignTabs::GetLightSlot(int32 Index)
