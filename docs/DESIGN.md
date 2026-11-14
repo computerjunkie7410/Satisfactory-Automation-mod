@@ -223,7 +223,7 @@ Automation is copied together with the game's own machine settings:
 - **Ctrl+C / Ctrl+V** while looking at a machine, and **middle click** then build: everything (the game's settings and the automation).
 - The window's **Copy Settings / Paste Settings** buttons: only the game's settings (e.g. a sign's design, a Smelter's recipe), as without the mod (decided 5 Nov 2026: people want to copy only a design).
 - Our **Copy automation settings / Paste automation settings** buttons at the bottom of every Automation page: only the automation.
-- **Middle click** (sample a building with the build gun) on an automated machine, then build: the new buildings get the same automation.
+- **Middle click** (sample a building with the build gun) on an automated machine, then build: the new buildings get the same automation. The sample is **forgotten** (14 Nov 2026) when you pick a building in the build menu or leave build mode, so a building taken from the menu starts clean; sample again with one middle click.
 - Only between the same machine (Constructor to Constructor, Miner Mk1 to Miner Mk1): the game's own grouping puts all production machines together, which is not wanted. Pasting replaces the machine's automation; copying a machine without automation and pasting it removes the other machine's automation (decided 5 Nov 2026).
 - A notification says what was copied / pasted ("AUTOMATION COPIED: 2 alarms, 1 action").
 

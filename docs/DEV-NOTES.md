@@ -331,3 +331,7 @@ Test of the Automation tab: open a Smelter and a Constructor, click Automation, 
 - Shared list: `SetRules` on a battery calls `ShareBatteryAlarms` (overwrites the other batteries of the circuit via `StoreBatteryAlarms`); `MergeBatteryGrids` every 2 s unions the lists of batteries on one circuit (first battery by name first). `EvaluateFireRules`: one leader per circuit (lowest `FName`) checks and rings.
 - `TArray<T*>::Sort` hands the predicate the objects (dereferenced), not the pointers (C2664 otherwise).
 
+## Sample forgotten (14 Nov 2026, untested)
+
+- `AMClipboard.cpp`: the per-build-gun sample (`AMCB_Samples`) is removed by `AMCB_ForgetSample` on `UFGBuildGunStateBuild::SetActiveRecipe` (a building picked in the menu; client call, so for a client the server's sample is not reached: multiplayer test) and on `EndState_Implementation` (virtual hook, build mode left). Not within 1 s of sampling (a middle click sets the recipe too).
+

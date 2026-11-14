@@ -25,8 +25,22 @@ namespace
 	{
 		FObjectKey Kind;
 		AMClipboard::FClip Clip;
+		/** When it was sampled (seconds): the game may set its recipe in the same moment. */
+		double Time = 0.0;
 	};
 	TMap<FObjectKey, FAMCBSample> AMCB_Samples;
+
+	/** A sample lasts until a building is picked again (build menu) or the build gun leaves build mode. */
+	void AMCB_ForgetSample(const UFGBuildGunStateBuild* Gun, const TCHAR* Why)
+	{
+		const FAMCBSample* Sample = Gun ? AMCB_Samples.Find(FObjectKey(Gun)) : nullptr;
+		// Not the sampling's own recipe change (middle click on a building sets its recipe too).
+		if (Sample && FPlatformTime::Seconds() - Sample->Time > 1.0)
+		{
+			AMCB_Samples.Remove(FObjectKey(Gun));
+			UE_LOG(LogAutomatedMachines, Log, TEXT("Sampled automation forgotten (%s)"), Why);
+		}
+	}
 
 	/** The build gun constructing right now (server, during InternalConstructHologram). */
 	TWeakObjectPtr<UFGBuildGunStateBuild> AMCB_ConstructingGun;
@@ -222,9 +236,22 @@ void AMClipboard::Install()
 			return;
 		}
 		Sample.Kind = FObjectKey(AMCB_Kind(Machine));
+		Sample.Time = FPlatformTime::Seconds();
 		UE_LOG(LogAutomatedMachines, Log, TEXT("Sampled the automation of %s: %s"), *Machine->GetName(), *AMCB_Describe(Sample.Clip));
 		AMCB_Samples.Add(FObjectKey(Self), MoveTemp(Sample));
 	});
+
+	// A building picked in the build menu, or build mode left: the sample is forgotten, so what is built
+	// next starts without automation (sampling again is one middle click).
+	SUBSCRIBE_METHOD_AFTER(UFGBuildGunStateBuild::SetActiveRecipe, [](UFGBuildGunStateBuild* Self, TSubclassOf<UFGRecipe> Recipe)
+	{
+		AMCB_ForgetSample(Self, TEXT("a building was picked"));
+	});
+	SUBSCRIBE_METHOD_VIRTUAL_AFTER(UFGBuildGunStateBuild::EndState_Implementation, GetMutableDefault<UFGBuildGunStateBuild>(),
+		[](UFGBuildGunStateBuild* Self)
+		{
+			AMCB_ForgetSample(Self, TEXT("build mode left"));
+		});
 
 	// Building: the buildings made during this call get the sampled automation (OnBuildableConstructed).
 	SUBSCRIBE_METHOD(UFGBuildGunStateBuild::InternalConstructHologram, [](auto& Scope, UFGBuildGunStateBuild* Self, FNetConstructionID ConstructionId)
