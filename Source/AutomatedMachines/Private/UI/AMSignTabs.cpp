@@ -5,6 +5,7 @@
 #include "Automation/AMSign.h"
 #include "Automation/AMLight.h"
 #include "Automation/AMBelt.h"
+#include "Buildables/FGBuildableSplitterSmart.h"
 #include "Buildables/FGBuildableLightSource.h"
 #include "Net/AMRemoteCallObject.h"
 #include "Buildables/FGBuildableWidgetSign.h"
@@ -113,6 +114,59 @@ namespace
 			}
 		});
 	}
+
+	/**
+	 * Calls a splitter window function with one TArray<FSplitterSortRule> parameter: gives it InRules
+	 * (Populate Rules) and / or reads OutRules from it (Generate Rules Array).
+	 */
+	bool AMST_CallRules(UObject* Target, FName FunctionName, const TArray<FSplitterSortRule>* InRules, TArray<FSplitterSortRule>* OutRules)
+	{
+		UFunction* Function = Target ? Target->FindFunction(FunctionName) : nullptr;
+		if (!Function)
+		{
+			return false;
+		}
+		TArray<uint8> Params;
+		Params.SetNumZeroed(FMath::Max<int32>(Function->ParmsSize, 1));
+		for (TFieldIterator<FProperty> It(Function); It && It->HasAnyPropertyFlags(CPF_Parm); ++It)
+		{
+			It->InitializeValue_InContainer(Params.GetData());
+		}
+		bool bOk = false;
+		const FArrayProperty* ArrayParam = nullptr;
+		for (TFieldIterator<FProperty> It(Function); It && It->HasAnyPropertyFlags(CPF_Parm); ++It)
+		{
+			const FArrayProperty* Candidate = CastField<FArrayProperty>(*It);
+			const FStructProperty* Inner = Candidate ? CastField<FStructProperty>(Candidate->Inner) : nullptr;
+			if (Inner && Inner->Struct == FSplitterSortRule::StaticStruct())
+			{
+				ArrayParam = Candidate;
+				break;
+			}
+		}
+		if (ArrayParam)
+		{
+			TArray<FSplitterSortRule>* Array = ArrayParam->ContainerPtrToValuePtr<TArray<FSplitterSortRule>>(Params.GetData());
+			if (InRules)
+			{
+				*Array = *InRules;
+			}
+			Target->ProcessEvent(Function, Params.GetData());
+			if (OutRules)
+			{
+				*OutRules = *Array;
+			}
+			bOk = true;
+		}
+		for (TFieldIterator<FProperty> It(Function); It && It->HasAnyPropertyFlags(CPF_Parm); ++It)
+		{
+			It->DestroyValue_InContainer(Params.GetData());
+		}
+		return bOk;
+	}
+
+	/** The three rule widgets of the merger window. */
+	const TCHAR* const AMST_MergerRuleWidgets[] = { TEXT("mPriorityLeft"), TEXT("mPriorityCenter"), TEXT("mPriorityRight") };
 
 	FTextProperty* AMST_FindTextField(const UScriptStruct* Struct)
 	{
@@ -474,6 +528,40 @@ bool UAMSignTabs::ReadBeltEditor(FAMBeltSetting& OutSetting, const FString& Even
 		return false;
 	}
 	OutSetting = AMBelt::Read(Machine, Event);
+	// The game's window holds the settings in its own widgets (and does not always put them on the
+	// machine at once): what they show is what we keep.
+	const UUserWidget* Host = GetHostWindow();
+	if (AMBelt::IsMerger(Machine))
+	{
+		for (const TCHAR* WidgetName : AMST_MergerRuleWidgets)
+		{
+			const UObject* Rule = AMST_GetObject(Host, FName(WidgetName));
+			const FIntProperty* IndexProperty = Rule ? FindFProperty<FIntProperty>(Rule->GetClass(), TEXT("mIndex")) : nullptr;
+			const FIntProperty* PriorityProperty = Rule ? FindFProperty<FIntProperty>(Rule->GetClass(), TEXT("mPriority")) : nullptr;
+			if (IndexProperty && PriorityProperty)
+			{
+				const int32 Input = IndexProperty->GetPropertyValue_InContainer(Rule);
+				if (OutSetting.Priorities.IsValidIndex(Input))
+				{
+					OutSetting.Priorities[Input] = PriorityProperty->GetPropertyValue_InContainer(Rule);
+				}
+			}
+		}
+	}
+	else if (Host)
+	{
+		TArray<FSplitterSortRule> Rules;
+		if (AMST_CallRules(const_cast<UUserWidget*>(Host), TEXT("GenerateRulesArray"), nullptr, &Rules))
+		{
+			OutSetting.RuleItems.Reset();
+			OutSetting.RuleOutputs.Reset();
+			for (const FSplitterSortRule& Rule : Rules)
+			{
+				OutSetting.RuleItems.Add(Rule.ItemClass);
+				OutSetting.RuleOutputs.Add(Rule.OutputIndex);
+			}
+		}
+	}
 	UE_LOG(LogAutomatedMachines, Log, TEXT("Belt settings: read %s from the machine: %d rules, %d priorities"),
 		Event.IsEmpty() ? TEXT("Default") : *Event, OutSetting.RuleItems.Num(), OutSetting.Priorities.Num());
 	return true;
@@ -486,7 +574,35 @@ void UAMSignTabs::LoadBeltEditor(const FAMBeltSetting& Setting)
 	{
 		return;
 	}
-	// On the machine (the server), then the game's window reads it again: it does not do that by itself.
+	// Into the game's window (its own widgets show them), and on the machine (the server).
+	if (UUserWidget* Host = GetHostWindow())
+	{
+		if (AMBelt::IsMerger(Machine))
+		{
+			for (const TCHAR* WidgetName : AMST_MergerRuleWidgets)
+			{
+				UObject* Rule = AMST_GetObject(Host, FName(WidgetName));
+				const FIntProperty* IndexProperty = Rule ? FindFProperty<FIntProperty>(Rule->GetClass(), TEXT("mIndex")) : nullptr;
+				if (IndexProperty && Setting.Priorities.IsValidIndex(IndexProperty->GetPropertyValue_InContainer(Rule)))
+				{
+					AMST_CallWith<FIntProperty>(Rule, TEXT("SetPriority"), Setting.Priorities[IndexProperty->GetPropertyValue_InContainer(Rule)]);
+				}
+			}
+		}
+		else
+		{
+			TArray<FSplitterSortRule> Rules;
+			const int32 Count = FMath::Min(Setting.RuleItems.Num(), Setting.RuleOutputs.Num());
+			for (int32 Index = 0; Index < Count; ++Index)
+			{
+				Rules.Emplace(Setting.RuleItems[Index], Setting.RuleOutputs[Index]);
+			}
+			if (!AMST_CallRules(Host, TEXT("PopulateRules"), &Rules, nullptr))
+			{
+				UE_LOG(LogAutomatedMachines, Warning, TEXT("Belt settings: the window has no Populate Rules"));
+			}
+		}
+	}
 	UAMRemoteCallObject::RequestPreviewBelt(GetOwningPlayer(), Machine, Setting);
 	FString Described;
 	for (int32 Index = 0; Index < Setting.Priorities.Num(); ++Index)
