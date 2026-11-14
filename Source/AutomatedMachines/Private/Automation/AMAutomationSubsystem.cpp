@@ -730,7 +730,8 @@ void AAMAutomationSubsystem::MergeBatteryGrids()
 			continue;
 		}
 		// Every alarm of the grid, each once: the first battery's (by name) first.
-		Batteries.Sort([](const AFGBuildablePowerStorage* A, const AFGBuildablePowerStorage* B) { return A->GetFName().LexicalLess(B->GetFName()); });
+		// TArray::Sort of pointers hands the predicate the objects, not the pointers.
+		Batteries.Sort([](const AFGBuildablePowerStorage& A, const AFGBuildablePowerStorage& B) { return A.GetFName().LexicalLess(B.GetFName()); });
 		TArray<FAMFireRule> Union;
 		for (const AFGBuildablePowerStorage* Battery : Batteries)
 		{
