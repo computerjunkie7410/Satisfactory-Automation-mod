@@ -20,6 +20,7 @@
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/Image.h"
+#include "Components/ListView.h"
 #include "Components/PanelWidget.h"
 #include "Components/PanelSlot.h"
 #include "Components/ScrollBox.h"
@@ -163,6 +164,42 @@ namespace
 			It->DestroyValue_InContainer(Params.GetData());
 		}
 		return bOk;
+	}
+
+	/**
+	 * Empties the lists of the three output widgets of a splitter window: its Populate Rules adds to
+	 * them (each switch of rows added the default rule again).
+	 */
+	void AMST_ClearSplitterLists(UObject* Window)
+	{
+		for (const TCHAR* WidgetName : { TEXT("mSmartLeft"), TEXT("mSmartCenter"), TEXT("mSmartRight") })
+		{
+			UObject* Output = AMST_GetObject(Window, FName(WidgetName));
+			if (!Output)
+			{
+				continue;
+			}
+			if (const FArrayProperty* Descriptors = FindFProperty<FArrayProperty>(Output->GetClass(), TEXT("mDescriptorListObjects")))
+			{
+				FScriptArrayHelper Helper(Descriptors, Descriptors->ContainerPtrToValuePtr<void>(Output));
+				Helper.EmptyValues();
+			}
+			UObject* PartsList = AMST_GetObject(Output, TEXT("mProgrammableSplitterSettings"));
+			if (UListView* List = Cast<UListView>(AMST_GetObject(PartsList, TEXT("mProgrammableRuleList"))))
+			{
+				List->ClearListItems();
+			}
+			UObject* RuleWidget = AMST_GetObject(Output, TEXT("mSmartSplitterRule"));
+			if (UListView* List = Cast<UListView>(AMST_GetObject(RuleWidget, TEXT("mList"))))
+			{
+				List->ClearListItems();
+			}
+			if (const FArrayProperty* Descriptors = RuleWidget ? FindFProperty<FArrayProperty>(RuleWidget->GetClass(), TEXT("mDescriptorListObjects")) : nullptr)
+			{
+				FScriptArrayHelper Helper(Descriptors, Descriptors->ContainerPtrToValuePtr<void>(RuleWidget));
+				Helper.EmptyValues();
+			}
+		}
 	}
 
 	/** The three rule widgets of the merger window. */
@@ -597,10 +634,14 @@ void UAMSignTabs::LoadBeltEditor(const FAMBeltSetting& Setting)
 			{
 				Rules.Emplace(Setting.RuleItems[Index], Setting.RuleOutputs[Index]);
 			}
+			AMST_ClearSplitterLists(Host);
 			if (!AMST_CallRules(Host, TEXT("PopulateRules"), &Rules, nullptr))
 			{
 				UE_LOG(LogAutomatedMachines, Warning, TEXT("Belt settings: the window has no Populate Rules"));
 			}
+			TArray<FSplitterSortRule> Shown;
+			AMST_CallRules(Host, TEXT("GenerateRulesArray"), nullptr, &Shown);
+			UE_LOG(LogAutomatedMachines, Log, TEXT("Belt settings: the window now shows %d rules (row has %d)"), Shown.Num(), Rules.Num());
 		}
 	}
 	UAMRemoteCallObject::RequestPreviewBelt(GetOwningPlayer(), Machine, Setting);
