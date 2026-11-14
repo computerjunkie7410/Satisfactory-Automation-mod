@@ -288,5 +288,5 @@ Alarms and two actions, delete outgoing items and delete incoming items (outgoin
 - Same side list as lights (`Settings: Default / ALARM [bin] / ... / + Auto Settings`) in the three windows (Smart Splitter, Programmable Splitter, Priority Merger). The programmable splitter is the same class as the smart one.
 - A row is the machine's own settings: a splitter's sort rules (item and output, as the game's window shows), a merger's priority per input. Selecting a row puts its settings on the machine and the game's window follows; the game's controls edit the machine, and the edits are read back into the selected row.
 - When an alarm rings the machine takes that alarm's settings and keeps them until another of its alarms rings (alarms have no "stopped"; use pairs). Default before any alarm rang.
-- No conditions and no Automation tab: a splitter or merger measures nothing here. They have no underglow (like lights and signs).
+- No conditions and no Automation tab: a splitter or merger measures nothing here. They get the underglow like other machines while they have alarm settings (they are big and boxy).
 - Copy / paste and middle-click sampling carry the alarm settings. Saved small: only the rules (item class and output index per rule). Uninstall-safe: without the mod the machine keeps the rules it had.

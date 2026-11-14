@@ -6,7 +6,6 @@
 #include "Buildables/FGBuildable.h"
 #include "Buildables/FGBuildableWidgetSign.h"
 #include "Automation/AMLight.h"
-#include "Automation/AMBelt.h"
 #include "Buildables/FGBuildableResourceExtractor.h"
 #include "Components/DecalComponent.h"
 #include "Components/MeshComponent.h"
@@ -120,7 +119,7 @@ void AAMMarkers::Rebuild()
 	{
 		const AActor* Machine = Entry.Machine;
 		// Signs and lights never glow: nothing may change how they look except their own settings.
-		if (IsValid(Machine) && !Entry.IsEmpty() && !Machine->IsA<AFGBuildableWidgetSign>() && !AMLight::IsLight(Machine) && !AMBelt::IsBelt(Machine))
+		if (IsValid(Machine) && !Entry.IsEmpty() && !Machine->IsA<AFGBuildableWidgetSign>() && !AMLight::IsLight(Machine))
 		{
 			Wanted.Add(Machine);
 		}
