@@ -20,7 +20,7 @@ No settings tab in the HUB. Nothing in the mod needs a world setting: every beha
 
 ## More machines (list of 6 Nov 2026)
 
-Done and tested: production machines (production window), miners, Water / Oil Extractor, storage containers, Biomass Burner, power switches and priority switches, signs, lights and light control panels, valves, fluid buffers, AWESOME Sink, HUB, MAM. Not automated (decided): pipeline pumps.
+Done and tested: production machines (production window), miners, Water / Oil Extractor, storage containers, Biomass Burner, power switches and priority switches, signs, lights and light control panels, valves, fluid buffers, AWESOME Sink, HUB, MAM, railway signals (with Track / Block actions), train stations, freight platforms (items and fluids), truck station (with transfer rates), Power Storage (14 Nov 2026: grid alarms, one shared list per grid), the Output overflow option and action. Not automated (decided): pipeline pumps, trains / locomotives.
 
 **Should already work, to check** (same class or window as something done):
 - Coal Generator, Fuel Generator, Nuclear Power Plant (fuel generators like the Biomass Burner; the Coal one also takes water, the Nuclear one has a waste output).
@@ -28,7 +28,6 @@ Done and tested: production machines (production window), miners, Water / Oil Ex
 - Industrial Fluid Buffer (same window as the Fluid Buffer).
 
 **Power:**
-- Power Storage: charge above / below N%, full, empty, charging / discharging.
 - Geothermal Generator: power events only (nothing to feed).
 - Alien Power Augmenter: fuel (somersloops / ...), power events.
 
@@ -40,9 +39,6 @@ Done and tested: production machines (production window), miners, Water / Oil Ex
 - Dimensional Depot uplink: upload events (maybe).
 
 **Transport:**
-- Train Station, Freight Platform, Fluid Freight Platform: train arrives / leaves, loading / unloading done; action: change load / unload mode.
-- Railway signals: (maybe) blocked / free.
-- Truck Station: done 7 Nov 2026 (to test): vehicle arrives / leaves, busy, fuel, container alarms; load mode, replace differing fuel, delete contents.
 - Drone Port: vehicle arrives / leaves, fuel low, input / output full.
 
 **Other buildings:**
