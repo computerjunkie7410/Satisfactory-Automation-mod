@@ -2098,6 +2098,19 @@ void AAMAutomationSubsystem::ApplyAction(AFGBuildableFactory* Factory, const FAM
 			}
 		}
 		break;
+	case EAMAction::DeleteOutgoing:
+	case EAMAction::DeleteIncoming:
+		if (AFGBuildableDroneStation* DronePort = Cast<AFGBuildableDroneStation>(Factory))
+		{
+			// Outgoing = input inventory, incoming = output inventory.
+			const bool bOutgoing = Rule.Action == EAMAction::DeleteOutgoing;
+			const int32 Slots = DeleteAllItems(bOutgoing ? DronePort->GetInputInventory() : DronePort->GetOutputInventory());
+			if (Slots > 0)
+			{
+				UE_LOG(LogAutomatedMachines, Log, TEXT("%s: %s buffer deleted (%d slots)"), *AMAS_Describe(Factory), bOutgoing ? TEXT("outgoing") : TEXT("incoming"), Slots);
+			}
+		}
+		break;
 	case EAMAction::DeleteContents:
 		if (UFGInventoryComponent* Contents = const_cast<UFGInventoryComponent*>(AMAS_StorageInventory(Factory)))
 		{

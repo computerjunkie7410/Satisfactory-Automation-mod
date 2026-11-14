@@ -298,4 +298,4 @@ Code: `UAMAutomationTab::SetupSinglePage`, `RegenerateTabButtons`, `SetOurTabBut
   `python3 Tools/check_source.py` before pushing.
 
 ## Drone Port window
-Third tab "Automation" after Drone Port / This Port / All Ports. Alarms: drone arrives / leaves, busy / idle, input / output full, outgoing / incoming items above / below (pick the item), outgoing / incoming rate above / below (items per minute), fuel, power.
+Fourth tab "Automation" after Drone Port / This Port / All Ports; actions: delete outgoing items, delete incoming items. Alarms: drone arrives / leaves, busy / idle, input / output full, outgoing / incoming items above / below (pick the item), outgoing / incoming rate above / below (items per minute), fuel, power.

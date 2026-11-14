@@ -173,6 +173,8 @@ FText AMRules::GetActionText(EAMAction Action)
 	case EAMAction::OverflowOff:   return AMTY_Text(TEXT("Output overflow off"));
 	case EAMAction::ReplaceFuelOn: return AMTY_Text(TEXT("Replace differing fuel on"));
 	case EAMAction::ReplaceFuelOff: return AMTY_Text(TEXT("Replace differing fuel off"));
+	case EAMAction::DeleteOutgoing: return AMTY_Text(TEXT("Delete outgoing items"));
+	case EAMAction::DeleteIncoming: return AMTY_Text(TEXT("Delete incoming items"));
 	default:                       return FText::GetEmpty();
 	}
 }
@@ -354,6 +356,10 @@ FText AMRules::GetActionDescription(EAMAction Action)
 		return AMTY_Text(TEXT("Shows a message on the screen of every player, in the game's notifications.\n\nIt shows the alarm's name with your text under it; leave the text empty to show which machine rang it, e.g. \"PLATES BACKED UP - Rung by Constructor\"."));
 	case EAMAction::PlaySound:
 		return AMTY_Text(TEXT("Plays a short sound for every player, wherever they are. Choose one of a few sounds of the game; picking one in the list plays it once so you can hear it."));
+	case EAMAction::DeleteOutgoing:
+		return AMTY_Text(TEXT("Destroys everything in the outgoing buffer: the items waiting for a drone to carry them away. They are gone for good: no points, no refund.\n\nWith \"Outgoing items above\" it works as an overflow for a port that sends more than the drones carry."));
+	case EAMAction::DeleteIncoming:
+		return AMTY_Text(TEXT("Destroys everything in the incoming buffer: the items the drones brought. They are gone for good: no points, no refund.\n\nWith \"Output full\" on the same port it keeps the port from blocking when nothing takes the items."));
 	case EAMAction::DeleteContents:
 		return AMTY_Text(TEXT("Destroys everything in the container. The items are gone for good: no points, no refund.\n\nWith \"Full\" or \"Filled above\" on the same container, it works as an overflow that throws away what nobody uses."));
 	case EAMAction::ChangeRecipe:
@@ -938,6 +944,10 @@ bool AMRules::IsActionAvailable(EAMAction Action, const UObject* Machine)
 		return false;
 	}
 	if (Machine->IsA<AFGBuildableDroneStation>())
+	{
+		return Action == EAMAction::DeleteOutgoing || Action == EAMAction::DeleteIncoming;
+	}
+	if (Action == EAMAction::DeleteOutgoing || Action == EAMAction::DeleteIncoming)
 	{
 		return false;
 	}

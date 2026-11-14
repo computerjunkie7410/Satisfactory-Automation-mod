@@ -150,6 +150,9 @@ enum class EAMAction : uint8
 	// Truck stations: their "Replace Differing Fuel" switch.
 	ReplaceFuelOn  UMETA(DisplayName = "Replace differing fuel on"),
 	ReplaceFuelOff UMETA(DisplayName = "Replace differing fuel off"),
+	// Drone ports: empty one of the two buffers.
+	DeleteOutgoing UMETA(DisplayName = "Delete outgoing items"),
+	DeleteIncoming UMETA(DisplayName = "Delete incoming items"),
 	Count          UMETA(Hidden)
 };
 
