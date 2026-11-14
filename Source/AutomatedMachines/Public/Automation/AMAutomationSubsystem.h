@@ -125,6 +125,14 @@ private:
 	/** Checks every fire rule; fires the events whose condition just became true. */
 	void EvaluateFireRules();
 
+	/**
+	 * Power Storage: the alarm list is one per power grid. A battery's list replaces the others' of
+	 * its grid (editing); when grids join, every battery gets all their alarms together (merging).
+	 */
+	void ShareBatteryAlarms(const AFGBuildable* Source);
+	void MergeBatteryGrids();
+	void StoreBatteryAlarms(AFGBuildable* Battery, const TArray<FAMFireRule>& Fires);
+
 	/** bRecipeChanged: the machine's recipe changed since the last check. */
 	static bool IsConditionTrue(const AFGBuildableFactory* Factory, const FAMFireRule& Rule, bool bRecipeChanged);
 
@@ -246,6 +254,7 @@ private:
 	TMap<TWeakObjectPtr<AFGBuildable>, TWeakObjectPtr<UClass>> mLastRecipes;
 
 	float mTimeSinceEvaluation = 0.f;
+	float mTimeSinceBatteryMerge = 0.f;
 
 	/** Train stations: their displays show our texts (every machine with a screen, every second). */
 	void UpdateStationDisplays();

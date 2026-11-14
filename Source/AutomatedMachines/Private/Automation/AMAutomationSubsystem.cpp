@@ -23,6 +23,7 @@
 #include "Buildables/FGBuildableRailroadStation.h"
 #include "Buildables/FGBuildableTrainPlatformCargo.h"
 #include "Buildables/FGBuildableDockingStation.h"
+#include "Buildables/FGBuildablePowerStorage.h"
 #include "FGTrainStationIdentifier.h"
 #include "FGTextRenderer.h"
 #include "FGTrain.h"
@@ -614,8 +615,150 @@ void AAMAutomationSubsystem::SetRules(AFGBuildable* Machine, const TArray<FAMFir
 		*AMAS_Describe(Machine), NewRules.Fires.Num(), NewRules.Reactions.Num(), NewRules.Options.bPassWrongItems ? TEXT("on") : TEXT("off"),
 		NewRules.Options.bPassExtraItems ? TEXT("on") : TEXT("off"));
 
+	// A Power Storage's alarms are the grid's: the other batteries of its grid get them too.
+	if (Cast<AFGBuildablePowerStorage>(Machine))
+	{
+		ShareBatteryAlarms(Machine);
+	}
+
 	ForceNetUpdate();
 	OnRulesChanged.Broadcast();
+}
+
+namespace
+{
+	/** The power grid a battery is on (null: not connected). */
+	const UFGPowerCircuit* AMAS_BatteryCircuit(const AActor* Battery)
+	{
+		const AFGBuildableFactory* Factory = Cast<AFGBuildableFactory>(Battery);
+		const UFGPowerInfoComponent* Info = Factory ? Factory->GetPowerInfo() : nullptr;
+		return Info ? Info->GetPowerCircuit() : nullptr;
+	}
+
+	bool AMAS_SameAlarms(const TArray<FAMFireRule>& A, const TArray<FAMFireRule>& B)
+	{
+		if (A.Num() != B.Num())
+		{
+			return false;
+		}
+		for (int32 Index = 0; Index < A.Num(); ++Index)
+		{
+			if (A[Index].Event != B[Index].Event || A[Index].Condition != B[Index].Condition || A[Index].Value != B[Index].Value)
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+}
+
+void AAMAutomationSubsystem::StoreBatteryAlarms(AFGBuildable* Battery, const TArray<FAMFireRule>& Fires)
+{
+	const int32 Index = mMachines.IndexOfByPredicate([Battery](const FAMMachineRules& Entry) { return Entry.Machine == Battery; });
+	if (Fires.Num() == 0)
+	{
+		if (Index != INDEX_NONE)
+		{
+			mMachines.RemoveAt(Index);
+		}
+	}
+	else if (Index != INDEX_NONE)
+	{
+		mMachines[Index].Fires = Fires;
+	}
+	else
+	{
+		FAMMachineRules NewRules;
+		NewRules.Machine = Battery;
+		NewRules.Fires = Fires;
+		mMachines.Add(NewRules);
+	}
+	mLastConditionValues.Remove(TWeakObjectPtr<AFGBuildable>(Battery));
+}
+
+void AAMAutomationSubsystem::ShareBatteryAlarms(const AFGBuildable* Source)
+{
+	const UFGPowerCircuit* Circuit = AMAS_BatteryCircuit(Source);
+	UWorld* World = GetWorld();
+	const FAMMachineRules* Rules = FindRules(Source);
+	if (!Circuit || !World)
+	{
+		return;
+	}
+	const TArray<FAMFireRule> Fires = Rules ? Rules->Fires : TArray<FAMFireRule>();
+	for (TActorIterator<AFGBuildablePowerStorage> It(World); It; ++It)
+	{
+		AFGBuildablePowerStorage* Other = *It;
+		if (Other == Source || AMAS_BatteryCircuit(Other) != Circuit)
+		{
+			continue;
+		}
+		const FAMMachineRules* OtherRules = FindRules(Other);
+		if (!AMAS_SameAlarms(OtherRules ? OtherRules->Fires : TArray<FAMFireRule>(), Fires))
+		{
+			StoreBatteryAlarms(Other, Fires);
+		}
+	}
+}
+
+void AAMAutomationSubsystem::MergeBatteryGrids()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+	// Only when some battery has alarms at all.
+	if (!mMachines.ContainsByPredicate([](const FAMMachineRules& Entry) { return Entry.Machine && Entry.Machine->IsA<AFGBuildablePowerStorage>(); }))
+	{
+		return;
+	}
+	TMap<const UFGPowerCircuit*, TArray<AFGBuildablePowerStorage*>> Grids;
+	for (TActorIterator<AFGBuildablePowerStorage> It(World); It; ++It)
+	{
+		if (const UFGPowerCircuit* Circuit = AMAS_BatteryCircuit(*It))
+		{
+			Grids.FindOrAdd(Circuit).Add(*It);
+		}
+	}
+	bool bChanged = false;
+	for (TPair<const UFGPowerCircuit*, TArray<AFGBuildablePowerStorage*>>& Grid : Grids)
+	{
+		TArray<AFGBuildablePowerStorage*>& Batteries = Grid.Value;
+		if (Batteries.Num() < 2)
+		{
+			continue;
+		}
+		// Every alarm of the grid, each once: the first battery's (by name) first.
+		Batteries.Sort([](const AFGBuildablePowerStorage* A, const AFGBuildablePowerStorage* B) { return A->GetFName().LexicalLess(B->GetFName()); });
+		TArray<FAMFireRule> Union;
+		for (const AFGBuildablePowerStorage* Battery : Batteries)
+		{
+			const FAMMachineRules* Rules = FindRules(Battery);
+			for (const FAMFireRule& Rule : Rules ? Rules->Fires : TArray<FAMFireRule>())
+			{
+				if (!Union.ContainsByPredicate([&Rule](const FAMFireRule& Known) { return Known.Event == Rule.Event && Known.Condition == Rule.Condition && Known.Value == Rule.Value; }))
+				{
+					Union.Add(Rule);
+				}
+			}
+		}
+		for (AFGBuildablePowerStorage* Battery : Batteries)
+		{
+			const FAMMachineRules* Rules = FindRules(Battery);
+			if (!AMAS_SameAlarms(Rules ? Rules->Fires : TArray<FAMFireRule>(), Union))
+			{
+				StoreBatteryAlarms(Battery, Union);
+				bChanged = true;
+				UE_LOG(LogAutomatedMachines, Log, TEXT("%s: grid alarms merged (%d alarm(s))"), *AMAS_Describe(Battery), Union.Num());
+			}
+		}
+	}
+	if (bChanged)
+	{
+		ForceNetUpdate();
+		OnRulesChanged.Broadcast();
+	}
 }
 
 void AAMAutomationSubsystem::ReleaseActionStates(FAMMachineRules& Entry)
@@ -795,7 +938,8 @@ bool AAMAutomationSubsystem::CanAutomate(const AActor* Machine)
 		|| Machine->IsA<AFGBuildableCircuitSwitch>() || AMLight::IsLight(Machine)
 		|| AMRules::IsValve(Machine) || Machine->IsA<AFGBuildablePipeReservoir>() || Machine->IsA<AFGBuildableResourceSink>()
 		|| Machine->IsA<AFGBuildableRailroadSignal>() || Machine->IsA<AFGBuildableRailroadStation>()
-		|| Machine->IsA<AFGBuildableTrainPlatformCargo>() || Machine->IsA<AFGBuildableDockingStation>());
+		|| Machine->IsA<AFGBuildableTrainPlatformCargo>() || Machine->IsA<AFGBuildableDockingStation>()
+		|| Machine->IsA<AFGBuildablePowerStorage>());
 }
 
 bool AAMAutomationSubsystem::RemoveInvalidEntries()
@@ -906,6 +1050,12 @@ void AAMAutomationSubsystem::Tick(float DeltaSeconds)
 		ForceNetUpdate();
 		OnRulesChanged.Broadcast();
 	}
+	mTimeSinceBatteryMerge += AMAS_EvaluationInterval;
+	if (mTimeSinceBatteryMerge >= 2.f)
+	{
+		mTimeSinceBatteryMerge = 0.f;
+		MergeBatteryGrids();
+	}
 	EvaluateFireRules();
 
 	// Options.
@@ -939,8 +1089,32 @@ void AAMAutomationSubsystem::Tick(float DeltaSeconds)
 void AAMAutomationSubsystem::EvaluateFireRules()
 {
 	TArray<TPair<FString, const AActor*>> EventsToFire;
+	// Power Storage: one battery per grid checks and rings (the first by name); they all hold the same alarms.
+	TMap<const UFGPowerCircuit*, const AActor*> BatteryLeaders;
 	for (const FAMMachineRules& Entry : mMachines)
 	{
+		if (Entry.Fires.Num() > 0 && Entry.Machine && Entry.Machine->IsA<AFGBuildablePowerStorage>())
+		{
+			if (const UFGPowerCircuit* Circuit = AMAS_BatteryCircuit(Entry.Machine))
+			{
+				const AActor*& Leader = BatteryLeaders.FindOrAdd(Circuit);
+				if (!Leader || Entry.Machine->GetFName().LexicalLess(Leader->GetFName()))
+				{
+					Leader = Entry.Machine;
+				}
+			}
+		}
+	}
+	for (const FAMMachineRules& Entry : mMachines)
+	{
+		if (Entry.Machine && Entry.Machine->IsA<AFGBuildablePowerStorage>())
+		{
+			const UFGPowerCircuit* Circuit = AMAS_BatteryCircuit(Entry.Machine);
+			if (Circuit && BatteryLeaders.FindRef(Circuit) != Entry.Machine.Get())
+			{
+				continue;
+			}
+		}
 		const AFGBuildableFactory* Factory = Cast<AFGBuildableFactory>(Entry.Machine);
 		const AFGBuildableCircuitSwitch* Switch = Cast<AFGBuildableCircuitSwitch>(Entry.Machine);
 		AFGBuildableRailroadSignal* Signal = Cast<AFGBuildableRailroadSignal>(Entry.Machine);
@@ -1219,6 +1393,37 @@ bool AAMAutomationSubsystem::IsConditionTrue(const AFGBuildableFactory* Factory,
 				}
 				return Count > 0 && Done == Count;
 			}
+			}
+		}
+		return false;
+	case EAMCondition::BatteryAbove:
+	case EAMCondition::BatteryBelow:
+	case EAMCondition::BatteryFull:
+	case EAMCondition::BatteryEmpty:
+	case EAMCondition::BatteryCharging:
+	case EAMCondition::BatteryDischarging:
+	case EAMCondition::BatteryEmptiesWithin:
+		if (const UFGPowerCircuit* Grid = AMAS_BatteryCircuit(Factory))
+		{
+			// The batteries of the grid together (the totals the game's own power graph shows).
+			const float Store = Grid->GetBatterySumPowerStore();
+			const float Capacity = Grid->GetBatterySumPowerStoreCapacity();
+			if (Capacity <= 0.f)
+			{
+				return false;
+			}
+			const float Percent = Store / Capacity * 100.f;
+			switch (Rule.Condition)
+			{
+			case EAMCondition::BatteryAbove:       return Percent > Rule.Value;
+			case EAMCondition::BatteryBelow:       return Percent < Rule.Value;
+			case EAMCondition::BatteryFull:        return Store >= Capacity - 0.01f;
+			case EAMCondition::BatteryEmpty:       return Store <= 0.01f;
+			case EAMCondition::BatteryCharging:    return Grid->GetBatterySumPowerInput() > 0.01f;
+			case EAMCondition::BatteryDischarging: return Grid->GetBatterySumPowerOutput() > 0.01f;
+			default:
+				// Seconds in the game, minutes in our alarms; 0 while it is not discharging.
+				return Grid->GetBatterySumPowerOutput() > 0.01f && Grid->GetTimeToBatteriesEmpty() / 60.f < Rule.Value;
 			}
 		}
 		return false;

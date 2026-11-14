@@ -90,6 +90,14 @@ enum class EAMCondition : uint8
 	TransferBelow      UMETA(DisplayName = "Transfer rate below"),
 	MaxTransferAbove   UMETA(DisplayName = "Max transfer above"),
 	MaxTransferBelow   UMETA(DisplayName = "Max transfer below"),
+	// Power Storage: the batteries of the power grid it is on, together (one alarm list per grid).
+	BatteryAbove       UMETA(DisplayName = "Charge above"),
+	BatteryBelow       UMETA(DisplayName = "Charge below"),
+	BatteryFull        UMETA(DisplayName = "Batteries full"),
+	BatteryEmpty       UMETA(DisplayName = "Batteries empty"),
+	BatteryCharging    UMETA(DisplayName = "Charging"),
+	BatteryDischarging UMETA(DisplayName = "Discharging"),
+	BatteryEmptiesWithin UMETA(DisplayName = "Empties within"),
 	Count              UMETA(Hidden)
 };
 

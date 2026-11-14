@@ -15,6 +15,7 @@
 #include "Buildables/FGBuildableRailroadStation.h"
 #include "Buildables/FGBuildableTrainPlatformCargo.h"
 #include "Buildables/FGBuildableDockingStation.h"
+#include "Buildables/FGBuildablePowerStorage.h"
 #include "FGPipeConnectionComponent.h"
 #include "FGPowerConnectionComponent.h"
 #include "FGFactoryConnectionComponent.h"
@@ -121,6 +122,13 @@ FText AMRules::GetConditionText(EAMCondition Condition)
 	case EAMCondition::TransferBelow:     return AMTY_Text(TEXT("Transfer rate below"));
 	case EAMCondition::MaxTransferAbove:  return AMTY_Text(TEXT("Max transfer above"));
 	case EAMCondition::MaxTransferBelow:  return AMTY_Text(TEXT("Max transfer below"));
+	case EAMCondition::BatteryAbove:      return AMTY_Text(TEXT("Charge above"));
+	case EAMCondition::BatteryBelow:      return AMTY_Text(TEXT("Charge below"));
+	case EAMCondition::BatteryFull:       return AMTY_Text(TEXT("Batteries full"));
+	case EAMCondition::BatteryEmpty:      return AMTY_Text(TEXT("Batteries empty"));
+	case EAMCondition::BatteryCharging:   return AMTY_Text(TEXT("Charging"));
+	case EAMCondition::BatteryDischarging: return AMTY_Text(TEXT("Discharging"));
+	case EAMCondition::BatteryEmptiesWithin: return AMTY_Text(TEXT("Empties within"));
 	default:                              return FText::GetEmpty();
 	}
 }
@@ -266,6 +274,20 @@ FText AMRules::GetConditionDescription(EAMCondition Condition)
 		return AMTY_Text(TEXT("Rings when the station's maximum transfer rate (stacks per minute, as in its window: the most the vehicles docking here could move) rises above the number you set."));
 	case EAMCondition::MaxTransferBelow:
 		return AMTY_Text(TEXT("Rings when the station's maximum transfer rate (stacks per minute) drops below the number you set."));
+	case EAMCondition::BatteryAbove:
+		return AMTY_Text(TEXT("Rings when the batteries of this power grid, all together, hold more than this percent of their capacity.\n\nThe alarm list of a Power Storage is the same for every Power Storage on the grid, and each alarm rings once for the whole grid."));
+	case EAMCondition::BatteryBelow:
+		return AMTY_Text(TEXT("Rings when the batteries of this power grid, all together, hold less than this percent of their capacity.\n\nUse it to start backup generators before the batteries run out."));
+	case EAMCondition::BatteryFull:
+		return AMTY_Text(TEXT("Rings when every battery of the grid is full."));
+	case EAMCondition::BatteryEmpty:
+		return AMTY_Text(TEXT("Rings when every battery of the grid is empty."));
+	case EAMCondition::BatteryCharging:
+		return AMTY_Text(TEXT("Rings when the batteries of the grid are charging: the grid makes more power than it uses and the extra goes into them."));
+	case EAMCondition::BatteryDischarging:
+		return AMTY_Text(TEXT("Rings when the batteries of the grid are discharging: the grid uses more power than it makes and they cover the rest."));
+	case EAMCondition::BatteryEmptiesWithin:
+		return AMTY_Text(TEXT("Rings when the batteries are discharging and, at this rate, will be empty in less than this many minutes (the time the game's own battery display shows).\n\nUse it for a warning that still leaves time to act."));
 	case EAMCondition::SignalRed:
 		return AMTY_Text(TEXT("Rings when the signal turns red: trains must stop at it (its block is taken, or it is blocked)."));
 	case EAMCondition::SignalGreen:
@@ -376,6 +398,24 @@ AMRules::FValueInfo AMRules::GetConditionValueInfo(EAMCondition Condition)
 		Info.Min = 0.f;
 		Info.Max = 100.f;
 		Info.Default = Condition == EAMCondition::LoadAbove ? 90.f : 20.f;
+	}
+	else if (Condition == EAMCondition::BatteryAbove || Condition == EAMCondition::BatteryBelow)
+	{
+		Info.bNeeded = true;
+		Info.Label = TEXT("Charge");
+		Info.Min = 0.f;
+		Info.Max = 100.f;
+		Info.Default = Condition == EAMCondition::BatteryAbove ? 90.f : 20.f;
+		Info.Unit = TEXT("%");
+	}
+	else if (Condition == EAMCondition::BatteryEmptiesWithin)
+	{
+		Info.bNeeded = true;
+		Info.Label = TEXT("Minutes");
+		Info.Min = 0.f;
+		Info.Max = 9999.f;
+		Info.Default = 10.f;
+		Info.Unit = TEXT("min");
 	}
 	else if (Condition == EAMCondition::TransferAbove || Condition == EAMCondition::TransferBelow)
 	{
@@ -643,6 +683,16 @@ bool AMRules::IsConditionAvailable(EAMCondition Condition, const UObject* Machin
 	{
 		return true;
 	}
+	// A Power Storage only reads its grid's batteries; nothing else has these.
+	const bool bBatteryEvent = Condition >= EAMCondition::BatteryAbove && Condition <= EAMCondition::BatteryEmptiesWithin;
+	if (Machine->IsA<AFGBuildablePowerStorage>())
+	{
+		return bBatteryEvent;
+	}
+	if (bBatteryEvent)
+	{
+		return false;
+	}
 	if (Machine->IsA<AFGBuildableCircuitSwitch>())
 	{
 		return bSwitchEvent;
@@ -794,6 +844,11 @@ bool AMRules::IsActionAvailable(EAMAction Action, const UObject* Machine)
 	if (!Machine || IsWorldAction(Action))
 	{
 		return true;
+	}
+	if (Machine->IsA<AFGBuildablePowerStorage>())
+	{
+		// Nothing to switch on a battery: it only rings alarms.
+		return false;
 	}
 	if (Machine->IsA<AFGBuildablePipelinePump>())
 	{
