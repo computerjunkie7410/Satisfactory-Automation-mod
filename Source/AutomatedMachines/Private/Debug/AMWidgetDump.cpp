@@ -46,6 +46,11 @@ namespace
 		TEXT("Widget_TabsContainer_C"),
 		TEXT("Widget_SlidingTabs_C"),
 		TEXT("Widget_SlidingTabs_Button_C"),
+		// Splitter / merger windows (14 Nov 2026): the rule widgets, to learn how the window holds its settings.
+		TEXT("BPW_PriorityMergerRule_C"),
+		TEXT("BPW_SmartSplitterRule_C"),
+		TEXT("BPW_SplitterProgrammableRule_C"),
+		TEXT("BPW_SplitterRuleListEntry_C"),
 	};
 
 	// Also every widget in those windows whose class name contains one of these (tab and menu parts).

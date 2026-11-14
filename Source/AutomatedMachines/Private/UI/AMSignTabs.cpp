@@ -499,21 +499,6 @@ void UAMSignTabs::LoadBeltEditor(const FAMBeltSetting& Setting)
 			Setting.RuleOutputs.IsValidIndex(Index) ? Setting.RuleOutputs[Index] : -1);
 	}
 	UE_LOG(LogAutomatedMachines, Log, TEXT("Belt settings: loaded %s:%s"), Setting.Event.IsEmpty() ? TEXT("Default") : *Setting.Event, *Described);
-	if (UWorld* World = GetWorld())
-	{
-		const bool bMerger = AMBelt::IsMerger(Machine);
-		for (const float Delay : { 0.05f, 0.4f })
-		{
-			FTimerHandle Later;
-			World->GetTimerManager().SetTimer(Later, FTimerDelegate::CreateWeakLambda(this, [this, bMerger]()
-			{
-				if (UUserWidget* Host = GetHostWindow())
-				{
-					AMST_CallNoParams(Host, bMerger ? TEXT("UpdatePriorities") : TEXT("OnSortRulesChanged"));
-				}
-			}), Delay, false);
-		}
-	}
 }
 
 FAMLightSetting& UAMSignTabs::GetLightSlot(int32 Index)

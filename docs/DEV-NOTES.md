@@ -353,3 +353,7 @@ Test of the Automation tab: open a Smelter and a Constructor, click Automation, 
 - `UAMSignTabs` got `bBeltMode`: slots `mBeltNormal` / `mBelts` (`FAMBeltSetting`: Event, RuleItems + RuleOutputs, Priorities). Loading a row = `RequestPreviewBelt` (server `AMBelt::Apply`); capturing = `AMBelt::Read` of the machine.
 - Data: `FAMMachineRules::BeltNormal / BeltSettings / BeltShowing`. Subsystem: `SetBeltSettings`, `PreviewBelt`, `ShowCurrentBeltSetting`; ClearAlarm, event names, use counts, copy / paste, sampling and the fire loop handle them like the light settings. `AMBelt` (AMBelt.h/.cpp): IsBelt, Read, Apply (`SetSortRules`, `SetInputPriorities`, whose size must equal the number of inputs).
 - Not compiled before pushing (no UE here): read the build log first if the update fails.
+
+### Belt windows hold their own copy (14 Nov 2026, found in the log)
+- The merger window keeps the priorities in its rule widgets. Its `UpdatePriorities()` pushes the WIDGET values onto the machine (calling it after our `AMBelt::Apply` put the old values back). So the refresh call was removed. Our rows must be read from and loaded into the window's widgets, like the lights' `mControlData`; the machine alone is not the truth.
+- Splitter window functions seen: `GenerateRulesArray(out Rules)` (widgets -> array), `PopulateRules(out Rules)`, `SaveRules()`, `OnSortRulesChanged()`. Next: the rule widgets (`BPW_PriorityMergerRule_C`, `BPW_SmartSplitterRule_C`, `BPW_SplitterProgrammableRule_C`, `BPW_SplitterRuleListEntry_C`) were added to the widget dump to read their functions.
