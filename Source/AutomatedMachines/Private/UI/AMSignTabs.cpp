@@ -20,6 +20,7 @@
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/Image.h"
+#include "Components/Slider.h"
 #include "Components/ListView.h"
 #include "Components/PanelWidget.h"
 #include "Components/PanelSlot.h"
@@ -189,17 +190,42 @@ namespace
 			{
 				List->ClearListItems();
 			}
-			UObject* RuleWidget = AMST_GetObject(Output, TEXT("mSmartSplitterRule"));
-			if (UListView* List = Cast<UListView>(AMST_GetObject(RuleWidget, TEXT("mList"))))
+			// (Not the picker's own list, in mSmartSplitterRule: clearing that left the item picker empty.)
+		}
+	}
+
+	/**
+	 * Moves one input's lever of the merger window to a priority. SetPriority only sets the number: the
+	 * lever, its label and the machine follow the slider's own change event, so we set the slider and
+	 * call that event (the other way round if the number did not come out right).
+	 */
+	void AMST_SetMergerPriority(UObject* Rule, int32 Priority)
+	{
+		AMST_CallWith<FIntProperty>(Rule, TEXT("SetPriority"), Priority);
+		USlider* Slider = Cast<USlider>(AMST_GetObject(Rule, TEXT("Slider")));
+		const FIntProperty* PriorityProperty = FindFProperty<FIntProperty>(Rule->GetClass(), TEXT("mPriority"));
+		UFunction* Changed = Rule->FindFunction(TEXT("BndEvt__BPW_PriorityMergerRule_Slider_81_K2Node_ComponentBoundEvent_0_OnFloatValueChangedEvent__DelegateSignature"));
+		if (!Slider || !PriorityProperty || !Changed)
+		{
+			UE_LOG(LogAutomatedMachines, Warning, TEXT("Merger lever: slider %d, priority %d, event %d"), Slider ? 1 : 0, PriorityProperty ? 1 : 0, Changed ? 1 : 0);
+			return;
+		}
+		const float Min = Slider->GetMinValue();
+		const float Max = Slider->GetMaxValue();
+		const float Candidates[2] = { FMath::Clamp(static_cast<float>(Priority), Min, Max), Max + Min - FMath::Clamp(static_cast<float>(Priority), Min, Max) };
+		for (const float Value : Candidates)
+		{
+			Slider->SetValue(Value);
+			float Param = Value;
+			Rule->ProcessEvent(Changed, &Param);
+			if (PriorityProperty->GetPropertyValue_InContainer(Rule) == Priority)
 			{
-				List->ClearListItems();
-			}
-			if (const FArrayProperty* Descriptors = RuleWidget ? FindFProperty<FArrayProperty>(RuleWidget->GetClass(), TEXT("mDescriptorListObjects")) : nullptr)
-			{
-				FScriptArrayHelper Helper(Descriptors, Descriptors->ContainerPtrToValuePtr<void>(RuleWidget));
-				Helper.EmptyValues();
+				UE_LOG(LogAutomatedMachines, Log, TEXT("Merger lever: priority %d is slider %.2f (range %.2f..%.2f)"), Priority, Value, Min, Max);
+				return;
 			}
 		}
+		UE_LOG(LogAutomatedMachines, Warning, TEXT("Merger lever: no slider value gave priority %d (range %.2f..%.2f, has %d)"), Priority, Min, Max,
+			PriorityProperty->GetPropertyValue_InContainer(Rule));
 	}
 
 	/** The three rule widgets of the merger window. */
@@ -622,7 +648,7 @@ void UAMSignTabs::LoadBeltEditor(const FAMBeltSetting& Setting)
 				const FIntProperty* IndexProperty = Rule ? FindFProperty<FIntProperty>(Rule->GetClass(), TEXT("mIndex")) : nullptr;
 				if (IndexProperty && Setting.Priorities.IsValidIndex(IndexProperty->GetPropertyValue_InContainer(Rule)))
 				{
-					AMST_CallWith<FIntProperty>(Rule, TEXT("SetPriority"), Setting.Priorities[IndexProperty->GetPropertyValue_InContainer(Rule)]);
+					AMST_SetMergerPriority(Rule, Setting.Priorities[IndexProperty->GetPropertyValue_InContainer(Rule)]);
 				}
 			}
 		}
