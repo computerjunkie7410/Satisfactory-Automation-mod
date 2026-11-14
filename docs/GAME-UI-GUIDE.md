@@ -299,3 +299,10 @@ Code: `UAMAutomationTab::SetupSinglePage`, `RegenerateTabButtons`, `SetOurTabBut
 
 ## Drone Port window
 Fourth tab "Automation" after Drone Port / This Port / All Ports; actions: delete outgoing items, delete incoming items. Alarms: drone arrives / leaves, busy / idle, input / output full, outgoing / incoming items above / below (pick the item), outgoing / incoming rate above / below (items per minute), fuel, power.
+
+## Smart Splitter, Programmable Splitter and Priority Merger windows (14 Nov 2026)
+- Windows: `Widget_SplitterSmart_C`, `Widget_SplitterProgrammable_C`, `Widget_MergerPriority_C`. Single page, no Automation tab: a `Settings: Default / ALARM [bin] / ... / + Auto Settings` list on the left (`UAMSignTabs` in belt mode), hooked as `Indirect_Child` of `mCopyPasteButtons`, like the light window.
+- **The windows hold their own copy of the settings** in their widgets; the machine is not the truth while the window is open. Read and load through the window:
+  - Merger: three `BPW_PriorityMergerRule_C` (`mPriorityLeft/Center/Right`), each with `mIndex` and `mPriority`. `SetPriority` only sets the number; the lever, label and machine follow the slider's change event (`Slider->SetValue` + the bound `...OnFloatValueChangedEvent` function). `UpdatePriorities()` pushes the widgets onto the machine: never call it to refresh.
+  - Splitters: `GenerateRulesArray(out TArray<FSplitterSortRule>)` reads the widgets, `PopulateRules(TArray<FSplitterSortRule>)` adds to them (it does not replace: empty the lists first). Per output: `mSmartLeft/Center/Right` (`BPW_SmartSplitterRule_C`) hold the rules in `mDescriptorListObjects` and the list view `mProgrammableSplitterSettings -> mProgrammableRuleList`. Do not clear `mSmartSplitterRule` (the item picker's own list): the picker then stays empty.
+- Output widget indexes and rule items: item `Desc_Wildcard` is "Any", `Desc_None` is an empty rule.
