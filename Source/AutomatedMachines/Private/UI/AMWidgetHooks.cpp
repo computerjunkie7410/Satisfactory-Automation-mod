@@ -96,6 +96,8 @@ namespace
 	// Truck stations (7 Nov 2026): one canvas page (CanvasPanel_68), hooked through its background mStationBG.
 	// Power Storage (14 Nov 2026): one page (CanvasPanel_103), hooked through its background mWindowBG.
 	const TCHAR* const AMWH_PowerStorageWindow = TEXT("/Game/FactoryGame/Buildable/Factory/PowerStorage/UI/BPW_PowerStorage.BPW_PowerStorage_C");
+	// Drone Port (14 Nov 2026): sliding pages (Drone Port / This Port / All Ports) inside HorizontalBox_66.
+	const TCHAR* const AMWH_DronePortWindow = TEXT("/Game/FactoryGame/Buildable/Factory/DroneStation/UI/BPW_Drone_Port.BPW_Drone_Port_C");
 	const TCHAR* const AMWH_TruckStationWindow = TEXT("/Game/FactoryGame/Buildable/-Shared/Widgets/Widget_DockingStation.Widget_DockingStation_C");
 
 	// Signs: the Sign Designer gets design tabs (UAMSignTabs), not an Automation page. Hooked into
@@ -191,6 +193,7 @@ namespace
 			EWidgetBlueprintHookParentType::Indirect_Child);
 		AMWH_HookPages(HookManager, AMWH_PowerStorageWindow, TEXT("mWindowBG"), TEXT("AM_PowerStorageAutomationTabHook"), false,
 			EWidgetBlueprintHookParentType::Indirect_Child);
+		AMWH_HookPages(HookManager, AMWH_DronePortWindow, TEXT("HorizontalBox_66"), TEXT("AM_DronePortAutomationTabHook"));
 		AMWH_HookPages(HookManager, AMWH_TruckStationWindow, TEXT("mStationBG"), TEXT("AM_TruckStationAutomationTabHook"), false,
 			EWidgetBlueprintHookParentType::Indirect_Child);
 		AMWH_HookPages(HookManager, AMWH_SignWindow, AMWH_SignPageChild, TEXT("AM_SignDesignTabsHook"), false,

@@ -130,6 +130,14 @@ FText AMRules::GetConditionText(EAMCondition Condition)
 	case EAMCondition::BatteryCharging:   return AMTY_Text(TEXT("Charging"));
 	case EAMCondition::BatteryDischarging: return AMTY_Text(TEXT("Discharging"));
 	case EAMCondition::BatteryEmptiesWithin: return AMTY_Text(TEXT("Empties within"));
+	case EAMCondition::OutgoingCountAbove: return AMTY_Text(TEXT("Outgoing items above"));
+	case EAMCondition::OutgoingCountBelow: return AMTY_Text(TEXT("Outgoing items below"));
+	case EAMCondition::IncomingCountAbove: return AMTY_Text(TEXT("Incoming items above"));
+	case EAMCondition::IncomingCountBelow: return AMTY_Text(TEXT("Incoming items below"));
+	case EAMCondition::OutgoingRateAbove:  return AMTY_Text(TEXT("Outgoing rate above"));
+	case EAMCondition::OutgoingRateBelow:  return AMTY_Text(TEXT("Outgoing rate below"));
+	case EAMCondition::IncomingRateAbove:  return AMTY_Text(TEXT("Incoming rate above"));
+	case EAMCondition::IncomingRateBelow:  return AMTY_Text(TEXT("Incoming rate below"));
 	default:                              return FText::GetEmpty();
 	}
 }
@@ -289,6 +297,22 @@ FText AMRules::GetConditionDescription(EAMCondition Condition)
 		return AMTY_Text(TEXT("Rings when the batteries of the grid are discharging: the grid uses more power than it makes and they cover the rest."));
 	case EAMCondition::BatteryEmptiesWithin:
 		return AMTY_Text(TEXT("Rings when the batteries are discharging and, at this rate, will be empty in less than this many minutes (the time the game's own battery display shows).\n\nUse it for a warning that still leaves time to act."));
+	case EAMCondition::OutgoingCountAbove:
+		return AMTY_Text(TEXT("Rings when the outgoing buffer (the items waiting for a drone to carry them away) holds more of one item than the number you set. Pick the item under the alarm."));
+	case EAMCondition::OutgoingCountBelow:
+		return AMTY_Text(TEXT("Rings when the outgoing buffer holds less of one item than the number you set. Pick the item under the alarm."));
+	case EAMCondition::IncomingCountAbove:
+		return AMTY_Text(TEXT("Rings when the incoming buffer (the items the drones brought) holds more of one item than the number you set. Pick the item under the alarm."));
+	case EAMCondition::IncomingCountBelow:
+		return AMTY_Text(TEXT("Rings when the incoming buffer holds less of one item than the number you set. Pick the item under the alarm."));
+	case EAMCondition::OutgoingRateAbove:
+		return AMTY_Text(TEXT("Rings when the items this port sends away per minute (average of the drones' trips, as the game's own statistics show) are above the number you set."));
+	case EAMCondition::OutgoingRateBelow:
+		return AMTY_Text(TEXT("Rings when the items this port sends away per minute are below the number you set."));
+	case EAMCondition::IncomingRateAbove:
+		return AMTY_Text(TEXT("Rings when the items this port receives per minute (average of the drones' trips) are above the number you set."));
+	case EAMCondition::IncomingRateBelow:
+		return AMTY_Text(TEXT("Rings when the items this port receives per minute are below the number you set."));
 	case EAMCondition::SignalRed:
 		return AMTY_Text(TEXT("Rings when the signal turns red: trains must stop at it (its block is taken, or it is blocked)."));
 	case EAMCondition::SignalGreen:
@@ -463,13 +487,22 @@ AMRules::FValueInfo AMRules::GetConditionValueInfo(EAMCondition Condition)
 		Info.Default = 20.f;
 		Info.Unit = TEXT("");
 	}
-	else if (Condition == EAMCondition::ItemCountAbove || Condition == EAMCondition::ItemCountBelow)
+	else if (Condition >= EAMCondition::OutgoingRateAbove && Condition <= EAMCondition::IncomingRateBelow)
+	{
+		Info.bNeeded = true;
+		Info.Label = TEXT("Rate");
+		Info.Min = 0.f;
+		Info.Max = 99999.f;
+		Info.Default = (Condition == EAMCondition::OutgoingRateAbove || Condition == EAMCondition::IncomingRateAbove) ? 100.f : 10.f;
+		Info.Unit = TEXT("/min");
+	}
+	else if (ConditionNeedsItem(Condition))
 	{
 		Info.bNeeded = true;
 		Info.Label = TEXT("#");
 		Info.Min = 0.f;
 		Info.Max = 999999.f;
-		Info.Default = Condition == EAMCondition::ItemCountAbove ? 500.f : 200.f;
+		Info.Default = (Condition == EAMCondition::ItemCountAbove || Condition == EAMCondition::OutgoingCountAbove || Condition == EAMCondition::IncomingCountAbove) ? 500.f : 200.f;
 		Info.Unit = TEXT("");
 	}
 	return Info;
@@ -754,8 +787,14 @@ bool AMRules::IsConditionAvailable(EAMCondition Condition, const UObject* Machin
 		case EAMCondition::InputNotFull:
 		case EAMCondition::OutputFull:
 		case EAMCondition::OutputNotFull:
-		case EAMCondition::ItemCountAbove:
-		case EAMCondition::ItemCountBelow:
+		case EAMCondition::OutgoingCountAbove:
+		case EAMCondition::OutgoingCountBelow:
+		case EAMCondition::IncomingCountAbove:
+		case EAMCondition::IncomingCountBelow:
+		case EAMCondition::OutgoingRateAbove:
+		case EAMCondition::OutgoingRateBelow:
+		case EAMCondition::IncomingRateAbove:
+		case EAMCondition::IncomingRateBelow:
 		case EAMCondition::FuelEmpty:
 		case EAMCondition::FuelAvailable:
 		case EAMCondition::FuelBelow:
@@ -765,6 +804,11 @@ bool AMRules::IsConditionAvailable(EAMCondition Condition, const UObject* Machin
 		default:
 			return false;
 		}
+	}
+	// The drone port's own conditions exist nowhere else.
+	if (Condition >= EAMCondition::OutgoingCountAbove && Condition <= EAMCondition::IncomingRateBelow)
+	{
+		return false;
 	}
 	if (bVehicleEvent)
 	{
@@ -989,5 +1033,6 @@ bool AMRules::HasPassWrongItems(const UObject* Machine)
 
 bool AMRules::ConditionNeedsItem(EAMCondition Condition)
 {
-	return Condition == EAMCondition::ItemCountAbove || Condition == EAMCondition::ItemCountBelow;
+	return Condition == EAMCondition::ItemCountAbove || Condition == EAMCondition::ItemCountBelow
+		|| (Condition >= EAMCondition::OutgoingCountAbove && Condition <= EAMCondition::IncomingCountBelow);
 }

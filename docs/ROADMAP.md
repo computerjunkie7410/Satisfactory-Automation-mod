@@ -39,7 +39,7 @@ Done and tested: production machines (production window), miners, Water / Oil Ex
 - Dimensional Depot uplink: upload events (maybe).
 
 **Transport:**
-- Drone Port: rules done (drone arrives / leaves, busy / idle, input / output full, item count in both buffers, fuel, power); its tab waits for the window layout dump.
+- Drone Port: done, tab hooked (sliding pages); waiting for the in-game test. Alarms: drone arrives / leaves, busy / idle, input / output full, outgoing / incoming item counts, outgoing / incoming rate (items per minute), fuel, power.
 
 **Other buildings:**
 - Doors: open / closed / locked (actions: lock, unlock).

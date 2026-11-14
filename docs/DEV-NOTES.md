@@ -341,3 +341,8 @@ Test of the Automation tab: open a Smelter and a Constructor, click Automation, 
 - Drone arrives/leaves = `GetDockedDrone()`; busy/idle = `IsTransferringItems()`; input/output full = input/output inventory fill >= 100% (`AMAS_InventoryFill`); fuel via `GetFuelInventory()`; power as usual. No actions (the port has no settings).
 - Tab not hooked yet: needs the window layout from the log ("===== begin ...").
 - Item count above/below added: counts the chosen item in the input and output inventories together.
+
+## Drone Port tab and split buffers (14 Nov 2026)
+- Window `BPW_Drone_Port_C`: sliding pages (Drone Port / This Port / All Ports) are the children of `HorizontalBox_66`; hooked with `AMWH_HookPages(..., "HorizontalBox_66", "AM_DronePortAutomationTabHook")`.
+- The window's `InputInventoryScrollbox` sits in `OutgoingOverlay`: input inventory = outgoing, output inventory = incoming. (The window's two labels read the other way round in the widget names; we follow the inventories.)
+- New conditions (appended after BatteryEmptiesWithin): Outgoing/Incoming item count above/below (item picked per alarm; replaces the generic item count for this port) and Outgoing/Incoming rate above/below (`AFGDroneStationInfo::GetAverageTotalOutgoing/IncomingItemRate`, items per minute, includes connected ports).

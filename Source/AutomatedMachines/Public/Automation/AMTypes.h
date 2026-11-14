@@ -98,6 +98,14 @@ enum class EAMCondition : uint8
 	BatteryCharging    UMETA(DisplayName = "Charging"),
 	BatteryDischarging UMETA(DisplayName = "Discharging"),
 	BatteryEmptiesWithin UMETA(DisplayName = "Empties within"),
+	OutgoingCountAbove UMETA(DisplayName = "Outgoing items above"),
+	OutgoingCountBelow UMETA(DisplayName = "Outgoing items below"),
+	IncomingCountAbove UMETA(DisplayName = "Incoming items above"),
+	IncomingCountBelow UMETA(DisplayName = "Incoming items below"),
+	OutgoingRateAbove  UMETA(DisplayName = "Outgoing rate above"),
+	OutgoingRateBelow  UMETA(DisplayName = "Outgoing rate below"),
+	IncomingRateAbove  UMETA(DisplayName = "Incoming rate above"),
+	IncomingRateBelow  UMETA(DisplayName = "Incoming rate below"),
 	Count              UMETA(Hidden)
 };
 

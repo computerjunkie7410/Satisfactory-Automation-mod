@@ -296,3 +296,6 @@ Code: `UAMAutomationTab::SetupSinglePage`, `RegenerateTabButtons`, `SetOurTabBut
 - **C2001 "newline in constant"**: a C++ text written by a Python edit script with `\n` in a normal
   Python string got a real line break. Use raw strings (`r"..."`) in edit scripts, and run
   `python3 Tools/check_source.py` before pushing.
+
+## Drone Port window
+Third tab "Automation" after Drone Port / This Port / All Ports. Alarms: drone arrives / leaves, busy / idle, input / output full, outgoing / incoming items above / below (pick the item), outgoing / incoming rate above / below (items per minute), fuel, power.

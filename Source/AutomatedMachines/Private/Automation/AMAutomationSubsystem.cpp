@@ -1471,6 +1471,38 @@ bool AAMAutomationSubsystem::IsConditionTrue(const AFGBuildableFactory* Factory,
 	case EAMCondition::FillBelow:         return GetFillLevel(Factory) * 100.f < Rule.Value;
 	case EAMCondition::ItemCountAbove:    return Rule.Item && CountItem(Factory, Rule.Item) > Rule.Value;
 	case EAMCondition::ItemCountBelow:    return Rule.Item && CountItem(Factory, Rule.Item) < Rule.Value;
+	case EAMCondition::OutgoingCountAbove:
+	case EAMCondition::OutgoingCountBelow:
+	case EAMCondition::IncomingCountAbove:
+	case EAMCondition::IncomingCountBelow:
+		if (const AFGBuildableDroneStation* DronePort = Cast<AFGBuildableDroneStation>(Factory))
+		{
+			// Outgoing = the input inventory (what waits for a drone), incoming = the output inventory (what drones brought).
+			const bool bOutgoing = Rule.Condition == EAMCondition::OutgoingCountAbove || Rule.Condition == EAMCondition::OutgoingCountBelow;
+			const UFGInventoryComponent* Buffer = bOutgoing ? DronePort->GetInputInventory() : DronePort->GetOutputInventory();
+			const int32 Count = Buffer && Rule.Item ? Buffer->GetNumItems(Rule.Item) : 0;
+			const bool bAbove = Rule.Condition == EAMCondition::OutgoingCountAbove || Rule.Condition == EAMCondition::IncomingCountAbove;
+			return Rule.Item && (bAbove ? Count > Rule.Value : Count < Rule.Value);
+		}
+		return false;
+	case EAMCondition::OutgoingRateAbove:
+	case EAMCondition::OutgoingRateBelow:
+	case EAMCondition::IncomingRateAbove:
+	case EAMCondition::IncomingRateBelow:
+		if (const AFGBuildableDroneStation* DronePort = Cast<AFGBuildableDroneStation>(Factory))
+		{
+			const AFGDroneStationInfo* Info = DronePort->GetInfo();
+			if (!Info)
+			{
+				return false;
+			}
+			// Items per minute, already, in the game's statistics.
+			const bool bOutgoing = Rule.Condition == EAMCondition::OutgoingRateAbove || Rule.Condition == EAMCondition::OutgoingRateBelow;
+			const float Rate = bOutgoing ? Info->GetAverageTotalOutgoingItemRate() : Info->GetAverageTotalIncomingItemRate();
+			const bool bAbove = Rule.Condition == EAMCondition::OutgoingRateAbove || Rule.Condition == EAMCondition::IncomingRateAbove;
+			return bAbove ? Rate > Rule.Value : Rate < Rule.Value;
+		}
+		return false;
 	case EAMCondition::FuelEmpty:         return IsOutOfFuel(Factory);
 	case EAMCondition::FuelAvailable:     return !IsOutOfFuel(Factory);
 	case EAMCondition::FuelBelow:         return CountFuel(Factory) < Rule.Value;
@@ -1587,13 +1619,6 @@ bool AAMAutomationSubsystem::IsFuseBlown(const AFGBuildableFactory* Factory)
 
 int32 AAMAutomationSubsystem::CountItem(const AFGBuildableFactory* Factory, TSubclassOf<UFGItemDescriptor> Item)
 {
-	if (const AFGBuildableDroneStation* DronePort = Cast<AFGBuildableDroneStation>(Factory))
-	{
-		// Both buffers: what waits to be carried and what the drones brought.
-		const UFGInventoryComponent* In = DronePort->GetInputInventory();
-		const UFGInventoryComponent* Out = DronePort->GetOutputInventory();
-		return Item ? (In ? In->GetNumItems(Item) : 0) + (Out ? Out->GetNumItems(Item) : 0) : 0;
-	}
 	const UFGInventoryComponent* Inventory = AMAS_StorageInventory(Factory);
 	return Inventory && Item ? Inventory->GetNumItems(Item) : 0;
 }
