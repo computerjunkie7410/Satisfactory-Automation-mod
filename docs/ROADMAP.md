@@ -57,5 +57,5 @@ Done and tested: production machines (production window), miners, Water / Oil Ex
 - **Alarm sets**: save a machine's alarms and actions as a named preset and apply it to others (beyond copy / paste).
 - **Per-alarm notification sound** (the Show message action with a chosen sound).
 
-## Batch: Smart Splitter, Programmable Splitter, Priority Merger (started 14 Nov 2026)
-Plan: like signs and lights, a side list in each window: `Settings: Default / ALARM [bin] / ... / + Auto Settings`. A row holds the machine's own settings (splitter: its sort rules; merger: the input priorities). The alarm's settings apply when it rings and stay until another of its alarms rings. No conditions (nothing to measure), only reactions. Step 1: the windows are added to the widget dump so the layouts can be read.
+## Batch: Smart Splitter, Programmable Splitter, Priority Merger (built 14 Nov 2026, to test)
+Like signs and lights: a side list in each window, `Settings: Default / ALARM [bin] / ... / + Auto Settings`. A row holds the machine's own settings (splitters: the sort rules; merger: the input priorities). When an alarm rings the machine takes that alarm's settings and keeps them until another of its alarms rings. No conditions, no Automation tab: they only react. To test: the list shows, selecting a row changes the game's controls, an alarm switches the settings, deleting an alarm, copy / paste, middle-click sampling, saving and loading.

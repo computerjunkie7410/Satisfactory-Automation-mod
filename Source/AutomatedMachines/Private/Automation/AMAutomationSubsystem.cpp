@@ -48,6 +48,7 @@
 #include "FGBuildableSubsystem.h"
 #include "Automation/AMSign.h"
 #include "Automation/AMLight.h"
+#include "Automation/AMBelt.h"
 #include "Buildables/FGBuildableLightsControlPanel.h"
 #include "Buildables/FGBuildableWidgetSign.h"
 #include "GameFramework/PlayerController.h"
@@ -399,6 +400,82 @@ void AAMAutomationSubsystem::ShowCurrentLightSetting(AFGBuildable* Light)
 	AMLight::Apply(Light, Setting ? *Setting : Rules->LightNormal);
 }
 
+void AAMAutomationSubsystem::SetBeltSettings(AFGBuildable* Machine, const FAMBeltSetting& Normal, const TArray<FAMBeltSetting>& Settings)
+{
+	if (!HasAuthority() || !AMBelt::IsBelt(Machine))
+	{
+		return;
+	}
+	int32 Index = mMachines.IndexOfByPredicate([Machine](const FAMMachineRules& Entry) { return Entry.Machine == Machine; });
+	if (Index == INDEX_NONE)
+	{
+		if (Settings.Num() == 0)
+		{
+			return;
+		}
+		FAMMachineRules& NewEntry = mMachines.AddDefaulted_GetRef();
+		NewEntry.Machine = Machine;
+		Index = mMachines.Num() - 1;
+	}
+	FAMMachineRules& Entry = mMachines[Index];
+	Entry.BeltNormal = Normal;
+	Entry.BeltNormal.Event.Reset();
+	Entry.BeltSettings.Reset();
+	for (const FAMBeltSetting& Setting : Settings)
+	{
+		FAMBeltSetting Clean = Setting;
+		Clean.Event = AMRules::NormalizeEventName(Setting.Event);
+		if (!Clean.Event.IsEmpty() && !Entry.BeltSettings.ContainsByPredicate([&Clean](const FAMBeltSetting& S) { return S.Event == Clean.Event; }))
+		{
+			Entry.BeltSettings.Add(Clean);
+		}
+	}
+	if (!Entry.BeltSettings.ContainsByPredicate([&Entry](const FAMBeltSetting& S) { return S.Event == Entry.BeltShowing; }))
+	{
+		Entry.BeltShowing.Reset();
+	}
+	UE_LOG(LogAutomatedMachines, Log, TEXT("%s: %d belt settings, showing %s"), *AMAS_Describe(Machine), Entry.BeltSettings.Num(),
+		Entry.BeltShowing.IsEmpty() ? TEXT("the normal settings") : *Entry.BeltShowing);
+	if (Entry.BeltSettings.Num() == 0)
+	{
+		AMBelt::Apply(Machine, Normal);
+		if (Entry.IsEmpty())
+		{
+			mMachines.RemoveAt(Index);
+		}
+	}
+	else
+	{
+		TWeakObjectPtr<AFGBuildable> WeakMachine(Machine);
+		FTimerHandle Later;
+		GetWorldTimerManager().SetTimer(Later, FTimerDelegate::CreateWeakLambda(this, [this, WeakMachine]()
+		{
+			ShowCurrentBeltSetting(WeakMachine.Get());
+		}), 1.f, false);
+	}
+	ForceNetUpdate();
+	OnRulesChanged.Broadcast();
+}
+
+void AAMAutomationSubsystem::PreviewBelt(AFGBuildable* Machine, const FAMBeltSetting& Setting)
+{
+	if (HasAuthority() && AMBelt::IsBelt(Machine))
+	{
+		AMBelt::Apply(Machine, Setting);
+	}
+}
+
+void AAMAutomationSubsystem::ShowCurrentBeltSetting(AFGBuildable* Machine)
+{
+	const FAMMachineRules* Rules = FindRules(Machine);
+	if (!Rules || Rules->BeltSettings.Num() == 0)
+	{
+		return;
+	}
+	const FAMBeltSetting* Setting = Rules->BeltSettings.FindByPredicate([Rules](const FAMBeltSetting& S) { return S.Event == Rules->BeltShowing; });
+	AMBelt::Apply(Machine, Setting ? *Setting : Rules->BeltNormal);
+}
+
 void AAMAutomationSubsystem::ClearAlarm(const FString& Event, bool bRingers, const AActor* OnlyMachine, bool bOnlyHub, bool bMam)
 {
 	if (!HasAuthority() || Event.IsEmpty())
@@ -408,6 +485,7 @@ void AAMAutomationSubsystem::ClearAlarm(const FString& Event, bool bRingers, con
 	int32 Removed = 0;
 	TArray<AFGBuildableWidgetSign*> SignsToRefresh;
 	TArray<AFGBuildable*> LightsToRefresh;
+	TArray<AFGBuildable*> BeltsToRefresh;
 	for (FAMMachineRules& Entry : mMachines)
 	{
 		if (bOnlyHub || (OnlyMachine && Entry.Machine.Get() != OnlyMachine))
@@ -470,6 +548,26 @@ void AAMAutomationSubsystem::ClearAlarm(const FString& Event, bool bRingers, con
 					}
 				}
 			}
+			const int32 Belts = Entry.BeltSettings.RemoveAll([&Event](const FAMBeltSetting& Setting) { return Setting.Event == Event; });
+			if (Belts > 0)
+			{
+				Removed += Belts;
+				if (Entry.BeltShowing == Event)
+				{
+					Entry.BeltShowing.Reset();
+				}
+				if (Entry.Machine)
+				{
+					if (Entry.BeltSettings.Num() == 0)
+					{
+						AMBelt::Apply(Entry.Machine, Entry.BeltNormal);
+					}
+					else
+					{
+						BeltsToRefresh.Add(Entry.Machine);
+					}
+				}
+			}
 		}
 	}
 	if (bRingers && !OnlyMachine)
@@ -491,6 +589,10 @@ void AAMAutomationSubsystem::ClearAlarm(const FString& Event, bool bRingers, con
 	for (AFGBuildable* Light : LightsToRefresh)
 	{
 		ShowCurrentLightSetting(Light);
+	}
+	for (AFGBuildable* Belt : BeltsToRefresh)
+	{
+		ShowCurrentBeltSetting(Belt);
 	}
 	RemoveInvalidEntries();
 	UE_LOG(LogAutomatedMachines, Log, TEXT("Alarm %s cleared (%s): %d rows removed"), *Event, bRingers ? TEXT("ringers") : TEXT("listeners"), Removed);
@@ -548,6 +650,9 @@ void AAMAutomationSubsystem::SetRules(AFGBuildable* Machine, const TArray<FAMFir
 		NewRules.LightSettings = Existing->LightSettings;
 		NewRules.LightNormal = Existing->LightNormal;
 		NewRules.LightShowing = Existing->LightShowing;
+		NewRules.BeltSettings = Existing->BeltSettings;
+		NewRules.BeltNormal = Existing->BeltNormal;
+		NewRules.BeltShowing = Existing->BeltShowing;
 		NewRules.bSignalBlocked = Existing->bSignalBlocked;
 		NewRules.StationTextShown = Existing->StationTextShown;
 	}
@@ -893,6 +998,10 @@ TArray<FString> AAMAutomationSubsystem::GetAllEventNames() const
 		{
 			Names.Add(Setting.Event);
 		}
+		for (const FAMBeltSetting& Setting : Entry.BeltSettings)
+		{
+			Names.Add(Setting.Event);
+		}
 	}
 	TArray<FString> Result = Names.Array();
 	Result.Sort();
@@ -911,7 +1020,8 @@ void AAMAutomationSubsystem::CountEventUses(const FString& Event, int32& OutRing
 		}
 		if (Entry.Reactions.ContainsByPredicate([&Event](const FAMReactionRule& Rule) { return Rule.Event == Event; })
 			|| Entry.SignDesigns.ContainsByPredicate([&Event](const FAMSignDesign& Design) { return Design.Event == Event; })
-			|| Entry.LightSettings.ContainsByPredicate([&Event](const FAMLightSetting& Setting) { return Setting.Event == Event; }))
+			|| Entry.LightSettings.ContainsByPredicate([&Event](const FAMLightSetting& Setting) { return Setting.Event == Event; })
+			|| Entry.BeltSettings.ContainsByPredicate([&Event](const FAMBeltSetting& Setting) { return Setting.Event == Event; }))
 		{
 			++OutActors;
 		}
@@ -941,7 +1051,7 @@ bool AAMAutomationSubsystem::CanAutomate(const AActor* Machine)
 		|| AMRules::IsValve(Machine) || Machine->IsA<AFGBuildablePipeReservoir>() || Machine->IsA<AFGBuildableResourceSink>()
 		|| Machine->IsA<AFGBuildableRailroadSignal>() || Machine->IsA<AFGBuildableRailroadStation>()
 		|| Machine->IsA<AFGBuildableTrainPlatformCargo>() || Machine->IsA<AFGBuildableDockingStation>()
-		|| Machine->IsA<AFGBuildablePowerStorage>() || Machine->IsA<AFGBuildableDroneStation>());
+		|| Machine->IsA<AFGBuildablePowerStorage>() || Machine->IsA<AFGBuildableDroneStation>() || AMBelt::IsBelt(Machine));
 }
 
 bool AAMAutomationSubsystem::RemoveInvalidEntries()
@@ -1228,6 +1338,17 @@ void AAMAutomationSubsystem::FireEvent(const FString& Event, const AActor* Ringe
 		// Lights: after this loop (panels first, then single lights).
 		if (AMLight::IsLight(Entry.Machine))
 		{
+			continue;
+		}
+		// Splitters and mergers: their settings for this alarm (they have no actions of their own).
+		if (AMBelt::IsBelt(Entry.Machine))
+		{
+			if (const FAMBeltSetting* Setting = Entry.BeltSettings.FindByPredicate([&Event](const FAMBeltSetting& S) { return S.Event == Event; }))
+			{
+				Entry.BeltShowing = Event;
+				AMBelt::Apply(Entry.Machine, *Setting);
+				UE_LOG(LogAutomatedMachines, Log, TEXT("%s gets its %s settings"), *AMAS_Describe(Entry.Machine), *Event);
+			}
 			continue;
 		}
 		// Railway signals: Block / Unblock (kept in the entry, saved).

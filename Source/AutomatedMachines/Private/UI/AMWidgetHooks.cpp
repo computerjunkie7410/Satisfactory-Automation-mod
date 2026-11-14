@@ -110,6 +110,12 @@ namespace
 	const TCHAR* const AMWH_LightWindow = TEXT("/Game/FactoryGame/Buildable/Factory/LightsControlPanel/UI/BPW_LightsControlPanel.BPW_LightsControlPanel_C");
 	const TCHAR* const AMWH_LightPageChild = TEXT("mCopyPasteButtons");
 
+	// Smart splitter, programmable splitter, priority merger (dumps 14 Nov 2026): three single-page windows,
+	// each with a Copy / Paste buttons panel (mCopyPasteButtons); the same side list as the lights.
+	const TCHAR* const AMWH_SmartSplitterWindow = TEXT("/Game/FactoryGame/Buildable/-Shared/Widgets/Widget_SplitterSmart.Widget_SplitterSmart_C");
+	const TCHAR* const AMWH_ProgrammableSplitterWindow = TEXT("/Game/FactoryGame/Buildable/-Shared/Widgets/Widget_SplitterProgrammable.Widget_SplitterProgrammable_C");
+	const TCHAR* const AMWH_PriorityMergerWindow = TEXT("/Game/FactoryGame/Buildable/Factory/CA_MergerPriority/UI/Widget_MergerPriority.Widget_MergerPriority_C");
+
 	// Power switches and priority power switches: one window with sliding pages, like the production
 	// window (dump 5 Nov 2026): the switch page and the priority list (its tab button is collapsed on
 	// a plain power switch) side by side in HorizontalBox_0.
@@ -199,6 +205,12 @@ namespace
 		AMWH_HookPages(HookManager, AMWH_SignWindow, AMWH_SignPageChild, TEXT("AM_SignDesignTabsHook"), false,
 			EWidgetBlueprintHookParentType::Indirect_Child, UAMSignTabs::StaticClass());
 		AMWH_HookPages(HookManager, AMWH_LightWindow, AMWH_LightPageChild, TEXT("AM_LightSettingsTabsHook"), false,
+			EWidgetBlueprintHookParentType::Indirect_Child, UAMSignTabs::StaticClass());
+		AMWH_HookPages(HookManager, AMWH_SmartSplitterWindow, AMWH_LightPageChild, TEXT("AM_SmartSplitterSettingsTabsHook"), false,
+			EWidgetBlueprintHookParentType::Indirect_Child, UAMSignTabs::StaticClass());
+		AMWH_HookPages(HookManager, AMWH_ProgrammableSplitterWindow, AMWH_LightPageChild, TEXT("AM_ProgrammableSplitterSettingsTabsHook"), false,
+			EWidgetBlueprintHookParentType::Indirect_Child, UAMSignTabs::StaticClass());
+		AMWH_HookPages(HookManager, AMWH_PriorityMergerWindow, AMWH_LightPageChild, TEXT("AM_PriorityMergerSettingsTabsHook"), false,
 			EWidgetBlueprintHookParentType::Indirect_Child, UAMSignTabs::StaticClass());
 	}
 }

@@ -14,6 +14,7 @@
 #include "Buildables/FGBuildableWidgetSign.h"
 #include "UI/AMSignTabs.h"
 #include "Automation/AMLight.h"
+#include "Automation/AMBelt.h"
 
 namespace
 {
@@ -67,6 +68,10 @@ namespace
 
 	FString AMCB_Describe(const AMClipboard::FClip& Clip)
 	{
+		if (Clip.BeltSettings.Num() > 0)
+		{
+			return FString::Printf(TEXT("%d alarm setting%s"), Clip.BeltSettings.Num(), Clip.BeltSettings.Num() == 1 ? TEXT("") : TEXT("s"));
+		}
 		if (Clip.LightSettings.Num() > 0)
 		{
 			return FString::Printf(TEXT("%d alarm setting%s"), Clip.LightSettings.Num(), Clip.LightSettings.Num() == 1 ? TEXT("") : TEXT("s"));
@@ -97,6 +102,8 @@ namespace
 		OutClip.SignDesigns = Rules->SignDesigns;
 		OutClip.LightNormal = Rules->LightNormal;
 		OutClip.LightSettings = Rules->LightSettings;
+		OutClip.BeltNormal = Rules->BeltNormal;
+		OutClip.BeltSettings = Rules->BeltSettings;
 		return true;
 	}
 }
@@ -161,6 +168,11 @@ bool AMClipboard::Paste(AFGPlayerState* Player, UObject* Object)
 		// The game pastes the light's own settings; the alarm settings come from us.
 		UAMRemoteCallObject::RequestSetLightSettings(AMCB_Controller(Player), Machine, Clip->LightNormal, Clip->LightSettings);
 	}
+	else if (AMBelt::IsBelt(Machine))
+	{
+		// The game pastes the splitter's own settings; the alarm settings come from us.
+		UAMRemoteCallObject::RequestSetBeltSettings(AMCB_Controller(Player), Machine, Clip->BeltNormal, Clip->BeltSettings);
+	}
 	else
 	{
 		UAMRemoteCallObject::RequestSetRules(AMCB_Controller(Player), Machine, Clip->Fires, Clip->Reactions, Clip->Options);
@@ -185,6 +197,10 @@ void AMClipboard::OnBuildableConstructed(AAMAutomationSubsystem* Subsystem, AFGB
 	else if (AMLight::IsLight(Buildable))
 	{
 		Subsystem->SetLightSettings(Buildable, Sample->Clip.LightNormal, Sample->Clip.LightSettings);
+	}
+	else if (AMBelt::IsBelt(Buildable))
+	{
+		Subsystem->SetBeltSettings(Buildable, Sample->Clip.BeltNormal, Sample->Clip.BeltSettings);
 	}
 	else
 	{

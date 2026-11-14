@@ -347,3 +347,9 @@ Test of the Automation tab: open a Smelter and a Constructor, click Automation, 
 - The window's `InputInventoryScrollbox` sits in `OutgoingOverlay`: input inventory = outgoing, output inventory = incoming. (The window's two labels read the other way round in the widget names; we follow the inventories.)
 - New conditions (appended after BatteryEmptiesWithin): Outgoing/Incoming item count above/below (item picked per alarm; replaces the generic item count for this port) and Outgoing/Incoming rate above/below (`AFGDroneStationInfo::GetAverageTotalOutgoing/IncomingItemRate`, items per minute, includes connected ports).
 - Actions DeleteOutgoing / DeleteIncoming (appended after ReplaceFuelOff): empty the input (outgoing) or output (incoming) inventory of a drone port. Hidden everywhere else.
+
+## Splitters and priority merger (14 Nov 2026)
+- Windows (dump 14 Nov): `Widget_SplitterSmart_C`, `Widget_SplitterProgrammable_C` (both target `AFGBuildableSplitterSmart`, property `mSplitterSmart`) and `Widget_MergerPriority_C` (`AFGBuildableMergerPriority`, `mPriorityMerger`); all have `mInteractObject` and an own-tree `mCopyPasteButtons`, hooked like the light window (Indirect_Child, `UAMSignTabs`).
+- `UAMSignTabs` got `bBeltMode`: slots `mBeltNormal` / `mBelts` (`FAMBeltSetting`: Event, RuleItems + RuleOutputs, Priorities). Loading a row = `RequestPreviewBelt` (server `AMBelt::Apply`); capturing = `AMBelt::Read` of the machine.
+- Data: `FAMMachineRules::BeltNormal / BeltSettings / BeltShowing`. Subsystem: `SetBeltSettings`, `PreviewBelt`, `ShowCurrentBeltSetting`; ClearAlarm, event names, use counts, copy / paste, sampling and the fire loop handle them like the light settings. `AMBelt` (AMBelt.h/.cpp): IsBelt, Read, Apply (`SetSortRules`, `SetInputPriorities`, whose size must equal the number of inputs).
+- Not compiled before pushing (no UE here): read the build log first if the update fails.

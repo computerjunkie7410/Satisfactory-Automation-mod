@@ -2589,7 +2589,8 @@ void UAMAutomationTab::AddExpandedList()
 			? Entry.Fires.ContainsByPredicate([&Event](const FAMFireRule& Rule) { return Rule.Event == Event; })
 			: (Entry.Reactions.ContainsByPredicate([&Event](const FAMReactionRule& Rule) { return Rule.Event == Event; })
 				|| Entry.SignDesigns.ContainsByPredicate([&Event](const FAMSignDesign& Design) { return Design.Event == Event; })
-				|| Entry.LightSettings.ContainsByPredicate([&Event](const FAMLightSetting& Setting) { return Setting.Event == Event; }));
+				|| Entry.LightSettings.ContainsByPredicate([&Event](const FAMLightSetting& Setting) { return Setting.Event == Event; })
+				|| Entry.BeltSettings.ContainsByPredicate([&Event](const FAMBeltSetting& Setting) { return Setting.Event == Event; }));
 		if (!bUses)
 		{
 			continue;

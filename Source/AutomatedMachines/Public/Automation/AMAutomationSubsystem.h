@@ -82,6 +82,15 @@ public:
 	void PreviewLight(AFGBuildable* Light, const FAMLightSetting& Setting);
 
 	/**
+	 * The same for a smart / programmable splitter or a priority merger (server only): its normal
+	 * settings and one per alarm. No settings: the normal ones, and the entry goes.
+	 */
+	void SetBeltSettings(AFGBuildable* Machine, const FAMBeltSetting& Normal, const TArray<FAMBeltSetting>& Settings);
+
+	/** Gives a splitter / merger some settings now (server only): the window shows another row of its list. */
+	void PreviewBelt(AFGBuildable* Machine, const FAMBeltSetting& Setting);
+
+	/**
 	 * Removes an alarm (server only): bRingers = the machines' alarm rows with this name; else every
 	 * action with it (machines, the HUB) and every sign design for it. OnlyMachine: from that one
 	 * machine only; bOnlyHub: from the HUB's actions only (the overview's per-machine bins).
@@ -118,6 +127,9 @@ private:
 
 	/** Gives a light the settings it should have now (its alarm's, or the normal ones). */
 	void ShowCurrentLightSetting(AFGBuildable* Light);
+
+	/** The same for a splitter / merger. */
+	void ShowCurrentBeltSetting(AFGBuildable* Machine);
 
 	/** Removes entries of dismantled machines and entries without rules. Returns true if any were removed. */
 	bool RemoveInvalidEntries();

@@ -46,6 +46,18 @@ public:
 	/** Gives a light some settings now (its window shows another row of the list). */
 	static void RequestPreviewLight(APlayerController* Player, AFGBuildable* Light, const FAMLightSetting& Setting);
 
+	UFUNCTION(Server, Reliable)
+	void ServerSetBeltSettings(AFGBuildable* Machine, const FAMBeltSetting& Normal, const TArray<FAMBeltSetting>& Settings);
+
+	/** A splitter's / priority merger's settings: on the server directly, else through the RCO. */
+	static void RequestSetBeltSettings(APlayerController* Player, AFGBuildable* Machine, const FAMBeltSetting& Normal, const TArray<FAMBeltSetting>& Settings);
+
+	UFUNCTION(Server, Reliable)
+	void ServerPreviewBelt(AFGBuildable* Machine, const FAMBeltSetting& Setting);
+
+	/** Gives a splitter / merger some settings now (its window shows another row of the list). */
+	static void RequestPreviewBelt(APlayerController* Player, AFGBuildable* Machine, const FAMBeltSetting& Setting);
+
 	/** Every player gets this object (made on the server when the player controller starts). */
 	static void InstallRegistration();
 

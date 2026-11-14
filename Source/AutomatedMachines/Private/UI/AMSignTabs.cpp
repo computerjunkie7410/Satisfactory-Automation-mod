@@ -4,6 +4,7 @@
 #include "Automation/AMAutomationSubsystem.h"
 #include "Automation/AMSign.h"
 #include "Automation/AMLight.h"
+#include "Automation/AMBelt.h"
 #include "Buildables/FGBuildableLightSource.h"
 #include "Net/AMRemoteCallObject.h"
 #include "Buildables/FGBuildableWidgetSign.h"
@@ -427,16 +428,20 @@ AFGBuildable* UAMSignTabs::GetTarget() const
 		return Sign;
 	}
 	AFGBuildable* Light = Cast<AFGBuildable>(AMST_GetObject(GetHostWindow(), TEXT("mInteractObject")));
-	return AMLight::IsLight(Light) ? Light : nullptr;
+	return AMLight::IsLight(Light) || AMBelt::IsBelt(Light) ? Light : nullptr;
 }
 
 int32 UAMSignTabs::NumSlots() const
 {
-	return bLightMode ? mLights.Num() : mDesigns.Num();
+	return bBeltMode ? mBelts.Num() : bLightMode ? mLights.Num() : mDesigns.Num();
 }
 
 FString UAMSignTabs::SlotEvent(int32 SlotIndex) const
 {
+	if (bBeltMode)
+	{
+		return mBelts.IsValidIndex(SlotIndex) ? mBelts[SlotIndex].Event : FString();
+	}
 	if (bLightMode)
 	{
 		return mLights.IsValidIndex(SlotIndex) ? mLights[SlotIndex].Event : FString();
@@ -446,9 +451,43 @@ FString UAMSignTabs::SlotEvent(int32 SlotIndex) const
 
 bool UAMSignTabs::HasSlot(const FString& Event) const
 {
+	if (bBeltMode)
+	{
+		return mBelts.ContainsByPredicate([&Event](const FAMBeltSetting& S) { return S.Event == Event; });
+	}
 	return bLightMode
 		? mLights.ContainsByPredicate([&Event](const FAMLightSetting& S) { return S.Event == Event; })
 		: mDesigns.ContainsByPredicate([&Event](const FAMSignDesign& D) { return D.Event == Event; });
+}
+
+FAMBeltSetting& UAMSignTabs::GetBeltSlot(int32 Index)
+{
+	return mBelts.IsValidIndex(Index - 1) ? mBelts[Index - 1] : mBeltNormal;
+}
+
+bool UAMSignTabs::ReadBeltEditor(FAMBeltSetting& OutSetting, const FString& Event) const
+{
+	// What the machine has now (the game's window sets it on every change).
+	const AFGBuildable* Machine = mSetupTarget.Get() ? mSetupTarget.Get() : GetTarget();
+	if (!Machine)
+	{
+		return false;
+	}
+	OutSetting = AMBelt::Read(Machine, Event);
+	return true;
+}
+
+void UAMSignTabs::LoadBeltEditor(const FAMBeltSetting& Setting)
+{
+	AFGBuildable* Machine = mSetupTarget.Get();
+	if (!Machine)
+	{
+		return;
+	}
+	// On the machine (the server); the game's window shows what the machine has.
+	UAMRemoteCallObject::RequestPreviewBelt(GetOwningPlayer(), Machine, Setting);
+	UE_LOG(LogAutomatedMachines, Log, TEXT("Belt settings: loaded %s (%d rules, %d priorities)"),
+		Setting.Event.IsEmpty() ? TEXT("Default") : *Setting.Event, Setting.RuleItems.Num(), Setting.Priorities.Num());
 }
 
 FAMLightSetting& UAMSignTabs::GetLightSlot(int32 Index)
@@ -588,6 +627,16 @@ FAMSignDesign& UAMSignTabs::GetSlot(int32 Index)
 
 void UAMSignTabs::CaptureEditor()
 {
+	if (bBeltMode)
+	{
+		FAMBeltSetting& CurrentBelt = GetBeltSlot(mSelected);
+		FAMBeltSetting EditedBelt;
+		if (ReadBeltEditor(EditedBelt, CurrentBelt.Event))
+		{
+			CurrentBelt = EditedBelt;
+		}
+		return;
+	}
 	if (bLightMode)
 	{
 		FAMLightSetting& CurrentLight = GetLightSlot(mSelected);
@@ -608,6 +657,15 @@ void UAMSignTabs::CaptureEditor()
 
 void UAMSignTabs::SendDesigns()
 {
+	if (bBeltMode)
+	{
+		if (AFGBuildable* Machine = mSetupTarget.Get())
+		{
+			UAMRemoteCallObject::RequestSetBeltSettings(GetOwningPlayer(), Machine, mBeltNormal, mBelts);
+			bHadDesigns = mBelts.Num() > 0;
+		}
+		return;
+	}
 	if (bLightMode)
 	{
 		if (AFGBuildable* Light = mSetupTarget.Get())
@@ -656,9 +714,34 @@ void UAMSignTabs::Setup()
 		return;
 	}
 	bLightMode = AMLight::IsLight(Target);
+	bBeltMode = AMBelt::IsBelt(Target);
 	mSetupTarget = Target;
 	const AAMAutomationSubsystem* LightSubsystem = AAMAutomationSubsystem::Get(this);
 	const FAMMachineRules* LightRules = LightSubsystem ? LightSubsystem->FindRules(Target) : nullptr;
+	if (bBeltMode)
+	{
+		// The settings: ours if the machine has any, else what it has now is the normal one.
+		mBelts.Reset();
+		mSelected = 0;
+		if (LightRules && LightRules->BeltSettings.Num() > 0)
+		{
+			mBeltNormal = LightRules->BeltNormal;
+			mBelts = LightRules->BeltSettings;
+			const int32 Showing = mBelts.IndexOfByPredicate([LightRules](const FAMBeltSetting& S) { return S.Event == LightRules->BeltShowing; });
+			mSelected = Showing == INDEX_NONE ? 0 : Showing + 1;
+			bHadDesigns = true;
+		}
+		else
+		{
+			ReadBeltEditor(mBeltNormal, FString());
+			bHadDesigns = false;
+		}
+		bSetUp = true;
+		AMST_Open = this;
+		RebuildTabs();
+		UE_LOG(LogAutomatedMachines, Log, TEXT("Belt settings for %s: %d alarm settings, tab %d selected"), *Target->GetName(), mBelts.Num(), mSelected);
+		return;
+	}
 	if (bLightMode)
 	{
 		// The settings: ours if the light has any, else what it has now is the normal one.
@@ -751,7 +834,7 @@ void UAMSignTabs::RebuildTabs()
 	mSidePanel->AddChild(Panel);
 	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass());
 	Panel->AddChild(Column);
-	if (UVerticalBoxSlot* TitleSlot = Column->AddChildToVerticalBox(AMUI::MakeText(WidgetTree, bLightMode ? TEXT("Settings") : TEXT("Designs"), AMUI::SizedFont(Font, 15), AMUI::White)))
+	if (UVerticalBoxSlot* TitleSlot = Column->AddChildToVerticalBox(AMUI::MakeText(WidgetTree, (bLightMode || bBeltMode) ? TEXT("Settings") : TEXT("Designs"), AMUI::SizedFont(Font, 15), AMUI::White)))
 	{
 		TitleSlot->SetPadding(FMargin(4.f, 2.f, 0.f, 8.f));
 	}
@@ -899,7 +982,11 @@ void UAMSignTabs::SelectTab(int32 Index)
 	{
 		CaptureEditor();
 		mSelected = Index;
-		if (bLightMode)
+		if (bBeltMode)
+		{
+			LoadBeltEditor(GetBeltSlot(Index));
+		}
+		else if (bLightMode)
 		{
 			LoadLightEditor(GetLightSlot(Index));
 		}
@@ -940,7 +1027,13 @@ void UAMSignTabs::AddDesign(const FString& Alarm)
 		return;
 	}
 	// Starts as a copy of the row being edited.
-	if (bLightMode)
+	if (bBeltMode)
+	{
+		FAMBeltSetting Setting = GetBeltSlot(mSelected);
+		Setting.Event = Event;
+		mBelts.Add(Setting);
+	}
+	else if (bLightMode)
 	{
 		FAMLightSetting Setting = GetLightSlot(mSelected);
 		Setting.Event = Event;
@@ -966,7 +1059,11 @@ void UAMSignTabs::RemoveDesign(int32 Index)
 	}
 	CaptureEditor();
 	const bool bWasSelected = Index == mSelected;
-	if (bLightMode)
+	if (bBeltMode)
+	{
+		mBelts.RemoveAt(Index - 1);
+	}
+	else if (bLightMode)
 	{
 		mLights.RemoveAt(Index - 1);
 	}
@@ -977,7 +1074,11 @@ void UAMSignTabs::RemoveDesign(int32 Index)
 	if (bWasSelected)
 	{
 		mSelected = 0;
-		if (bLightMode)
+		if (bBeltMode)
+		{
+			LoadBeltEditor(mBeltNormal);
+		}
+		else if (bLightMode)
 		{
 			LoadLightEditor(mLightNormal);
 		}
@@ -1069,7 +1170,7 @@ void UAMSignTabs::OpenPicker()
 	SearchSize->AddChild(SearchField);
 	mPickerSearch = WidgetTree->ConstructWidget<UEditableText>(UEditableText::StaticClass());
 	mPickerSearch->SetFont(Font);
-	mPickerSearch->SetHintText(FText::FromString(bLightMode ? TEXT("settings for which alarm?") : TEXT("design for which alarm?")));
+	mPickerSearch->SetHintText(FText::FromString((bLightMode || bBeltMode) ? TEXT("settings for which alarm?") : TEXT("design for which alarm?")));
 	mPickerSearch->OnTextChanged.AddDynamic(this, &UAMSignTabs::OnPickerSearchChanged);
 	mPickerSearch->OnTextCommitted.AddDynamic(this, &UAMSignTabs::OnPickerSearchCommitted);
 	SearchField->AddChild(mPickerSearch);
@@ -1163,7 +1264,7 @@ void UAMSignTabs::FillPicker(const FString& Filter)
 		UBorder* Message = AMUI::MakeBox(WidgetTree, AMUI::Option, FMargin(12.f, 7.f));
 		Message->AddChild(AMUI::MakeText(WidgetTree, Typed.IsEmpty()
 			? FString(TEXT("No alarms yet: type a name and press Enter."))
-			: FString::Printf(TEXT("Enter: new %s for %s"), bLightMode ? TEXT("settings") : TEXT("design"), *Typed), Font, AMUI::Grey));
+			: FString::Printf(TEXT("Enter: new %s for %s"), (bLightMode || bBeltMode) ? TEXT("settings") : TEXT("design"), *Typed), Font, AMUI::Grey));
 		mPickerList->AddChildToVerticalBox(Message);
 	}
 }

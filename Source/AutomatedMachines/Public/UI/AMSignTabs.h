@@ -17,6 +17,11 @@
 // Default and one row per alarm. There the game's controls set the light itself while editing; each
 // row's settings are read from and loaded into the window (bLightMode).
 //
+// Smart and programmable splitters and priority mergers get the same list (bBeltMode): a row is the
+// splitter's sort rules / the merger's input priorities. Selecting a row puts its settings on the
+// machine (the game's own window follows); the game's controls edit the machine, and the edits are read
+// back into the selected row.
+//
 // This widget is hooked into the Sign Designer's page: an empty, click-through layer over it (visible,
 // so it always has a size: the alarm picker floats on it, above "+ Auto Settings"). The list (made in
 // its widget tree) goes into the window's body row, next to the page.
@@ -134,6 +139,16 @@ private:
 	int32 NumSlots() const;
 	FString SlotEvent(int32 SlotIndex) const;
 	bool HasSlot(const FString& Event) const;
+
+	/** Splitters / mergers: the settings shown in the window (the machine's own), and loading some. */
+	bool ReadBeltEditor(FAMBeltSetting& OutSetting, const FString& Event) const;
+	void LoadBeltEditor(const FAMBeltSetting& Setting);
+	FAMBeltSetting& GetBeltSlot(int32 Index);
+
+	/** The window is a splitter's or a merger's: belt settings. */
+	bool bBeltMode = false;
+	FAMBeltSetting mBeltNormal;
+	TArray<FAMBeltSetting> mBelts;
 
 	/** The window is a light's: light settings, not sign designs. */
 	bool bLightMode = false;

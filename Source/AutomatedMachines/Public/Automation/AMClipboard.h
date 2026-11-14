@@ -30,6 +30,9 @@ namespace AMClipboard
 		/** Lights: the normal settings and the alarm settings. */
 		FAMLightSetting LightNormal;
 		TArray<FAMLightSetting> LightSettings;
+		/** Splitters and priority mergers: the normal settings and the alarm settings. */
+		FAMBeltSetting BeltNormal;
+		TArray<FAMBeltSetting> BeltSettings;
 	};
 
 	/** Installs the hooks (once, at module startup, not in the editor). */

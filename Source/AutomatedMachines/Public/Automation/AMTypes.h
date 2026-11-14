@@ -333,6 +333,29 @@ struct AUTOMATEDMACHINES_API FAMLightSetting
 	bool bEnabled = true;
 };
 
+/**
+ * Settings of a smart / programmable splitter or a priority merger for one alarm (or the normal
+ * settings, no event): a splitter's sort rules (an item and the output it goes to, side by side in the
+ * two arrays), a merger's priority per input.
+ */
+USTRUCT(BlueprintType)
+struct AUTOMATEDMACHINES_API FAMBeltSetting
+{
+	GENERATED_BODY()
+
+	UPROPERTY(SaveGame)
+	FString Event;
+
+	UPROPERTY(SaveGame)
+	TArray<TSubclassOf<UFGItemDescriptor>> RuleItems;
+
+	UPROPERTY(SaveGame)
+	TArray<int32> RuleOutputs;
+
+	UPROPERTY(SaveGame)
+	TArray<int32> Priorities;
+};
+
 /** All rules of one machine. Machines without rules have no entry at all. */
 USTRUCT(BlueprintType)
 struct AUTOMATEDMACHINES_API FAMMachineRules
@@ -371,6 +394,16 @@ struct AUTOMATEDMACHINES_API FAMMachineRules
 	UPROPERTY(SaveGame)
 	FString LightShowing;
 
+	/** Splitters and priority mergers: settings per alarm, the normal settings, and the alarm showing now (empty: normal). */
+	UPROPERTY(SaveGame)
+	TArray<FAMBeltSetting> BeltSettings;
+
+	UPROPERTY(SaveGame)
+	FAMBeltSetting BeltNormal;
+
+	UPROPERTY(SaveGame)
+	FString BeltShowing;
+
 	/**
 	 * Train stations: the text our Display text puts on the station's display (empty: its name). Only
 	 * the display's picture changes (on every machine, from this replicated value): the station keeps
@@ -383,7 +416,7 @@ struct AUTOMATEDMACHINES_API FAMMachineRules
 	UPROPERTY(SaveGame)
 	bool bSignalBlocked = false;
 
-	bool IsEmpty() const { return Fires.Num() == 0 && Reactions.Num() == 0 && Options.IsDefault() && SignDesigns.Num() == 0 && LightSettings.Num() == 0; }
+	bool IsEmpty() const { return Fires.Num() == 0 && Reactions.Num() == 0 && Options.IsDefault() && SignDesigns.Num() == 0 && LightSettings.Num() == 0 && BeltSettings.Num() == 0; }
 };
 
 namespace AMRules

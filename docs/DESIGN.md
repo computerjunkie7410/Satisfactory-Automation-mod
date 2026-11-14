@@ -282,3 +282,11 @@ The glow under automated machines is now a **circuit-board pattern**: cyan trace
 
 ### Drone Port
 Alarms and two actions, delete outgoing items and delete incoming items (outgoing and incoming item counts and rates, separately): drone arrives / leaves, busy / idle, input full / not full, output full / not full, fuel empty / available / below, loses / gets power. Actions: delete outgoing items, delete incoming items.
+
+### Smart / programmable splitters and priority mergers: settings per alarm (14 Nov 2026, to test)
+
+- Same side list as lights (`Settings: Default / ALARM [bin] / ... / + Auto Settings`) in the three windows (Smart Splitter, Programmable Splitter, Priority Merger). The programmable splitter is the same class as the smart one.
+- A row is the machine's own settings: a splitter's sort rules (item and output, as the game's window shows), a merger's priority per input. Selecting a row puts its settings on the machine and the game's window follows; the game's controls edit the machine, and the edits are read back into the selected row.
+- When an alarm rings the machine takes that alarm's settings and keeps them until another of its alarms rings (alarms have no "stopped"; use pairs). Default before any alarm rang.
+- No conditions and no Automation tab: a splitter or merger measures nothing here. They have no underglow (like lights and signs).
+- Copy / paste and middle-click sampling carry the alarm settings. Saved small: only the rules (item class and output index per rule). Uninstall-safe: without the mod the machine keeps the rules it had.

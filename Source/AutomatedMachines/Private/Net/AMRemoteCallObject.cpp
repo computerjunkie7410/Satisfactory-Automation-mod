@@ -183,6 +183,66 @@ void UAMRemoteCallObject::RequestPreviewLight(APlayerController* Player, AFGBuil
 	}
 }
 
+void UAMRemoteCallObject::ServerSetBeltSettings_Implementation(AFGBuildable* Machine, const FAMBeltSetting& Normal, const TArray<FAMBeltSetting>& Settings)
+{
+	if (AAMAutomationSubsystem* Subsystem = AAMAutomationSubsystem::Get(Machine))
+	{
+		Subsystem->SetBeltSettings(Machine, Normal, Settings);
+	}
+}
+
+void UAMRemoteCallObject::RequestSetBeltSettings(APlayerController* Player, AFGBuildable* Machine, const FAMBeltSetting& Normal, const TArray<FAMBeltSetting>& Settings)
+{
+	if (!Machine)
+	{
+		return;
+	}
+	if (Machine->HasAuthority())
+	{
+		if (AAMAutomationSubsystem* Subsystem = AAMAutomationSubsystem::Get(Machine))
+		{
+			Subsystem->SetBeltSettings(Machine, Normal, Settings);
+		}
+		return;
+	}
+	AFGPlayerController* FGPlayer = Cast<AFGPlayerController>(Player);
+	UAMRemoteCallObject* RCO = FGPlayer ? Cast<UAMRemoteCallObject>(FGPlayer->GetRemoteCallObjectOfClass(StaticClass())) : nullptr;
+	if (RCO)
+	{
+		RCO->ServerSetBeltSettings(Machine, Normal, Settings);
+	}
+}
+
+void UAMRemoteCallObject::ServerPreviewBelt_Implementation(AFGBuildable* Machine, const FAMBeltSetting& Setting)
+{
+	if (AAMAutomationSubsystem* Subsystem = AAMAutomationSubsystem::Get(Machine))
+	{
+		Subsystem->PreviewBelt(Machine, Setting);
+	}
+}
+
+void UAMRemoteCallObject::RequestPreviewBelt(APlayerController* Player, AFGBuildable* Machine, const FAMBeltSetting& Setting)
+{
+	if (!Machine)
+	{
+		return;
+	}
+	if (Machine->HasAuthority())
+	{
+		if (AAMAutomationSubsystem* Subsystem = AAMAutomationSubsystem::Get(Machine))
+		{
+			Subsystem->PreviewBelt(Machine, Setting);
+		}
+		return;
+	}
+	AFGPlayerController* FGPlayer = Cast<AFGPlayerController>(Player);
+	UAMRemoteCallObject* RCO = FGPlayer ? Cast<UAMRemoteCallObject>(FGPlayer->GetRemoteCallObjectOfClass(StaticClass())) : nullptr;
+	if (RCO)
+	{
+		RCO->ServerPreviewBelt(Machine, Setting);
+	}
+}
+
 void UAMRemoteCallObject::ServerClearAlarm_Implementation(const FString& Event, bool bRingers, AFGBuildable* OnlyMachine, bool bOnlyHub, bool bMam)
 {
 	if (AAMAutomationSubsystem* Subsystem = AAMAutomationSubsystem::Get(GetOuter()))
