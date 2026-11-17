@@ -1054,7 +1054,7 @@ bool AMRules::IsActionAvailable(EAMAction Action, const UObject* Machine)
 	if (Machine->IsA<AFGCentralStorageContainer>())
 	{
 		// Only its input: what waits to be uploaded (the depot itself is never touched).
-		return Action == EAMAction::DeleteContents;
+		return Action == EAMAction::DeleteInput;
 	}
 	if (Machine->IsA<AFGBuildableStorage>())
 	{

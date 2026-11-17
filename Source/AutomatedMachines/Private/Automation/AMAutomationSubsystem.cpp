@@ -2185,6 +2185,13 @@ void AAMAutomationSubsystem::ApplyAction(AFGBuildableFactory* Factory, const FAM
 		// A production machine: below.
 		[[fallthrough]];
 	case EAMAction::DeleteInput:
+		if (AFGCentralStorageContainer* Uplink = Rule.Action == EAMAction::DeleteInput ? Cast<AFGCentralStorageContainer>(Factory) : nullptr)
+		{
+			// Dimensional Depot uplink: its input slot only, never the depot.
+			const int32 Slots = DeleteAllItems(Uplink->GetStorageInventory());
+			UE_LOG(LogAutomatedMachines, Log, TEXT("%s: input deleted (%d slots had items)"), *AMAS_Describe(Factory), Slots);
+			break;
+		}
 		if (AFGBuildablePowerBooster* Booster = Cast<AFGBuildablePowerBooster>(Factory))
 		{
 			const int32 Slots = DeleteAllItems(Booster->GetFuelInventory());
