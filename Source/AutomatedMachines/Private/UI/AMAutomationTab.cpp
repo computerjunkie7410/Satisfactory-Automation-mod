@@ -740,6 +740,7 @@ void UAMAutomationTab::LoadRules()
 		mReactions = Rules->Reactions;
 		mOptions = Rules->Options;
 	}
+	mGroupOrder.Reset();
 	bRulesLoaded = true;
 	if (mClipboardRow)
 	{
@@ -1176,13 +1177,27 @@ void UAMAutomationTab::RebuildRows()
 		}
 	}
 
-	// Actions grouped by alarm, in the order the alarms first appear: a header, the alarm's
-	// actions, "+ action".
-	TArray<FString> GroupEvents;
+	// Actions grouped by alarm: a header, the alarm's actions, "+ action". The groups keep the
+	// order they were shown in (removing a group's first action must not move it below another
+	// group); new groups go last, in the order their alarms first appear.
+	TArray<FString> PresentEvents;
 	for (const FAMReactionRule& Rule : mReactions)
 	{
-		GroupEvents.AddUnique(Rule.Event);
+		PresentEvents.AddUnique(Rule.Event);
 	}
+	TArray<FString> GroupEvents;
+	for (const FString& Known : mGroupOrder)
+	{
+		if (PresentEvents.Contains(Known))
+		{
+			GroupEvents.AddUnique(Known);
+		}
+	}
+	for (const FString& Present : PresentEvents)
+	{
+		GroupEvents.AddUnique(Present);
+	}
+	mGroupOrder = GroupEvents;
 	for (int32 Group = 0; Group < GroupEvents.Num(); ++Group)
 	{
 		const FString& Event = GroupEvents[Group];
@@ -1507,6 +1522,19 @@ void UAMAutomationTab::RenameActionGroup(const FString& OldEvent, const FString&
 		if (Rule.Event == OldEvent)
 		{
 			Rule.Event = NewEvent;
+		}
+	}
+	// The renamed group stays where it was (or joins the group it now shares a name with).
+	const int32 OldPlace = mGroupOrder.IndexOfByKey(OldEvent);
+	if (OldPlace != INDEX_NONE)
+	{
+		if (mGroupOrder.Contains(NewEvent))
+		{
+			mGroupOrder.RemoveAt(OldPlace);
+		}
+		else
+		{
+			mGroupOrder[OldPlace] = NewEvent;
 		}
 	}
 	OnRulesEdited();

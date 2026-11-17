@@ -335,6 +335,8 @@ private:
 	/** This machine's rules as edited here (sent to the server on every change). */
 	TArray<FAMFireRule> mFires;
 	TArray<FAMReactionRule> mReactions;
+	/** The order the action groups are shown in: kept while editing, so removing an action never makes groups swap places. */
+	TArray<FString> mGroupOrder;
 	FAMMachineOptions mOptions;
 	bool bRulesLoaded = false;
 
