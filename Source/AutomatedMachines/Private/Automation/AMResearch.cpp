@@ -11,6 +11,8 @@
 #include "Engine/World.h"
 #include "UObject/UnrealType.h"
 #include "UObject/UObjectHash.h"
+#include "AssetRegistry/IAssetRegistry.h"
+#include "AssetRegistry/AssetData.h"
 #include "AvailabilityDependencies/FGAvailabilityDependency.h"
 
 namespace
@@ -65,21 +67,60 @@ namespace
 	/** Writes a grid position into a FVector2D or FIntPoint field. */
 	bool AMR_SetPoint(const FStructProperty* Field, void* Value, const FIntPoint& Point)
 	{
-		if (!Field)
+		// Any struct with numeric X and Y (FVector2D, FVector2f, FIntPoint, FVector, a blueprint struct...).
+		if (!Field || !Value)
 		{
 			return false;
 		}
-		if (Field->Struct == TBaseStructure<FVector2D>::Get())
+		bool bX = false;
+		bool bY = false;
+		for (TFieldIterator<FProperty> It(Field->Struct); It; ++It)
 		{
-			*static_cast<FVector2D*>(Value) = FVector2D(Point.X, Point.Y);
-			return true;
+			FNumericProperty* Number = CastField<FNumericProperty>(*It);
+			const FString Name = It->GetAuthoredName();
+			const bool bIsX = Name == TEXT("X") || Name.StartsWith(TEXT("X_"));
+			const bool bIsY = Name == TEXT("Y") || Name.StartsWith(TEXT("Y_"));
+			if (!Number || (!bIsX && !bIsY))
+			{
+				continue;
+			}
+			void* NumberValue = Number->ContainerPtrToValuePtr<void>(Value);
+			const int32 Coordinate = bIsX ? Point.X : Point.Y;
+			if (Number->IsFloatingPoint())
+			{
+				Number->SetFloatingPointPropertyValue(NumberValue, static_cast<double>(Coordinate));
+			}
+			else
+			{
+				Number->SetIntPropertyValue(NumberValue, static_cast<int64>(Coordinate));
+			}
+			bX |= bIsX;
+			bY |= bIsY;
 		}
-		if (Field->Struct == TBaseStructure<FIntPoint>::Get())
+		if (!(bX && bY))
 		{
-			*static_cast<FIntPoint*>(Value) = Point;
-			return true;
+			UE_LOG(LogAutomatedMachines, Warning, TEXT("[Research] %s [%s]: no X / Y to set"), *Field->GetAuthoredName(), *Field->Struct->GetName());
 		}
-		return false;
+		return bX && bY;
+	}
+
+	/** Logs a struct's fields, and those of the structs inside it (to see the game's node layout). */
+	void AMR_LogSchema(const UStruct* Struct, const FString& Indent)
+	{
+		for (TFieldIterator<FProperty> It(Struct); It; ++It)
+		{
+			UE_LOG(LogAutomatedMachines, Log, TEXT("[Research] schema %s%s [%s]"), *Indent, *It->GetAuthoredName(), *It->GetCPPType());
+			const FProperty* Inner = *It;
+			if (const FArrayProperty* Array = CastField<FArrayProperty>(Inner))
+			{
+				Inner = Array->Inner;
+				UE_LOG(LogAutomatedMachines, Log, TEXT("[Research] schema %s  of [%s]"), *Indent, *Inner->GetCPPType());
+			}
+			if (const FStructProperty* Nested = CastField<FStructProperty>(Inner); Nested && Indent.Len() < 8)
+			{
+				AMR_LogSchema(Nested->Struct, Indent + TEXT("  "));
+			}
+		}
 	}
 
 	/** Adds Object to an array-of-objects field of a struct value. */
@@ -315,9 +356,32 @@ bool UAMResearchTree::PrepareDefaults()
 
 	// The game's node blueprint: from a vanilla tree (logged as a model), or by its path.
 	UClass* NodeClass = nullptr;
+	// The game's trees: from the asset registry (the paths above are only a guess).
+	TArray<FString> TreePaths;
 	for (const TCHAR* TreePath : AMR_VanillaTrees)
 	{
-		UClass* TreeClass = LoadClass<UFGResearchTree>(nullptr, TreePath);
+		TreePaths.Add(TreePath);
+	}
+	{
+		TArray<FAssetData> Assets;
+		IAssetRegistry::GetChecked().GetAssetsByPath(FName(TEXT("/Game/FactoryGame/Schematics/Research")), Assets, true);
+		for (const FAssetData& Asset : Assets)
+		{
+			const FString Name = Asset.AssetName.ToString();
+			if (Name.StartsWith(TEXT("Research_")) && TreePaths.Num() < 12)
+			{
+				TreePaths.AddUnique(FString::Printf(TEXT("%s.%s_C"), *Asset.PackageName.ToString(), *Name));
+			}
+		}
+		UE_LOG(LogAutomatedMachines, Log, TEXT("[Research] %d assets in /Game/FactoryGame/Schematics/Research"), Assets.Num());
+	}
+	for (const FString& TreePath : TreePaths)
+	{
+		UClass* TreeClass = LoadObject<UClass>(nullptr, *TreePath, nullptr, LOAD_NoWarn | LOAD_Quiet);
+		if (TreeClass && !TreeClass->IsChildOf(UFGResearchTree::StaticClass()))
+		{
+			TreeClass = nullptr;
+		}
 		if (!TreeClass)
 		{
 			continue;
@@ -330,7 +394,7 @@ bool UAMResearchTree::PrepareDefaults()
 		}
 		FScriptArrayHelper Nodes(NodesProperty, NodesProperty->ContainerPtrToValuePtr<void>(TreeClass->GetDefaultObject()));
 		const FObjectPropertyBase* Inner = CastField<FObjectPropertyBase>(NodesProperty->Inner);
-		for (int32 Index = 0; Inner && Index < Nodes.Num() && Index < 2; ++Index)
+		for (int32 Index = 0; Inner && Index < Nodes.Num() && Index < 4; ++Index)
 		{
 			UObject* Node = Inner->GetObjectPropertyValue(Nodes.GetRawPtr(Index));
 			if (Node && !NodeClass)
@@ -359,6 +423,7 @@ bool UAMResearchTree::PrepareDefaults()
 		return false;
 	}
 	UE_LOG(LogAutomatedMachines, Log, TEXT("[Research] node class %s, data %s [%s]"), *NodeClass->GetPathName(), *DataProperty->GetName(), *DataProperty->Struct->GetName());
+	AMR_LogSchema(DataProperty->Struct, FString());
 
 	AMR_Keep(NodeClass);
 	UFGResearchTreeNode* Root = AMR_Keep(NewObject<UFGResearchTreeNode>(Cdo, NodeClass));
