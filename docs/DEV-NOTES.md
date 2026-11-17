@@ -365,3 +365,6 @@ Test of the Automation tab: open a Smelter and a Constructor, click Automation, 
 Class `AFGBuildablePowerBooster` (a plain `AFGBuildableFactory`, not a generator). Window `BPW_AlienPower_C` (`/Game/FactoryGame/Buildable/Factory/AlienPower/UI/`): one page, hooked as Indirect_Child of `mConsole` (bSlotSetup=false). Its power graph and production display are inside the same page. Fuel (alien items) is optional, so "fuel empty" only means no boost fuel loaded. Fuel count = all items in its fuel inventory.
 
 No standby button on the Augmenter (user, 17 Nov 2026): no paused / resumed alarms, no pause / resume actions; only "delete fuel".
+
+## Removing an action deleted the wrong one (17 Nov 2026, open)
+Report: in a Constructor, two alarm groups each with "Running"; the bin of the top group's Running removed the bottom group's. The code removes by the row's index into `mReactions` and I found no path that shifts it. Now each row remembers the alarm and action it shows (`mBuiltEvent` / `mBuiltAction`, kept up to date by the switch and the action picker); `RemoveRule` checks the index against them and, if it does not match, removes the matching rule instead and logs "Automation tab: remove: row index ... expected ...". Every removal also logs "Automation tab: removing action N (ALARM / Action) of M". If the warning shows up, it tells where the index goes wrong.

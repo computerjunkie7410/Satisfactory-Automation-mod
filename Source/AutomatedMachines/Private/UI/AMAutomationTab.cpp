@@ -1387,8 +1387,31 @@ void UAMAutomationTab::OnPassWrongHovered()
 	ShowPassWrongInfo();
 }
 
-void UAMAutomationTab::RemoveRule(bool bFire, int32 Index)
+void UAMAutomationTab::RemoveRule(bool bFire, int32 Index, const FString& ExpectedEvent, EAMAction ExpectedAction)
 {
+	// The row's index must still point at the rule the row shows (same alarm); if not, find it.
+	if (!bFire && mReactions.IsValidIndex(Index) && (mReactions[Index].Event != ExpectedEvent
+		|| (ExpectedAction != EAMAction::Count && mReactions[Index].Action != ExpectedAction)))
+	{
+		const int32 Found = mReactions.IndexOfByPredicate([&ExpectedEvent, ExpectedAction](const FAMReactionRule& Rule)
+		{
+			return Rule.Event == ExpectedEvent && Rule.Action == ExpectedAction;
+		});
+		UE_LOG(LogAutomatedMachines, Warning, TEXT("Automation tab: remove: row index %d is %s / %s, expected %s / %s; using %d"),
+			Index, *mReactions[Index].Event, *AMRules::GetActionText(mReactions[Index].Action).ToString(),
+			*ExpectedEvent, ExpectedAction != EAMAction::Count ? *AMRules::GetActionText(ExpectedAction).ToString() : TEXT("?"), Found);
+		Index = Found;
+	}
+	else if (bFire && mFires.IsValidIndex(Index) && mFires[Index].Event != ExpectedEvent)
+	{
+		UE_LOG(LogAutomatedMachines, Warning, TEXT("Automation tab: remove: alarm row index %d is %s, expected %s"),
+			Index, *mFires[Index].Event, *ExpectedEvent);
+	}
+	if (!bFire && mReactions.IsValidIndex(Index))
+	{
+		UE_LOG(LogAutomatedMachines, Log, TEXT("Automation tab: removing action %d (%s / %s) of %d"),
+			Index, *mReactions[Index].Event, *AMRules::GetActionText(mReactions[Index].Action).ToString(), mReactions.Num());
+	}
 	if (bFire && mFires.IsValidIndex(Index))
 	{
 		mFires.RemoveAt(Index);

@@ -112,7 +112,8 @@ public:
 	void OnRulesEdited();
 
 	/** Removes a rule, saves, and rebuilds the rows (on the next frame). */
-	void RemoveRule(bool bFire, int32 Index);
+	/** Removes a row's rule. ExpectedEvent / ExpectedAction: what the row showed (checked against the index). */
+	void RemoveRule(bool bFire, int32 Index, const FString& ExpectedEvent, EAMAction ExpectedAction);
 
 	/**
 	 * Actions grouped by alarm: one more action for the alarm (the first one that does not clash

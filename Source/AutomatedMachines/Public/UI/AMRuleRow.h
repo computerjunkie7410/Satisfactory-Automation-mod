@@ -183,6 +183,10 @@ private:
 
 	bool bIsAlarm = true;
 	int32 mIndex = INDEX_NONE;
+	/** The alarm name of the rule this row was built for (to check the index when removing). */
+	FString mBuiltEvent;
+	/** The action this row shows (kept up to date by its switch). */
+	EAMAction mBuiltAction = EAMAction::Count;
 
 	/** A header of grouped actions: its alarm, and how many actions it has. */
 	bool bGroupHeader = false;

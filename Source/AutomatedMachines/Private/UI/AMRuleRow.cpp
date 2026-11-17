@@ -380,6 +380,7 @@ void UAMRuleRow::OnStateClicked()
 	case EAMAction::ReplaceFuelOff: Rule->Action = EAMAction::ReplaceFuelOn; break;
 	default: return;
 	}
+	mBuiltAction = Rule->Action;
 	if (AMRules::IsSignalAction(Rule->Action) || Rule->Action == EAMAction::LoadMode || Rule->Action == EAMAction::UnloadMode
 		|| Rule->Action == EAMAction::OverflowOn || Rule->Action == EAMAction::OverflowOff
 		|| Rule->Action == EAMAction::ReplaceFuelOn || Rule->Action == EAMAction::ReplaceFuelOff)
@@ -428,6 +429,17 @@ void UAMRuleRow::Build(UAMAutomationTab* InTab, bool bInIsAlarm, int32 InIndex, 
 	mTab = InTab;
 	bIsAlarm = bInIsAlarm;
 	mIndex = InIndex;
+	if (bIsAlarm)
+	{
+		const FAMFireRule* Fire = mTab->GetFireRule(mIndex);
+		mBuiltEvent = Fire ? Fire->Event : FString();
+	}
+	else
+	{
+		const FAMReactionRule* Reaction = mTab->GetReactionRule(mIndex);
+		mBuiltEvent = Reaction ? Reaction->Event : FString();
+		mBuiltAction = Reaction ? Reaction->Action : EAMAction::Count;
+	}
 	if (!bIsAlarm && bInGrouped)
 	{
 		bCompact = true;
@@ -1135,6 +1147,7 @@ void UAMRuleRow::Choose(const UAMChoice& Choice)
 			if (Rule->Action != Action)
 			{
 				Rule->Action = Action;
+				mBuiltAction = Action;
 				const AMRules::FValueInfo Info = AMRules::GetActionValueInfo(Action);
 				Rule->Value = Info.bNeeded ? Info.Default : 0.f;
 				Rule->Recipe = nullptr;
@@ -1424,5 +1437,5 @@ void UAMRuleRow::OnMessageCommitted(const FText& Text, ETextCommit::Type CommitM
 void UAMRuleRow::OnRemoveClicked()
 {
 	// The tab rebuilds all rows, this one included.
-	mTab->RemoveRule(bIsAlarm, mIndex);
+	mTab->RemoveRule(bIsAlarm, mIndex, mBuiltEvent, mBuiltAction);
 }
