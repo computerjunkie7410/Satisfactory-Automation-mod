@@ -363,3 +363,5 @@ Test of the Automation tab: open a Smelter and a Constructor, click Automation, 
 
 ## Alien Power Augmenter (17 Nov 2026)
 Class `AFGBuildablePowerBooster` (a plain `AFGBuildableFactory`, not a generator). Window `BPW_AlienPower_C` (`/Game/FactoryGame/Buildable/Factory/AlienPower/UI/`): one page, hooked as Indirect_Child of `mConsole` (bSlotSetup=false). Its power graph and production display are inside the same page. Fuel (alien items) is optional, so "fuel empty" only means no boost fuel loaded. Fuel count = all items in its fuel inventory.
+
+No standby button on the Augmenter (user, 17 Nov 2026): no paused / resumed alarms, no pause / resume actions; only "delete fuel".

@@ -29,7 +29,7 @@ Done and tested: production machines (production window), miners, Water / Oil Ex
 
 **Power:**
 - Geothermal Generator: excluded (decided 17 Nov 2026).
-- Alien Power Augmenter: code in and tab hooked on `mConsole` (17 Nov 2026), waiting for the in-game test. Alarms: starts / stops producing, paused / resumed, fuel empty / available / below, power, fuse. Actions: pause / resume / toggle, delete fuel.
+- Alien Power Augmenter: code in and tab hooked on `mConsole` (17 Nov 2026), waiting for the in-game test. Alarms: starts / stops producing, fuel empty / available / below, power, fuse. Action: delete fuel (it has no standby button).
 
 **Extraction:**
 - Resource Well Pressurizer (and its extractors): like the extractors, plus on / off.

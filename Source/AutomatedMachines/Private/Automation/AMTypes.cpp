@@ -872,13 +872,11 @@ bool AMRules::IsConditionAvailable(EAMCondition Condition, const UObject* Machin
 	}
 	if (Machine->IsA<AFGBuildablePowerBooster>())
 	{
-		// Alien Power Augmenter: running, standby, its optional alien fuel, power, fuse.
+		// Alien Power Augmenter: running, its optional alien fuel, power, fuse (no standby button).
 		switch (Condition)
 		{
 		case EAMCondition::StartsProducing:
 		case EAMCondition::StopsProducing:
-		case EAMCondition::Paused:
-		case EAMCondition::Resumed:
 		case EAMCondition::FuelEmpty:
 		case EAMCondition::FuelAvailable:
 		case EAMCondition::FuelBelow:
@@ -1029,8 +1027,8 @@ bool AMRules::IsActionAvailable(EAMAction Action, const UObject* Machine)
 	}
 	if (Machine->IsA<AFGBuildablePowerBooster>())
 	{
-		return Action == EAMAction::Pause || Action == EAMAction::Resume || Action == EAMAction::TogglePause
-			|| Action == EAMAction::DeleteInput;
+		// No standby button: its only action is deleting the fuel.
+		return Action == EAMAction::DeleteInput;
 	}
 	if (Machine->IsA<AFGBuildableGeneratorFuel>())
 	{
