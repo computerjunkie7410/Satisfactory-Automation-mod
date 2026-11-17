@@ -29,6 +29,11 @@
 #include "Buildables/FGBuildablePowerStorage.h"
 #include "FGTrainStationIdentifier.h"
 #include "FGTextRenderer.h"
+#include "Components/TextRenderComponent.h"
+#include "Components/WidgetComponent.h"
+#include "Blueprint/UserWidget.h"
+#include "Blueprint/WidgetTree.h"
+#include "Components/TextBlock.h"
 #include "FGTrain.h"
 #include "FGRailroadVehicle.h"
 #include "FGCircuitSubsystem.h"
@@ -1115,6 +1120,66 @@ namespace
 		for (TFieldIterator<FProperty> It(Event); It && It->HasAnyPropertyFlags(CPF_Parm); ++It)
 		{
 			It->DestroyValue_InContainer(Params);
+		}
+		// The sign may also be drawn by text components the event does not touch: write them too.
+		const FString Shown = bHasTag ? Tag : FString();
+		TArray<UFGTextRenderer*> Renderers;
+		Switch->GetComponents<UFGTextRenderer>(Renderers);
+		for (UFGTextRenderer* Renderer : Renderers)
+		{
+			if (UFunction* Update = Renderer->FindFunction(TEXT("UpdateText")))
+			{
+				struct
+				{
+					int32 ElementID = 0;
+					FString Text;
+				} UpdateParams;
+				UpdateParams.Text = Shown;
+				Renderer->ProcessEvent(Update, &UpdateParams);
+			}
+		}
+		TArray<UTextRenderComponent*> TextRenders;
+		Switch->GetComponents<UTextRenderComponent>(TextRenders);
+		for (UTextRenderComponent* TextRender : TextRenders)
+		{
+			TextRender->SetText(FText::FromString(Shown));
+		}
+		TArray<UWidgetComponent*> WidgetComponents;
+		Switch->GetComponents<UWidgetComponent>(WidgetComponents);
+		for (UWidgetComponent* WidgetComponent : WidgetComponents)
+		{
+			UUserWidget* Widget = WidgetComponent->GetUserWidgetObject();
+			if (Widget && Widget->WidgetTree)
+			{
+				Widget->WidgetTree->ForEachWidget([&Shown](UWidget* Child)
+				{
+					if (UTextBlock* Text = Cast<UTextBlock>(Child))
+					{
+						Text->SetText(FText::FromString(Shown));
+					}
+				});
+			}
+		}
+
+		// Once per switch class: what it is made of (to find its sign if none of the above draws it).
+		static TSet<FName> Described;
+		if (!Described.Contains(Switch->GetClass()->GetFName()))
+		{
+			Described.Add(Switch->GetClass()->GetFName());
+			TArray<UActorComponent*> Components;
+			Switch->GetComponents(Components);
+			for (UActorComponent* Component : Components)
+			{
+				UE_LOG(LogAutomatedMachines, Log, TEXT("[SwitchSign] %s component %s [%s]"), *Switch->GetClass()->GetName(), *Component->GetName(), *Component->GetClass()->GetName());
+			}
+			for (TFieldIterator<UFunction> It(Switch->GetClass(), EFieldIteratorFlags::ExcludeSuper); It; ++It)
+			{
+				UE_LOG(LogAutomatedMachines, Log, TEXT("[SwitchSign] %s function %s"), *Switch->GetClass()->GetName(), *It->GetName());
+			}
+			for (TFieldIterator<FProperty> It(Switch->GetClass(), EFieldIteratorFlags::ExcludeSuper); It; ++It)
+			{
+				UE_LOG(LogAutomatedMachines, Log, TEXT("[SwitchSign] %s var %s [%s]"), *Switch->GetClass()->GetName(), *It->GetName(), *It->GetCPPType());
+			}
 		}
 	}
 }
