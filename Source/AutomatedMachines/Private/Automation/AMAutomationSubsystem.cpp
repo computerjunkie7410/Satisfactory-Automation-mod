@@ -1086,6 +1086,39 @@ bool AAMAutomationSubsystem::RemoveInvalidEntries()
 	return Removed > 0;
 }
 
+namespace
+{
+	/** Draws a text on a power switch's sign, as the game does when its tag changes (its blueprint
+	 *  event OnBuildingTagChanged, protected: called by name). Only the picture: the tag stays. */
+	void AMAS_ShowSwitchTag(AFGBuildableCircuitSwitch* Switch, bool bHasTag, const FString& Tag)
+	{
+		UFunction* Event = Switch ? Switch->FindFunction(TEXT("OnBuildingTagChanged")) : nullptr;
+		if (!Event)
+		{
+			return;
+		}
+		uint8* Params = static_cast<uint8*>(FMemory_Alloca(FMath::Max<int32>(Event->ParmsSize, 1)));
+		FMemory::Memzero(Params, Event->ParmsSize);
+		for (TFieldIterator<FProperty> It(Event); It && It->HasAnyPropertyFlags(CPF_Parm); ++It)
+		{
+			It->InitializeValue_InContainer(Params);
+			if (FBoolProperty* BoolParam = CastField<FBoolProperty>(*It))
+			{
+				BoolParam->SetPropertyValue_InContainer(Params, bHasTag);
+			}
+			else if (FStrProperty* StrParam = CastField<FStrProperty>(*It))
+			{
+				StrParam->SetPropertyValue_InContainer(Params, Tag);
+			}
+		}
+		Switch->ProcessEvent(Event, Params);
+		for (TFieldIterator<FProperty> It(Event); It && It->HasAnyPropertyFlags(CPF_Parm); ++It)
+		{
+			It->DestroyValue_InContainer(Params);
+		}
+	}
+}
+
 void AAMAutomationSubsystem::UpdateStationDisplays()
 {
 	// The text on each station's display (its UFGTextRenderer): ours, or its name again. Only the
@@ -1093,6 +1126,20 @@ void AAMAutomationSubsystem::UpdateStationDisplays()
 	TSet<TWeakObjectPtr<AActor>> Seen;
 	for (const FAMMachineRules& Entry : mMachines)
 	{
+		if (AFGBuildableCircuitSwitch* Switch = Cast<AFGBuildableCircuitSwitch>(Entry.Machine))
+		{
+			if (!Entry.StationTextShown.IsEmpty())
+			{
+				Seen.Add(Switch);
+				AMAS_ShowSwitchTag(Switch, true, Entry.StationTextShown);
+				if (!mStationDisplays.Contains(Switch))
+				{
+					UE_LOG(LogAutomatedMachines, Log, TEXT("%s: display shows %s"), *AMAS_Describe(Switch), *Entry.StationTextShown);
+				}
+				mStationDisplays.Add(Switch);
+			}
+			continue;
+		}
 		AFGBuildableRailroadStation* Station = Cast<AFGBuildableRailroadStation>(Entry.Machine);
 		if (!Station || Entry.StationTextShown.IsEmpty())
 		{
@@ -1129,6 +1176,11 @@ void AAMAutomationSubsystem::UpdateStationDisplays()
 			if (AFGBuildableRailroadStation* Station = Cast<AFGBuildableRailroadStation>(It->Get()))
 			{
 				Station->OnNameChanged();
+			}
+			else if (AFGBuildableCircuitSwitch* Switch = Cast<AFGBuildableCircuitSwitch>(It->Get()))
+			{
+				// Its own tag (and whether it shows one) again.
+				AMAS_ShowSwitchTag(Switch, IFGBuildingTagInterface::Execute_HasBuildingTag(Switch), IFGBuildingTagInterface::Execute_GetBuildingTag(Switch));
 			}
 			It.RemoveCurrent();
 		}
@@ -2423,6 +2475,15 @@ void AAMAutomationSubsystem::ApplySwitchAction(AFGBuildableCircuitSwitch* Switch
 		}
 		break;
 	}
+	case EAMAction::StationText:
+		if (FAMMachineRules* Entry = mMachines.FindByPredicate([Switch](const FAMMachineRules& E) { return E.Machine == Switch; }))
+		{
+			// The display follows (UpdateStationDisplays, on every machine); the tag is not changed.
+			Entry->StationTextShown = Rule.Message.TrimStartAndEnd();
+			ForceNetUpdate();
+			UE_LOG(LogAutomatedMachines, Log, TEXT("%s display: %s"), *AMAS_Describe(Switch), Entry->StationTextShown.IsEmpty() ? TEXT("its name") : *Entry->StationTextShown);
+		}
+		break;
 	case EAMAction::SetPriority:
 		if (AFGBuildablePriorityPowerSwitch* Priority = Cast<AFGBuildablePriorityPowerSwitch>(Switch))
 		{

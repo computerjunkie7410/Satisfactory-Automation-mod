@@ -395,7 +395,7 @@ FText AMRules::GetActionDescription(EAMAction Action)
 	case EAMAction::UnloadMode:
 		return AMTY_Text(TEXT("Off: the platform unloads docked trains into itself."));
 	case EAMAction::StationText:
-		return AMTY_Text(TEXT("The display on the station shows this text instead of its name. Empty: it shows its name again.\n\nOnly the display changes: the station keeps its name (map, timetables)."));
+		return AMTY_Text(TEXT("The display on the station or power switch shows this text instead of its name. Empty: it shows its name again.\n\nOnly the display changes: the station or switch keeps its name (map, timetables, the switch's window)."));
 	case EAMAction::StationName:
 		return AMTY_Text(TEXT("The station shows its own name again."));
 	case EAMAction::BlockSignal:
@@ -1020,6 +1020,11 @@ bool AMRules::IsActionAvailable(EAMAction Action, const UObject* Machine)
 		return false;
 	}
 	const bool bStationAction = Action == EAMAction::StationText || Action == EAMAction::StationName;
+	if (Action == EAMAction::StationText && Machine->IsA<AFGBuildableCircuitSwitch>())
+	{
+		// A power switch's display (its building tag sign): like a station's.
+		return true;
+	}
 	if (Machine->IsA<AFGBuildableRailroadStation>())
 	{
 		// No on / off (the station has none): only its display.

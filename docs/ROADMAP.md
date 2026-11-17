@@ -45,6 +45,8 @@ Done and tested: production machines (production window), miners, Water / Oil Ex
 - Personnel Elevator: arrives at a floor (action: call to a floor).
 - Space Elevator: phase completed, parts delivered (world events, like the MAM).
 
+**Power switch display (17 Nov 2026, code in, waiting for the in-game test):** the switches get the train stations' "Display text" action: the switch's sign shows the text; empty = its own name (tag) again. Only the sign's picture changes, the tag stays.
+
 ## Useful optional features
 
 - **Find an alarm's machines**: clicking an alarm name in the HUB overview lists the machines that ring it and listen to it (name, distance, direction), optionally with a map marker.
