@@ -24,6 +24,7 @@
 #include "Buildables/FGBuildableTrainPlatformCargo.h"
 #include "Buildables/FGBuildableDockingStation.h"
 #include "Buildables/FGBuildableDroneStation.h"
+#include "FGBuildablePowerBooster.h"
 #include "Buildables/FGBuildablePowerStorage.h"
 #include "FGTrainStationIdentifier.h"
 #include "FGTextRenderer.h"
@@ -1051,7 +1052,7 @@ bool AAMAutomationSubsystem::CanAutomate(const AActor* Machine)
 		|| AMRules::IsValve(Machine) || Machine->IsA<AFGBuildablePipeReservoir>() || Machine->IsA<AFGBuildableResourceSink>()
 		|| Machine->IsA<AFGBuildableRailroadSignal>() || Machine->IsA<AFGBuildableRailroadStation>()
 		|| Machine->IsA<AFGBuildableTrainPlatformCargo>() || Machine->IsA<AFGBuildableDockingStation>()
-		|| Machine->IsA<AFGBuildablePowerStorage>() || Machine->IsA<AFGBuildableDroneStation>() || AMBelt::IsBelt(Machine));
+		|| Machine->IsA<AFGBuildablePowerStorage>() || Machine->IsA<AFGBuildableDroneStation>() || Machine->IsA<AFGBuildablePowerBooster>() || AMBelt::IsBelt(Machine));
 }
 
 bool AAMAutomationSubsystem::RemoveInvalidEntries()
@@ -1693,6 +1694,10 @@ bool AAMAutomationSubsystem::IsOutOfFuel(const AFGBuildableFactory* Factory)
 	{
 		return CountFuel(Factory) <= 0;
 	}
+	if (const AFGBuildablePowerBooster* Booster = Cast<AFGBuildablePowerBooster>(Factory))
+	{
+		return CountFuel(Factory) <= 0 && !Booster->HasFuel();
+	}
 	const AFGBuildableGeneratorFuel* Generator = Cast<AFGBuildableGeneratorFuel>(Factory);
 	return Generator && !Generator->HasFuel();
 }
@@ -1712,6 +1717,21 @@ int32 AAMAutomationSubsystem::CountFuel(const AFGBuildableFactory* Factory)
 			if (StationFuel->GetStackFromIndex(SlotIndex, Stack) && Stack.HasItems())
 			{
 				Count += Stack.NumItems;
+			}
+		}
+		return Count;
+	}
+	if (const AFGBuildablePowerBooster* Booster = Cast<AFGBuildablePowerBooster>(Factory))
+	{
+		// Alien Power Augmenter: the items in its fuel slot(s).
+		const UFGInventoryComponent* BoosterFuel = Booster->GetFuelInventory();
+		int32 Count = 0;
+		for (int32 SlotIndex = 0; BoosterFuel && SlotIndex < BoosterFuel->GetSizeLinear(); ++SlotIndex)
+		{
+			FInventoryStack BoosterStack;
+			if (BoosterFuel->GetStackFromIndex(SlotIndex, BoosterStack) && BoosterStack.HasItems())
+			{
+				Count += BoosterStack.NumItems;
 			}
 		}
 		return Count;
@@ -2152,6 +2172,12 @@ void AAMAutomationSubsystem::ApplyAction(AFGBuildableFactory* Factory, const FAM
 		// A production machine: below.
 		[[fallthrough]];
 	case EAMAction::DeleteInput:
+		if (AFGBuildablePowerBooster* Booster = Cast<AFGBuildablePowerBooster>(Factory))
+		{
+			const int32 Slots = DeleteAllItems(Booster->GetFuelInventory());
+			UE_LOG(LogAutomatedMachines, Log, TEXT("%s: fuel deleted (%d slots had items)"), *AMAS_Describe(Factory), Slots);
+			break;
+		}
 		if (AFGBuildableGeneratorFuel* Generator = Cast<AFGBuildableGeneratorFuel>(Factory))
 		{
 			if (Rule.Action == EAMAction::DeleteInput)

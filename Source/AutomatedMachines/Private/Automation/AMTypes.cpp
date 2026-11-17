@@ -16,6 +16,7 @@
 #include "Buildables/FGBuildableTrainPlatformCargo.h"
 #include "Buildables/FGBuildableDockingStation.h"
 #include "Buildables/FGBuildableDroneStation.h"
+#include "FGBuildablePowerBooster.h"
 #include "Buildables/FGBuildablePowerStorage.h"
 #include "FGPipeConnectionComponent.h"
 #include "FGPowerConnectionComponent.h"
@@ -869,6 +870,27 @@ bool AMRules::IsConditionAvailable(EAMCondition Condition, const UObject* Machin
 		}
 		return bStorageEvent;
 	}
+	if (Machine->IsA<AFGBuildablePowerBooster>())
+	{
+		// Alien Power Augmenter: running, standby, its optional alien fuel, power, fuse.
+		switch (Condition)
+		{
+		case EAMCondition::StartsProducing:
+		case EAMCondition::StopsProducing:
+		case EAMCondition::Paused:
+		case EAMCondition::Resumed:
+		case EAMCondition::FuelEmpty:
+		case EAMCondition::FuelAvailable:
+		case EAMCondition::FuelBelow:
+		case EAMCondition::LosesPower:
+		case EAMCondition::GetsPower:
+		case EAMCondition::FuseBlown:
+		case EAMCondition::FuseReset:
+			return true;
+		default:
+			return false;
+		}
+	}
 	if (Machine->IsA<AFGBuildableGeneratorFuel>())
 	{
 		switch (Condition)
@@ -1004,6 +1026,11 @@ bool AMRules::IsActionAvailable(EAMAction Action, const UObject* Machine)
 	if (Machine->IsA<AFGBuildableStorage>())
 	{
 		return Action == EAMAction::DeleteContents;
+	}
+	if (Machine->IsA<AFGBuildablePowerBooster>())
+	{
+		return Action == EAMAction::Pause || Action == EAMAction::Resume || Action == EAMAction::TogglePause
+			|| Action == EAMAction::DeleteInput;
 	}
 	if (Machine->IsA<AFGBuildableGeneratorFuel>())
 	{

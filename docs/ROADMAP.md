@@ -28,18 +28,17 @@ Done and tested: production machines (production window), miners, Water / Oil Ex
 - Industrial Fluid Buffer (same window as the Fluid Buffer).
 
 **Power:**
-- Geothermal Generator: power events only (nothing to feed).
-- Alien Power Augmenter: fuel (somersloops / ...), power events.
+- Geothermal Generator: excluded (decided 17 Nov 2026).
+- Alien Power Augmenter: code in (17 Nov 2026), tab not hooked yet: needs the window dump. Alarms: starts / stops producing, paused / resumed, fuel empty / available / below, power, fuse. Actions: pause / resume / toggle, delete fuel.
 
 **Extraction:**
 - Resource Well Pressurizer (and its extractors): like the extractors, plus on / off.
 
 **Logistics:**
-- Programmable / Smart Splitter: action: change an output's filter.
 - Dimensional Depot uplink: upload events (maybe).
 
 **Transport:**
-- Drone Port: done, tab hooked (sliding pages); waiting for the in-game test. Alarms: drone arrives / leaves, busy / idle, input / output full, outgoing / incoming item counts, outgoing / incoming rate (items per minute), fuel, power. Actions: delete outgoing items, delete incoming items.
+- Drone Port: done and tested (14 Nov 2026). Alarms: drone arrives / leaves, busy / idle, input / output full, outgoing / incoming item counts, outgoing / incoming rate (items per minute), fuel, power. Actions: delete outgoing items, delete incoming items.
 
 **Other buildings:**
 - Doors: open / closed / locked (actions: lock, unlock).
