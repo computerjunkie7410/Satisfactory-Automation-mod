@@ -1198,6 +1198,33 @@ void UAMAutomationTab::RebuildRows()
 		GroupEvents.AddUnique(Present);
 	}
 	mGroupOrder = GroupEvents;
+	// Keep the list itself in that order (each group's actions together), so the saved rules show
+	// the same way when the window opens again. Done here because every row is rebuilt below with
+	// its new index; the machine gets the new order.
+	{
+		TArray<FAMReactionRule> Ordered;
+		Ordered.Reserve(mReactions.Num());
+		for (const FString& Event : GroupEvents)
+		{
+			for (const FAMReactionRule& Rule : mReactions)
+			{
+				if (Rule.Event == Event)
+				{
+					Ordered.Add(Rule);
+				}
+			}
+		}
+		bool bMoved = false;
+		for (int32 Index = 0; !bMoved && Index < Ordered.Num(); ++Index)
+		{
+			bMoved = Ordered[Index].Event != mReactions[Index].Event;
+		}
+		if (bMoved && Ordered.Num() == mReactions.Num())
+		{
+			mReactions = MoveTemp(Ordered);
+			OnRulesEdited();
+		}
+	}
 	for (int32 Group = 0; Group < GroupEvents.Num(); ++Group)
 	{
 		const FString& Event = GroupEvents[Group];
