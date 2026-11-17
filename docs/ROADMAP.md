@@ -32,7 +32,7 @@ Done and tested: production machines (production window), miners, Water / Oil Ex
 - Alien Power Augmenter: done and tested (17 Nov 2026). Alarms: starts / stops producing, fuel empty / available / below, power, fuse. Action: delete fuel (it has no standby button).
 
 **Extraction:**
-- Resource Well Pressurizer (and its extractors): like the extractors, plus on / off.
+- Resource Well Pressurizer: code in (17 Nov 2026), tab not hooked yet (needs the window dump). Alarms: starts / stops producing, paused / resumed, power, fuse. Actions: pause / resume / toggle, set clock speed. Its extractors are the Water / Oil Extractor class (already done).
 
 **Logistics:**
 - Dimensional Depot uplink: tab works (17 Nov 2026); depot item count alarms still to confirm. Alarms: input full / not full / empty / not empty (its one slot), depot items above / below (the shared depot's count of an item), power. Action: delete input (same name as on other machines).
@@ -41,7 +41,7 @@ Done and tested: production machines (production window), miners, Water / Oil Ex
 - Drone Port: done and tested (14 Nov 2026). Alarms: drone arrives / leaves, busy / idle, input / output full, outgoing / incoming item counts, outgoing / incoming rate (items per minute), fuel, power. Actions: delete outgoing items, delete incoming items.
 
 **Other buildings:**
-- Doors: open / closed / locked (actions: lock, unlock).
+- Doors: not automated (decided 17 Nov 2026: too buggy in the game).
 - Personnel Elevator: arrives at a floor (action: call to a floor).
 - Space Elevator: phase completed, parts delivered (world events, like the MAM).
 

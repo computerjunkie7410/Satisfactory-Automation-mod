@@ -25,6 +25,7 @@
 #include "Buildables/FGBuildableDockingStation.h"
 #include "Buildables/FGBuildableDroneStation.h"
 #include "FGBuildablePowerBooster.h"
+#include "Buildables/FGBuildableFrackingActivator.h"
 #include "FGCentralStorageSubsystem.h"
 #include "Buildables/FGBuildablePowerStorage.h"
 #include "FGTrainStationIdentifier.h"
@@ -1053,7 +1054,7 @@ bool AAMAutomationSubsystem::CanAutomate(const AActor* Machine)
 		|| AMRules::IsValve(Machine) || Machine->IsA<AFGBuildablePipeReservoir>() || Machine->IsA<AFGBuildableResourceSink>()
 		|| Machine->IsA<AFGBuildableRailroadSignal>() || Machine->IsA<AFGBuildableRailroadStation>()
 		|| Machine->IsA<AFGBuildableTrainPlatformCargo>() || Machine->IsA<AFGBuildableDockingStation>()
-		|| Machine->IsA<AFGBuildablePowerStorage>() || Machine->IsA<AFGBuildableDroneStation>() || Machine->IsA<AFGBuildablePowerBooster>() || AMBelt::IsBelt(Machine));
+		|| Machine->IsA<AFGBuildablePowerStorage>() || Machine->IsA<AFGBuildableDroneStation>() || Machine->IsA<AFGBuildablePowerBooster>() || Machine->IsA<AFGBuildableFrackingActivator>() || AMBelt::IsBelt(Machine));
 }
 
 bool AAMAutomationSubsystem::RemoveInvalidEntries()

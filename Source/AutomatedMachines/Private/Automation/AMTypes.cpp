@@ -18,6 +18,7 @@
 #include "Buildables/FGBuildableDroneStation.h"
 #include "Buildables/FGCentralStorageContainer.h"
 #include "FGBuildablePowerBooster.h"
+#include "Buildables/FGBuildableFrackingActivator.h"
 #include "Buildables/FGBuildablePowerStorage.h"
 #include "FGPipeConnectionComponent.h"
 #include "FGPowerConnectionComponent.h"
@@ -900,6 +901,24 @@ bool AMRules::IsConditionAvailable(EAMCondition Condition, const UObject* Machin
 		}
 		return bStorageEvent;
 	}
+	if (Machine->IsA<AFGBuildableFrackingActivator>())
+	{
+		// Resource Well Pressurizer: running, standby, power (it feeds the well's extractors, no items of its own).
+		switch (Condition)
+		{
+		case EAMCondition::StartsProducing:
+		case EAMCondition::StopsProducing:
+		case EAMCondition::Paused:
+		case EAMCondition::Resumed:
+		case EAMCondition::LosesPower:
+		case EAMCondition::GetsPower:
+		case EAMCondition::FuseBlown:
+		case EAMCondition::FuseReset:
+			return true;
+		default:
+			return false;
+		}
+	}
 	if (Machine->IsA<AFGBuildablePowerBooster>())
 	{
 		// Alien Power Augmenter: running, its optional alien fuel, power, fuse (no standby button).
@@ -1064,6 +1083,12 @@ bool AMRules::IsActionAvailable(EAMAction Action, const UObject* Machine)
 	if (Machine->IsA<AFGBuildableStorage>())
 	{
 		return Action == EAMAction::DeleteContents;
+	}
+	if (Machine->IsA<AFGBuildableFrackingActivator>())
+	{
+		// Standby and clock speed (the well's extraction follows it).
+		return Action == EAMAction::Pause || Action == EAMAction::Resume || Action == EAMAction::TogglePause
+			|| Action == EAMAction::SetClockSpeed;
 	}
 	if (Machine->IsA<AFGBuildablePowerBooster>())
 	{
