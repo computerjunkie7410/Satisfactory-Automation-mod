@@ -33,6 +33,22 @@ namespace
 		return FText::FromString(Text);
 	}
 
+	/**
+	 * Keeps an object for the whole game. Our classes' defaults (CDOs) are native: the garbage
+	 * collector does not look through them, so what only they point to (loaded items, the icon, the
+	 * objects we make) would be freed at the next map load (it crashed SML's registration with a
+	 * freed cost item after going from the main menu to a save).
+	 */
+	template <typename T>
+	T* AMR_Keep(T* Object)
+	{
+		if (Object && !Object->IsRooted())
+		{
+			Object->AddToRoot();
+		}
+		return Object;
+	}
+
 	/** A field of a (blueprint) struct whose name starts with Prefix (blueprint struct fields end in a GUID). */
 	FProperty* AMR_Field(const UStruct* Struct, const TCHAR* Prefix)
 	{
@@ -145,7 +161,7 @@ namespace
 			}
 			if (Found && Found->IsChildOf(Base) && !Found->HasAnyClassFlags(CLASS_Abstract))
 			{
-				return Found;
+				return AMR_Keep(Found);
 			}
 		}
 		TArray<UClass*> Children;
@@ -154,7 +170,7 @@ namespace
 		{
 			if (!Child->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists))
 			{
-				return Child;
+				return AMR_Keep(Child);
 			}
 		}
 		UE_LOG(LogAutomatedMachines, Warning, TEXT("[Research] no usable class for %s: left out"), *Base->GetName());
@@ -170,7 +186,7 @@ namespace
 		{
 			return nullptr;
 		}
-		UFGUnlock* Unlock = NewObject<UFGUnlock>(Outer, UnlockClass);
+		UFGUnlock* Unlock = AMR_Keep(NewObject<UFGUnlock>(Outer, UnlockClass));
 		AMR_SetText(Unlock, TEXT("mUnlockName"), AMR_Text(Name));
 		AMR_SetText(Unlock, TEXT("mUnlockDescription"), AMR_Text(Description));
 		AMR_SetTexture(Unlock, TEXT("mUnlockIconBig"), Icon);
@@ -186,7 +202,7 @@ namespace
 		{
 			UE_LOG(LogAutomatedMachines, Warning, TEXT("[Research] item not found: %s"), Path);
 		}
-		return Item;
+		return AMR_Keep(Item);
 	}
 
 	FSlateBrush AMR_Brush(UTexture2D* Icon)
@@ -236,7 +252,7 @@ UAMSchematic_Automation::UAMSchematic_Automation()
 void UAMSchematic_Automation::PrepareDefaults()
 {
 	UAMSchematic_Automation* Cdo = GetMutableDefault<UAMSchematic_Automation>();
-	UTexture2D* Icon = LoadObject<UTexture2D>(nullptr, AMR_Icon);
+	UTexture2D* Icon = AMR_Keep(LoadObject<UTexture2D>(nullptr, AMR_Icon));
 	AMR_SCHEMATIC_ASSETS(Cdo, AMR_AILimiter, 6, Icon, TEXT("Automation tab"),
 		TEXT("Alarms and actions in the windows of production machines, extractors, generators, storage, power switches, stations, signals, signs, lights and more."))
 }
@@ -251,7 +267,7 @@ UAMSchematic_Overflow::UAMSchematic_Overflow()
 void UAMSchematic_Overflow::PrepareDefaults()
 {
 	UAMSchematic_Overflow* Cdo = GetMutableDefault<UAMSchematic_Overflow>();
-	UTexture2D* Icon = LoadObject<UTexture2D>(nullptr, AMR_Icon);
+	UTexture2D* Icon = AMR_Keep(LoadObject<UTexture2D>(nullptr, AMR_Icon));
 	AMR_SCHEMATIC_ASSETS(Cdo, AMR_HighSpeedConnector, 2, Icon, TEXT("Output overflow"),
 		TEXT("The Output overflow option and the Output overflow on / off actions."))
 	// Only after "Automated Machines": it hangs under it in the tree (the MAM's own parent check),
@@ -260,7 +276,7 @@ void UAMSchematic_Overflow::PrepareDefaults()
 	Cdo->mSchematicDependencies.Reset();
 	UClass* DependencyClass = AMR_ConcreteClass(UFGSchematicPurchasedDependency::StaticClass(), {
 		TEXT("/Game/FactoryGame/AvailabilityDependencies/BP_SchematicPurchasedDependency.BP_SchematicPurchasedDependency_C") });
-	UFGAvailabilityDependency* Dependency = DependencyClass ? NewObject<UFGAvailabilityDependency>(Cdo, DependencyClass) : nullptr;
+	UFGAvailabilityDependency* Dependency = DependencyClass ? AMR_Keep(NewObject<UFGAvailabilityDependency>(Cdo, DependencyClass)) : nullptr;
 	if (!Dependency)
 	{
 		return;
@@ -294,7 +310,7 @@ UAMResearchTree::UAMResearchTree()
 bool UAMResearchTree::PrepareDefaults()
 {
 	UAMResearchTree* Cdo = GetMutableDefault<UAMResearchTree>();
-	UTexture2D* Icon = LoadObject<UTexture2D>(nullptr, AMR_Icon);
+	UTexture2D* Icon = AMR_Keep(LoadObject<UTexture2D>(nullptr, AMR_Icon));
 	Cdo->mResearchTreeIcon = AMR_Brush(Icon);
 
 	// The game's node blueprint: from a vanilla tree (logged as a model), or by its path.
@@ -344,8 +360,9 @@ bool UAMResearchTree::PrepareDefaults()
 	}
 	UE_LOG(LogAutomatedMachines, Log, TEXT("[Research] node class %s, data %s [%s]"), *NodeClass->GetPathName(), *DataProperty->GetName(), *DataProperty->Struct->GetName());
 
-	UFGResearchTreeNode* Root = NewObject<UFGResearchTreeNode>(Cdo, NodeClass);
-	UFGResearchTreeNode* Child = NewObject<UFGResearchTreeNode>(Cdo, NodeClass);
+	AMR_Keep(NodeClass);
+	UFGResearchTreeNode* Root = AMR_Keep(NewObject<UFGResearchTreeNode>(Cdo, NodeClass));
+	UFGResearchTreeNode* Child = AMR_Keep(NewObject<UFGResearchTreeNode>(Cdo, NodeClass));
 	const UStruct* Data = DataProperty->Struct;
 	void* RootData = DataProperty->ContainerPtrToValuePtr<void>(Root);
 	void* ChildData = DataProperty->ContainerPtrToValuePtr<void>(Child);
