@@ -96,6 +96,8 @@ namespace
 	// Truck stations (7 Nov 2026): one canvas page (CanvasPanel_68), hooked through its background mStationBG.
 	// Power Storage (14 Nov 2026): one page (CanvasPanel_103), hooked through its background mWindowBG.
 	const TCHAR* const AMWH_PowerStorageWindow = TEXT("/Game/FactoryGame/Buildable/Factory/PowerStorage/UI/BPW_PowerStorage.BPW_PowerStorage_C");
+	// Alien Power Augmenter (17 Nov 2026): one page (CanvasPanel_0 in WindowBody), hooked through its console image mConsole.
+	const TCHAR* const AMWH_AugmenterWindow = TEXT("/Game/FactoryGame/Buildable/Factory/AlienPower/UI/BPW_AlienPower.BPW_AlienPower_C");
 	// Drone Port (14 Nov 2026): sliding pages (Drone Port / This Port / All Ports) inside HorizontalBox_66.
 	const TCHAR* const AMWH_DronePortWindow = TEXT("/Game/FactoryGame/Buildable/Factory/DroneStation/UI/BPW_Drone_Port.BPW_Drone_Port_C");
 	const TCHAR* const AMWH_TruckStationWindow = TEXT("/Game/FactoryGame/Buildable/-Shared/Widgets/Widget_DockingStation.Widget_DockingStation_C");
@@ -198,6 +200,8 @@ namespace
 		AMWH_HookPages(HookManager, AMWH_FluidPlatformWindow, TEXT("BPW_PipeModule"), TEXT("AM_FluidPlatformAutomationTabHook"), false,
 			EWidgetBlueprintHookParentType::Indirect_Child);
 		AMWH_HookPages(HookManager, AMWH_PowerStorageWindow, TEXT("mWindowBG"), TEXT("AM_PowerStorageAutomationTabHook"), false,
+			EWidgetBlueprintHookParentType::Indirect_Child);
+		AMWH_HookPages(HookManager, AMWH_AugmenterWindow, TEXT("mConsole"), TEXT("AM_AugmenterAutomationTabHook"), false,
 			EWidgetBlueprintHookParentType::Indirect_Child);
 		AMWH_HookPages(HookManager, AMWH_DronePortWindow, TEXT("HorizontalBox_66"), TEXT("AM_DronePortAutomationTabHook"));
 		AMWH_HookPages(HookManager, AMWH_TruckStationWindow, TEXT("mStationBG"), TEXT("AM_TruckStationAutomationTabHook"), false,
