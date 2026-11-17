@@ -10,6 +10,8 @@
 #include "Engine/Texture2D.h"
 #include "Engine/World.h"
 #include "UObject/UnrealType.h"
+#include "UObject/UObjectHash.h"
+#include "AvailabilityDependencies/FGAvailabilityDependency.h"
 
 namespace
 {
@@ -128,10 +130,47 @@ namespace
 		}
 	}
 
-	/** An info-only line in the research's "Unlocks" list. */
+	/**
+	 * A class we can make objects of: the game's C++ unlock / dependency classes are abstract, their
+	 * blueprint children are used. One of the paths, else any loaded non-abstract child, else null.
+	 */
+	UClass* AMR_ConcreteClass(UClass* Base, std::initializer_list<const TCHAR*> Paths)
+	{
+		for (const TCHAR* Path : Paths)
+		{
+			UClass* Found = FindObject<UClass>(nullptr, Path);
+			if (!Found)
+			{
+				Found = LoadObject<UClass>(nullptr, Path, nullptr, LOAD_NoWarn | LOAD_Quiet);
+			}
+			if (Found && Found->IsChildOf(Base) && !Found->HasAnyClassFlags(CLASS_Abstract))
+			{
+				return Found;
+			}
+		}
+		TArray<UClass*> Children;
+		GetDerivedClasses(Base, Children, true);
+		for (UClass* Child : Children)
+		{
+			if (!Child->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists))
+			{
+				return Child;
+			}
+		}
+		UE_LOG(LogAutomatedMachines, Warning, TEXT("[Research] no usable class for %s: left out"), *Base->GetName());
+		return nullptr;
+	}
+
+	/** An info-only line in the research's "Unlocks" list (null if the game's class is not found). */
 	UFGUnlock* AMR_InfoUnlock(UObject* Outer, const TCHAR* Name, const TCHAR* Description, UTexture2D* Icon)
 	{
-		UFGUnlockInfoOnly* Unlock = NewObject<UFGUnlockInfoOnly>(Outer);
+		UClass* UnlockClass = AMR_ConcreteClass(UFGUnlockInfoOnly::StaticClass(), {
+			TEXT("/Game/FactoryGame/Unlocks/BP_UnlockInfoOnly.BP_UnlockInfoOnly_C") });
+		if (!UnlockClass)
+		{
+			return nullptr;
+		}
+		UFGUnlock* Unlock = NewObject<UFGUnlock>(Outer, UnlockClass);
 		AMR_SetText(Unlock, TEXT("mUnlockName"), AMR_Text(Name));
 		AMR_SetText(Unlock, TEXT("mUnlockDescription"), AMR_Text(Description));
 		AMR_SetTexture(Unlock, TEXT("mUnlockIconBig"), Icon);
@@ -182,7 +221,10 @@ namespace
 	Cdo->mSchematicIcon = AMR_Brush(Icon); \
 	Cdo->mSmallSchematicIcon = Icon; \
 	Cdo->mUnlocks.Reset(); \
-	Cdo->mUnlocks.Add(AMR_InfoUnlock(Cdo, UnlockName, UnlockText, Icon));
+	if (UFGUnlock* InfoUnlock = AMR_InfoUnlock(Cdo, UnlockName, UnlockText, Icon)) \
+	{ \
+		Cdo->mUnlocks.Add(InfoUnlock); \
+	}
 
 UAMSchematic_Automation::UAMSchematic_Automation()
 {
@@ -212,9 +254,17 @@ void UAMSchematic_Overflow::PrepareDefaults()
 	UTexture2D* Icon = LoadObject<UTexture2D>(nullptr, AMR_Icon);
 	AMR_SCHEMATIC_ASSETS(Cdo, AMR_HighSpeedConnector, 2, Icon, TEXT("Output overflow"),
 		TEXT("The Output overflow option and the Output overflow on / off actions."))
-	// Only after "Automated Machines".
+	// Only after "Automated Machines": it hangs under it in the tree (the MAM's own parent check),
+	// plus a "purchased" dependency if the game's (blueprint) class for it is found.
+	Cdo->mDependsOnSchematic = UAMSchematic_Automation::StaticClass();
 	Cdo->mSchematicDependencies.Reset();
-	UFGSchematicPurchasedDependency* Dependency = NewObject<UFGSchematicPurchasedDependency>(Cdo);
+	UClass* DependencyClass = AMR_ConcreteClass(UFGSchematicPurchasedDependency::StaticClass(), {
+		TEXT("/Game/FactoryGame/AvailabilityDependencies/BP_SchematicPurchasedDependency.BP_SchematicPurchasedDependency_C") });
+	UFGAvailabilityDependency* Dependency = DependencyClass ? NewObject<UFGAvailabilityDependency>(Cdo, DependencyClass) : nullptr;
+	if (!Dependency)
+	{
+		return;
+	}
 	// Init() is editor-only: its two fields by reflection.
 	if (const FArrayProperty* Required = CastField<FArrayProperty>(Dependency->GetClass()->FindPropertyByName(TEXT("mSchematics"))))
 	{
@@ -229,7 +279,6 @@ void UAMSchematic_Overflow::PrepareDefaults()
 		RequireAll->SetPropertyValue_InContainer(Dependency, true);
 	}
 	Cdo->mSchematicDependencies.Add(Dependency);
-	Cdo->mDependsOnSchematic = UAMSchematic_Automation::StaticClass();
 }
 
 // --- Research tree ------------------------------------------------------------------------------
@@ -282,6 +331,10 @@ bool UAMResearchTree::PrepareDefaults()
 	if (!NodeClass)
 	{
 		NodeClass = LoadClass<UFGResearchTreeNode>(nullptr, AMR_NodeClassFallback);
+	}
+	if (NodeClass && NodeClass->HasAnyClassFlags(CLASS_Abstract))
+	{
+		NodeClass = nullptr;
 	}
 	FStructProperty* DataProperty = NodeClass ? AMR_NodeData(NodeClass) : nullptr;
 	if (!DataProperty)
