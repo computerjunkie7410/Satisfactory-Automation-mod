@@ -1,4 +1,6 @@
 #include "UI/AMAutomationTab.h"
+#include "Buildables/FGCentralStorageContainer.h"
+#include "FGCentralStorageSubsystem.h"
 #include "Buildables/FGBuildableCircuitSwitch.h"
 #include "Buildables/FGBuildablePriorityPowerSwitch.h"
 #include "AutomatedMachinesModule.h"
@@ -768,8 +770,26 @@ TArray<UClass*> UAMAutomationTab::GetPickableItems() const
 			&& UFGItemDescriptor::GetForm(Item) == EResourceForm::RF_SOLID;
 	};
 
+	// A Dimensional Depot uplink: what the depot holds now, first (its alarms count the depot).
+	if (Cast<AFGCentralStorageContainer>(GetMachine()))
+	{
+		if (const AFGCentralStorageSubsystem* Depot = AFGCentralStorageSubsystem::Get(const_cast<UAMAutomationTab*>(this)))
+		{
+			TArray<FItemAmount> DepotItems;
+			Depot->GetAllItemsFromCentralStorage(DepotItems);
+			for (const FItemAmount& Amount : DepotItems)
+			{
+				UClass* Item = Amount.ItemClass.Get();
+				if (Amount.Amount > 0 && IsPickable(Item) && !Seen.Contains(Item))
+				{
+					Seen.Add(Item);
+					Contents.Add(Item);
+				}
+			}
+		}
+	}
 	// What this container holds now, first.
-	if (AFGBuildableStorage* Storage = Cast<AFGBuildableStorage>(GetMachine()))
+	else if (AFGBuildableStorage* Storage = Cast<AFGBuildableStorage>(GetMachine()))
 	{
 		if (const UFGInventoryComponent* Inventory = Storage->GetStorageInventory())
 		{

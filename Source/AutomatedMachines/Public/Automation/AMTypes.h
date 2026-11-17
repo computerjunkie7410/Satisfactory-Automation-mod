@@ -106,6 +106,8 @@ enum class EAMCondition : uint8
 	OutgoingRateBelow  UMETA(DisplayName = "Outgoing rate below"),
 	IncomingRateAbove  UMETA(DisplayName = "Incoming rate above"),
 	IncomingRateBelow  UMETA(DisplayName = "Incoming rate below"),
+	DepotCountAbove    UMETA(DisplayName = "Depot items above"),
+	DepotCountBelow    UMETA(DisplayName = "Depot items below"),
 	Count              UMETA(Hidden)
 };
 

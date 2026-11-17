@@ -25,6 +25,7 @@
 #include "Buildables/FGBuildableDockingStation.h"
 #include "Buildables/FGBuildableDroneStation.h"
 #include "FGBuildablePowerBooster.h"
+#include "FGCentralStorageSubsystem.h"
 #include "Buildables/FGBuildablePowerStorage.h"
 #include "FGTrainStationIdentifier.h"
 #include "FGTextRenderer.h"
@@ -1046,7 +1047,7 @@ bool AAMAutomationSubsystem::CanAutomate(const AActor* Machine)
 	// Fuel generators: Biomass Burner, Coal, Fuel, Nuclear (one class; their windows come one by one).
 	// Power switches and priority power switches (the priority switch is a subclass).
 	return Machine && (Machine->IsA<AFGBuildableManufacturer>() || Machine->IsA<AFGBuildableResourceExtractor>()
-		|| (Machine->IsA<AFGBuildableStorage>() && !Machine->IsA<AFGCentralStorageContainer>())
+		|| Machine->IsA<AFGBuildableStorage>()
 		|| Machine->IsA<AFGBuildableGeneratorFuel>() || Machine->IsA<AFGBuildableWidgetSign>()
 		|| Machine->IsA<AFGBuildableCircuitSwitch>() || AMLight::IsLight(Machine)
 		|| AMRules::IsValve(Machine) || Machine->IsA<AFGBuildablePipeReservoir>() || Machine->IsA<AFGBuildableResourceSink>()
@@ -1623,6 +1624,18 @@ bool AAMAutomationSubsystem::IsConditionTrue(const AFGBuildableFactory* Factory,
 			const float Rate = bOutgoing ? Info->GetAverageTotalOutgoingItemRate() : Info->GetAverageTotalIncomingItemRate();
 			const bool bAbove = Rule.Condition == EAMCondition::OutgoingRateAbove || Rule.Condition == EAMCondition::IncomingRateAbove;
 			return bAbove ? Rate > Rule.Value : Rate < Rule.Value;
+		}
+		return false;
+	case EAMCondition::DepotCountAbove:
+	case EAMCondition::DepotCountBelow:
+		if (const AFGCentralStorageSubsystem* Depot = AFGCentralStorageSubsystem::Get(const_cast<AFGBuildableFactory*>(Factory)))
+		{
+			if (!Rule.Item)
+			{
+				return false;
+			}
+			const int32 Count = Depot->GetNumItemsFromCentralStorage(Rule.Item);
+			return Rule.Condition == EAMCondition::DepotCountAbove ? Count > Rule.Value : Count < Rule.Value;
 		}
 		return false;
 	case EAMCondition::FuelEmpty:         return IsOutOfFuel(Factory);

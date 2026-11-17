@@ -35,7 +35,7 @@ Done and tested: production machines (production window), miners, Water / Oil Ex
 - Resource Well Pressurizer (and its extractors): like the extractors, plus on / off.
 
 **Logistics:**
-- Dimensional Depot uplink: upload events (maybe).
+- Dimensional Depot uplink: code in (17 Nov 2026), tab not hooked yet (needs the window dump). Alarms: input full / not full / empty / not empty (its one slot), depot items above / below (the shared depot's count of an item), power. Action: delete input.
 
 **Transport:**
 - Drone Port: done and tested (14 Nov 2026). Alarms: drone arrives / leaves, busy / idle, input / output full, outgoing / incoming item counts, outgoing / incoming rate (items per minute), fuel, power. Actions: delete outgoing items, delete incoming items.

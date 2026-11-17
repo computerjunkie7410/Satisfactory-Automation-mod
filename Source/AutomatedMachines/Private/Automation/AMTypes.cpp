@@ -16,6 +16,7 @@
 #include "Buildables/FGBuildableTrainPlatformCargo.h"
 #include "Buildables/FGBuildableDockingStation.h"
 #include "Buildables/FGBuildableDroneStation.h"
+#include "Buildables/FGCentralStorageContainer.h"
 #include "FGBuildablePowerBooster.h"
 #include "Buildables/FGBuildablePowerStorage.h"
 #include "FGPipeConnectionComponent.h"
@@ -139,6 +140,8 @@ FText AMRules::GetConditionText(EAMCondition Condition)
 	case EAMCondition::OutgoingRateBelow:  return AMTY_Text(TEXT("Outgoing rate below"));
 	case EAMCondition::IncomingRateAbove:  return AMTY_Text(TEXT("Incoming rate above"));
 	case EAMCondition::IncomingRateBelow:  return AMTY_Text(TEXT("Incoming rate below"));
+	case EAMCondition::DepotCountAbove:    return AMTY_Text(TEXT("Depot items above"));
+	case EAMCondition::DepotCountBelow:    return AMTY_Text(TEXT("Depot items below"));
 	default:                              return FText::GetEmpty();
 	}
 }
@@ -316,6 +319,10 @@ FText AMRules::GetConditionDescription(EAMCondition Condition)
 		return AMTY_Text(TEXT("Rings when the items this port receives per minute (average of the drones' trips) are above the number you set."));
 	case EAMCondition::IncomingRateBelow:
 		return AMTY_Text(TEXT("Rings when the items this port receives per minute are below the number you set."));
+	case EAMCondition::DepotCountAbove:
+		return AMTY_Text(TEXT("Rings when the Dimensional Depot (the storage every uplink fills, shared by the whole factory) holds more of one item than the number you set. Pick the item under the alarm."));
+	case EAMCondition::DepotCountBelow:
+		return AMTY_Text(TEXT("Rings when the Dimensional Depot holds less of one item than the number you set. Pick the item under the alarm.\n\nUse it to start the production that feeds the uplinks again."));
 	case EAMCondition::SignalRed:
 		return AMTY_Text(TEXT("Rings when the signal turns red: trains must stop at it (its block is taken, or it is blocked)."));
 	case EAMCondition::SignalGreen:
@@ -509,7 +516,8 @@ AMRules::FValueInfo AMRules::GetConditionValueInfo(EAMCondition Condition)
 		Info.Label = TEXT("#");
 		Info.Min = 0.f;
 		Info.Max = 999999.f;
-		Info.Default = (Condition == EAMCondition::ItemCountAbove || Condition == EAMCondition::OutgoingCountAbove || Condition == EAMCondition::IncomingCountAbove) ? 500.f : 200.f;
+		Info.Default = (Condition == EAMCondition::ItemCountAbove || Condition == EAMCondition::OutgoingCountAbove || Condition == EAMCondition::IncomingCountAbove
+			|| Condition == EAMCondition::DepotCountAbove) ? 500.f : 200.f;
 		Info.Unit = TEXT("");
 	}
 	return Info;
@@ -812,6 +820,28 @@ bool AMRules::IsConditionAvailable(EAMCondition Condition, const UObject* Machin
 			return false;
 		}
 	}
+	if (Machine->IsA<AFGCentralStorageContainer>())
+	{
+		// Dimensional Depot uplink: its one-slot input (full / empty), the depot's item counts, power.
+		switch (Condition)
+		{
+		case EAMCondition::StorageFull:
+		case EAMCondition::StorageNotFull:
+		case EAMCondition::StorageEmpty:
+		case EAMCondition::StorageNotEmpty:
+		case EAMCondition::DepotCountAbove:
+		case EAMCondition::DepotCountBelow:
+		case EAMCondition::LosesPower:
+		case EAMCondition::GetsPower:
+			return true;
+		default:
+			return false;
+		}
+	}
+	if (Condition == EAMCondition::DepotCountAbove || Condition == EAMCondition::DepotCountBelow)
+	{
+		return false;
+	}
 	// The drone port's own conditions exist nowhere else.
 	if (Condition >= EAMCondition::OutgoingCountAbove && Condition <= EAMCondition::IncomingRateBelow)
 	{
@@ -1021,6 +1051,11 @@ bool AMRules::IsActionAvailable(EAMAction Action, const UObject* Machine)
 	{
 		return Action != EAMAction::DeleteContents && !IsSwitchAction(Action);
 	}
+	if (Machine->IsA<AFGCentralStorageContainer>())
+	{
+		// Only its input: what waits to be uploaded (the depot itself is never touched).
+		return Action == EAMAction::DeleteContents;
+	}
 	if (Machine->IsA<AFGBuildableStorage>())
 	{
 		return Action == EAMAction::DeleteContents;
@@ -1069,5 +1104,6 @@ bool AMRules::HasPassWrongItems(const UObject* Machine)
 bool AMRules::ConditionNeedsItem(EAMCondition Condition)
 {
 	return Condition == EAMCondition::ItemCountAbove || Condition == EAMCondition::ItemCountBelow
-		|| (Condition >= EAMCondition::OutgoingCountAbove && Condition <= EAMCondition::IncomingCountBelow);
+		|| (Condition >= EAMCondition::OutgoingCountAbove && Condition <= EAMCondition::IncomingCountBelow)
+		|| Condition == EAMCondition::DepotCountAbove || Condition == EAMCondition::DepotCountBelow;
 }

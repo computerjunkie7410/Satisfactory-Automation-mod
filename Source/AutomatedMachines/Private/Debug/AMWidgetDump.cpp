@@ -28,6 +28,7 @@
 #include "Buildables/FGBuildableDockingStation.h"
 #include "Buildables/FGBuildableDroneStation.h"
 #include "FGBuildablePowerBooster.h"
+#include "Buildables/FGCentralStorageContainer.h"
 #include "Buildables/FGBuildableSplitterSmart.h"
 #include "Buildables/FGBuildableMergerPriority.h"
 #include "Buildables/FGBuildablePowerStorage.h"
@@ -264,7 +265,7 @@ namespace
 			|| Object->IsA<AFGBuildableResourceSink>() || Object->IsA<AFGBuildableRailroadSignal>()
 			|| Object->IsA<AFGBuildableRailroadStation>() || Object->IsA<AFGBuildableTrainPlatformCargo>()
 			|| Object->IsA<AFGBuildableDockingStation>() || Object->IsA<AFGBuildableDroneStation>() || Object->IsA<AFGBuildablePowerStorage>()
-			|| Object->IsA<AFGBuildableSplitterSmart>() || Object->IsA<AFGBuildableMergerPriority>() || Object->IsA<AFGBuildablePowerBooster>());
+			|| Object->IsA<AFGBuildableSplitterSmart>() || Object->IsA<AFGBuildableMergerPriority>() || Object->IsA<AFGBuildablePowerBooster>() || Object->IsA<AFGCentralStorageContainer>());
 	}
 
 	void AMWD_CheckWorld(UWorld* World)
