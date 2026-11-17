@@ -32,7 +32,7 @@ Done and tested: production machines (production window), miners, Water / Oil Ex
 - Alien Power Augmenter: done and tested (17 Nov 2026). Alarms: starts / stops producing, fuel empty / available / below, power, fuse. Action: delete fuel (it has no standby button).
 
 **Extraction:**
-- Resource Well Pressurizer: code in (17 Nov 2026), tab not hooked yet (needs the window dump). Alarms: starts / stops producing, paused / resumed, power, fuse. Actions: pause / resume / toggle, set clock speed. Its extractors are the Water / Oil Extractor class (already done).
+- Resource Well Pressurizer: code in and tab hooked on `bg` (17 Nov 2026), waiting for the in-game test. Alarms: starts / stops producing, paused / resumed, power, fuse. Actions: pause / resume / toggle, set clock speed. Its extractors (Resource Well Extractor) had no tab (their own window): hooked too; they have no standby or clock speed (their window has none), so their only action is delete output.
 
 **Logistics:**
 - Dimensional Depot uplink: tab works (17 Nov 2026); depot item count alarms still to confirm. Alarms: input full / not full / empty / not empty (its one slot), depot items above / below (the shared depot's count of an item), power. Action: delete input (same name as on other machines).

@@ -315,3 +315,9 @@ One page, title "Dimensional Depot Uploader" (class `BPW_CentralStorage_C`, insi
 
 ## Power switch sign (17 Nov 2026)
 Not a window: the switch's 3D sign. `Build_PowerSwitch_C` draws its tag on two `UFGTextRenderer` components (`mTextFront`, `mTextBack`; also listed in `mFGTextRenderers`), created and updated by its blueprint function `CreateOrUpdate_TextRenderers`, called from the event `OnBuildingTagChanged(hasTag, tag)`. Our "Display text" writes the renderers directly (`UpdateText(0, text)`) and only when they show something else; the switch's own tag is drawn again by calling `OnBuildingTagChanged` with its real tag.
+
+## Resource Well Pressurizer and Resource Well Extractor windows (17 Nov 2026)
+Both in `/Game/FactoryGame/Buildable/Factory/FrackingSmasher/UI/`, one page each inside `WindowBody`.
+- Pressurizer `BPW_FrackingSmasher_C`, title "Resource Well Pressurizer": page `CanvasPanel_101` with `bg`, `mStandbyButton` (`Widget_StandbyButton_C`), `Widget_Overclock` (clock speed slider, "Target production rate", shard slots).
+- Well extractor `BPW_FrackingExtractor_C`: page `CanvasPanel_43` with `DarkBG`, `bg`, `mFluidTank`, `mFlowRateGauge`, `BPW_ProductionDisplay`. No standby button, no clock speed.
+The Automation tab is hooked as a sibling of `bg` in both (unique in each window).

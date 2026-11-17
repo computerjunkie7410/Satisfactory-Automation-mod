@@ -19,6 +19,7 @@
 #include "Buildables/FGCentralStorageContainer.h"
 #include "FGBuildablePowerBooster.h"
 #include "Buildables/FGBuildableFrackingActivator.h"
+#include "Buildables/FGBuildableFrackingExtractor.h"
 #include "Buildables/FGBuildablePowerStorage.h"
 #include "FGPipeConnectionComponent.h"
 #include "FGPowerConnectionComponent.h"
@@ -962,6 +963,14 @@ bool AMRules::IsConditionAvailable(EAMCondition Condition, const UObject* Machin
 			return false;
 		}
 	}
+	if (Machine->IsA<AFGBuildableFrackingExtractor>())
+	{
+		// Resource well extractor: no standby or clock speed of its own (its pressurizer has them).
+		if (Condition == EAMCondition::Paused || Condition == EAMCondition::Resumed)
+		{
+			return false;
+		}
+	}
 	if (Machine->IsA<AFGBuildableResourceExtractor>())
 	{
 		switch (Condition)
@@ -1108,6 +1117,11 @@ bool AMRules::IsActionAvailable(EAMAction Action, const UObject* Machine)
 		default:
 			return false;
 		}
+	}
+	if (Machine->IsA<AFGBuildableFrackingExtractor>())
+	{
+		// Its window has no standby or clock speed (the pressurizer drives the well).
+		return Action == EAMAction::DeleteOutput;
 	}
 	if (Machine->IsA<AFGBuildableResourceExtractor>())
 	{
