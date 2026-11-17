@@ -309,3 +309,6 @@ Fourth tab "Automation" after Drone Port / This Port / All Ports; actions: delet
 
 ## Alien Power Augmenter window (17 Nov 2026)
 One page, title "Alien Power Augmenter" (class `BPW_AlienPower_C`, inside `Widget_Window_DarkMode`). Page body: `WindowBody > mSizeBox > CanvasPanel_0`, which holds `mBG`, `mConsole`, the power graph (`PowerCircuitGraph`: Consum., Production, Max Cons., Capacity, Power Boost), the power storage info and `BPW_ProductionDisplay` (the alien matrix input slot). The machine is `mPowerBooster`. The Automation tab is hooked as a sibling of `mConsole` (unique name).
+
+## Dimensional Depot Uploader window (17 Nov 2026)
+One page, title "Dimensional Depot Uploader" (class `BPW_CentralStorage_C`, inside `Widget_Window_DarkMode`). Page body: `WindowBody > mDropArea (Widget_InventorySlot_DropArea_C) > ... > CanvasPanel_56`, holding `mBackdrop`, `mBG`, `mUploadBox` (`mUploadInventory`: the one input slot; `mUploadText` e.g. "No space left in Depot"; `mAmountInCentralStorageText` "183/309": the depot's count / limit of that item), the upload info and `mUploadRateText` ("120 per min"). The Automation tab is hooked as a sibling of `mBackdrop`.
