@@ -1,4 +1,5 @@
 #include "UI/AMSignTabs.h"
+#include "Automation/AMResearch.h"
 #include "AutomatedMachinesModule.h"
 #include "UI/AMUIHelpers.h"
 #include "Automation/AMAutomationSubsystem.h"
@@ -304,6 +305,12 @@ void UAMSignTabs::NativeOnInitialized()
 void UAMSignTabs::NativeConstruct()
 {
 	Super::NativeConstruct();
+	// No side list until "Automated Machines" is researched in the MAM.
+	if (!AMResearch::IsAutomationUnlocked(this))
+	{
+		SetVisibility(ESlateVisibility::Collapsed);
+		return;
+	}
 	bSetUp = false;
 	mSetupTries = 0;
 	// Over the whole page (for the picker), but hidden.

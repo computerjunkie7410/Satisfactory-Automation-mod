@@ -1,4 +1,5 @@
 #include "UI/AMAutomationTab.h"
+#include "Automation/AMResearch.h"
 #include "Buildables/FGCentralStorageContainer.h"
 #include "FGCentralStorageSubsystem.h"
 #include "Buildables/FGBuildableCircuitSwitch.h"
@@ -1902,6 +1903,13 @@ void UAMAutomationTab::NativeOnInitialized()
 void UAMAutomationTab::NativeConstruct()
 {
 	Super::NativeConstruct();
+
+	// No tab until "Automated Machines" is researched in the MAM.
+	if (!AMResearch::IsAutomationUnlocked(this))
+	{
+		SetVisibility(ESlateVisibility::Collapsed);
+		return;
+	}
 
 	UObject* Frame = GetWindowFrame();
 	if (!bBoundToFrame && Frame)

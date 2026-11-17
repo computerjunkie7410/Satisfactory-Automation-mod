@@ -1,4 +1,5 @@
 #include "Automation/AMAutomationSubsystem.h"
+#include "Automation/AMResearch.h"
 #include "Automation/AMMarkers.h"
 #include "FGSchematicManager.h"
 #include "FGResearchManager.h"
@@ -169,6 +170,8 @@ void AAMAutomationSubsystem::InstallRegistration()
 		{
 			Manager->RegisterSubsystemActor(AAMAutomationSubsystem::StaticClass());
 		}
+		// The MAM tab "Automated Machines" (its research unlocks the mod).
+		AMResearch::Register(World);
 	});
 	InstallOutputHooks();
 	AMSignal::InstallHooks();
@@ -1256,18 +1259,24 @@ void AAMAutomationSubsystem::Tick(float DeltaSeconds)
 		mTimeSinceBatteryMerge = 0.f;
 		MergeBatteryGrids();
 	}
+	// Nothing runs until "Automated Machines" is researched in the MAM.
+	if (!AMResearch::IsAutomationUnlocked(this))
+	{
+		return;
+	}
 	EvaluateFireRules();
 
-	// Options.
+	// Options (Output overflow: its own research).
+	const bool bOverflow = AMResearch::IsOverflowUnlocked(this);
 	for (const FAMMachineRules& Entry : mMachines)
 	{
 		AFGBuildableFactory* Factory = Cast<AFGBuildableFactory>(Entry.Machine);
-		if (Factory && Entry.Options.bPassWrongItems)
+		if (Factory && bOverflow && Entry.Options.bPassWrongItems)
 		{
 			TakeWrongItem(Factory);
 		}
 		// Both share the one waiting item per machine: a wrong item, if any, goes first.
-		if (Factory && Entry.Options.bPassExtraItems)
+		if (Factory && bOverflow && Entry.Options.bPassExtraItems)
 		{
 			TakeExtraItem(Factory);
 		}
@@ -1384,7 +1393,7 @@ void AAMAutomationSubsystem::EvaluateFireRules()
 
 void AAMAutomationSubsystem::FireEvent(const FString& Event, const AActor* Ringer, const FString& RungBy)
 {
-	if (!HasAuthority())
+	if (!HasAuthority() || !AMResearch::IsAutomationUnlocked(this))
 	{
 		return;
 	}

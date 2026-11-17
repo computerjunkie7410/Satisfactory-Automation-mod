@@ -1,4 +1,5 @@
 #include "Automation/AMTypes.h"
+#include "Automation/AMResearch.h"
 #include "FGRecipe.h"
 #include "ItemAmount.h"
 #include "Resources/FGItemDescriptor.h"
@@ -1142,7 +1143,8 @@ bool AMRules::IsActionAvailable(EAMAction Action, const UObject* Machine)
 
 bool AMRules::HasPassWrongItems(const UObject* Machine)
 {
-	return Machine && Machine->IsA<AFGBuildableManufacturer>();
+	// The Output overflow option: production machines, once "Output Overflow" is researched in the MAM.
+	return Machine && Machine->IsA<AFGBuildableManufacturer>() && AMResearch::IsOverflowUnlocked(Machine);
 }
 
 bool AMRules::ConditionNeedsItem(EAMCondition Condition)

@@ -4,9 +4,9 @@ Done and tested so far: see the table in `DEV-NOTES.md` ("What works").
 
 ## Left to do (before a first release)
 
-1. **Multiplayer test**: a client changing rules, copy / paste, sign designs, the HUB overview bins; and a dedicated server (no UI, no glows there, rules still run).
-2. **Blueprints (the game's Blueprint Designer)**: a machine built from a blueprint gets no automation today (only Ctrl+C / Ctrl+V and middle click copy it). Decide: carry the rules inside blueprints, or say on the mod page that they don't.
-3. **MAM research to unlock the mod** (as early as possible): which tree, node and cost. Until then everything is available from the start.
+1. **Multiplayer test**: cannot be tested for now (17 Nov 2026). To say on the mod page: made for multiplayer (server-side rules, replicated), not tested with several players yet.
+2. **Blueprints (the game's Blueprint Designer)**: decided 17 Nov 2026: not for now. Machines built from a blueprint get no automation (Ctrl+C / Ctrl+V and middle click do copy it); say so on the mod page.
+3. **MAM research** (code in 17 Nov 2026, waiting for the in-game test): its own MAM tab "Automated Machines". Node "Automated Machines" (6 AI Limiter) unlocks the whole mod (tabs, side lists, rules running); under it "Output Overflow" (2 High-Speed Connector) unlocks the Output overflow option and actions. All in C++ (`AMResearch`), no editor assets.
 4. **Clean-up**:
    - switch off the widget dump (`AMWidgetDump::Install()` in the module), it writes many lines to the log;
    - make the sign copy / paste log lines (`UAMSignTabs::OnGameClipboardCopied` / `Pasted`) Verbose;

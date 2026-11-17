@@ -178,6 +178,12 @@ In a crowd of machines the player must see at a glance which ones are automated,
 - Statuses read from the game's factory classes; actions use the game's own functions (e.g. pause / standby, clock speed), so machines behave exactly as if the player had done it by hand.
 - Multiplayer from the start: clients send their changes to the server through a remote call object; the server runs all events and actions.
 
+## MAM research (decided 17 Nov 2026)
+The mod has its own MAM tab, **Automated Machines**:
+- **Automated Machines** (cost 6 AI Limiter, 30 s): unlocks the whole mod. Before it, no window shows an Automation tab or a side list (signs, lights, splitters, merger, HUB, MAM), and no alarm rings or action runs. Rules already saved stay saved and start working once it is researched.
+- **Output Overflow**, under it (cost 2 High-Speed Connector, 20 s): unlocks the Output overflow option of production machines and the Output overflow on / off actions. Before it the option is hidden and those actions are not offered; a saved "on" is dropped the next time the machine's automation is edited.
+That is all: nothing else is locked.
+
 ## Open questions
 
 1. ~~First machine~~ — decided: the Smelter and the Constructor.
