@@ -29,11 +29,6 @@
 #include "Buildables/FGBuildablePowerStorage.h"
 #include "FGTrainStationIdentifier.h"
 #include "FGTextRenderer.h"
-#include "Components/TextRenderComponent.h"
-#include "Components/WidgetComponent.h"
-#include "Blueprint/UserWidget.h"
-#include "Blueprint/WidgetTree.h"
-#include "Components/TextBlock.h"
 #include "FGTrain.h"
 #include "FGRailroadVehicle.h"
 #include "FGCircuitSubsystem.h"
@@ -1093,15 +1088,63 @@ bool AAMAutomationSubsystem::RemoveInvalidEntries()
 
 namespace
 {
-	/** Draws a text on a power switch's sign, as the game does when its tag changes (its blueprint
-	 *  event OnBuildingTagChanged, protected: called by name). Only the picture: the tag stays. */
-	void AMAS_ShowSwitchTag(AFGBuildableCircuitSwitch* Switch, bool bHasTag, const FString& Tag)
+	/** The text a display (UFGTextRenderer) shows now: its first element's Text (protected: read by reflection). */
+	bool AMAS_GetRendererText(const UFGTextRenderer* Renderer, FString& OutText)
+	{
+		const FArrayProperty* Elements = Renderer ? CastField<FArrayProperty>(Renderer->GetClass()->FindPropertyByName(TEXT("Elements"))) : nullptr;
+		const FStructProperty* Entry = Elements ? CastField<FStructProperty>(Elements->Inner) : nullptr;
+		const FStrProperty* Text = Entry ? CastField<FStrProperty>(Entry->Struct->FindPropertyByName(TEXT("Text"))) : nullptr;
+		if (!Text)
+		{
+			return false;
+		}
+		FScriptArrayHelper Array(Elements, Elements->ContainerPtrToValuePtr<void>(Renderer));
+		if (Array.Num() == 0)
+		{
+			return false;
+		}
+		OutText = Text->GetPropertyValue_InContainer(Array.GetRawPtr(0));
+		return true;
+	}
+
+	/** Writes a text on every display of a station or switch, only where it shows something else
+	 *  (writing redraws the display: doing it every second made it blink). Returns how many there are. */
+	int32 AMAS_WriteDisplays(AActor* Actor, const FString& Shown)
+	{
+		TArray<UFGTextRenderer*> Displays;
+		Actor->GetComponents<UFGTextRenderer>(Displays);
+		for (UFGTextRenderer* Display : Displays)
+		{
+			FString Current;
+			if (AMAS_GetRendererText(Display, Current) && Current == Shown)
+			{
+				continue;
+			}
+			// UpdateText is private in C++ but a Blueprint function: called by name.
+			if (UFunction* Update = Display->FindFunction(TEXT("UpdateText")))
+			{
+				struct
+				{
+					int32 ElementID = 0;
+					FString Text;
+				} Params;
+				Params.Text = Shown;
+				Display->ProcessEvent(Update, &Params);
+			}
+		}
+		return Displays.Num();
+	}
+
+	/** A power switch draws its own tag again: its blueprint event OnBuildingTagChanged (protected: called by name). */
+	void AMAS_RestoreSwitchTag(AFGBuildableCircuitSwitch* Switch)
 	{
 		UFunction* Event = Switch ? Switch->FindFunction(TEXT("OnBuildingTagChanged")) : nullptr;
 		if (!Event)
 		{
 			return;
 		}
+		const bool bHasTag = IFGBuildingTagInterface::Execute_HasBuildingTag(Switch);
+		const FString Tag = IFGBuildingTagInterface::Execute_GetBuildingTag(Switch);
 		uint8* Params = static_cast<uint8*>(FMemory_Alloca(FMath::Max<int32>(Event->ParmsSize, 1)));
 		FMemory::Memzero(Params, Event->ParmsSize);
 		for (TFieldIterator<FProperty> It(Event); It && It->HasAnyPropertyFlags(CPF_Parm); ++It)
@@ -1121,66 +1164,6 @@ namespace
 		{
 			It->DestroyValue_InContainer(Params);
 		}
-		// The sign may also be drawn by text components the event does not touch: write them too.
-		const FString Shown = bHasTag ? Tag : FString();
-		TArray<UFGTextRenderer*> Renderers;
-		Switch->GetComponents<UFGTextRenderer>(Renderers);
-		for (UFGTextRenderer* Renderer : Renderers)
-		{
-			if (UFunction* Update = Renderer->FindFunction(TEXT("UpdateText")))
-			{
-				struct
-				{
-					int32 ElementID = 0;
-					FString Text;
-				} UpdateParams;
-				UpdateParams.Text = Shown;
-				Renderer->ProcessEvent(Update, &UpdateParams);
-			}
-		}
-		TArray<UTextRenderComponent*> TextRenders;
-		Switch->GetComponents<UTextRenderComponent>(TextRenders);
-		for (UTextRenderComponent* TextRender : TextRenders)
-		{
-			TextRender->SetText(FText::FromString(Shown));
-		}
-		TArray<UWidgetComponent*> WidgetComponents;
-		Switch->GetComponents<UWidgetComponent>(WidgetComponents);
-		for (UWidgetComponent* WidgetComponent : WidgetComponents)
-		{
-			UUserWidget* Widget = WidgetComponent->GetUserWidgetObject();
-			if (Widget && Widget->WidgetTree)
-			{
-				Widget->WidgetTree->ForEachWidget([&Shown](UWidget* Child)
-				{
-					if (UTextBlock* Text = Cast<UTextBlock>(Child))
-					{
-						Text->SetText(FText::FromString(Shown));
-					}
-				});
-			}
-		}
-
-		// Once per switch class: what it is made of (to find its sign if none of the above draws it).
-		static TSet<FName> Described;
-		if (!Described.Contains(Switch->GetClass()->GetFName()))
-		{
-			Described.Add(Switch->GetClass()->GetFName());
-			TArray<UActorComponent*> Components;
-			Switch->GetComponents(Components);
-			for (UActorComponent* Component : Components)
-			{
-				UE_LOG(LogAutomatedMachines, Log, TEXT("[SwitchSign] %s component %s [%s]"), *Switch->GetClass()->GetName(), *Component->GetName(), *Component->GetClass()->GetName());
-			}
-			for (TFieldIterator<UFunction> It(Switch->GetClass(), EFieldIteratorFlags::ExcludeSuper); It; ++It)
-			{
-				UE_LOG(LogAutomatedMachines, Log, TEXT("[SwitchSign] %s function %s"), *Switch->GetClass()->GetName(), *It->GetName());
-			}
-			for (TFieldIterator<FProperty> It(Switch->GetClass(), EFieldIteratorFlags::ExcludeSuper); It; ++It)
-			{
-				UE_LOG(LogAutomatedMachines, Log, TEXT("[SwitchSign] %s var %s [%s]"), *Switch->GetClass()->GetName(), *It->GetName(), *It->GetCPPType());
-			}
-		}
 	}
 }
 
@@ -1196,10 +1179,10 @@ void AAMAutomationSubsystem::UpdateStationDisplays()
 			if (!Entry.StationTextShown.IsEmpty())
 			{
 				Seen.Add(Switch);
-				AMAS_ShowSwitchTag(Switch, true, Entry.StationTextShown);
+				const int32 Displays = AMAS_WriteDisplays(Switch, Entry.StationTextShown);
 				if (!mStationDisplays.Contains(Switch))
 				{
-					UE_LOG(LogAutomatedMachines, Log, TEXT("%s: display shows %s"), *AMAS_Describe(Switch), *Entry.StationTextShown);
+					UE_LOG(LogAutomatedMachines, Log, TEXT("%s: %d display(s) show %s"), *AMAS_Describe(Switch), Displays, *Entry.StationTextShown);
 				}
 				mStationDisplays.Add(Switch);
 			}
@@ -1211,25 +1194,10 @@ void AAMAutomationSubsystem::UpdateStationDisplays()
 			continue;
 		}
 		Seen.Add(Station);
-		TArray<UFGTextRenderer*> Displays;
-		Station->GetComponents<UFGTextRenderer>(Displays);
-		for (UFGTextRenderer* Display : Displays)
-		{
-			// UpdateText is private in C++ but a Blueprint function: called by name.
-			if (UFunction* Update = Display->FindFunction(TEXT("UpdateText")))
-			{
-				struct
-				{
-					int32 ElementID = 0;
-					FString Text;
-				} Params;
-				Params.Text = Entry.StationTextShown;
-				Display->ProcessEvent(Update, &Params);
-			}
-		}
+		const int32 Displays = AMAS_WriteDisplays(Station, Entry.StationTextShown);
 		if (!mStationDisplays.Contains(Station))
 		{
-			UE_LOG(LogAutomatedMachines, Log, TEXT("%s: %d display(s) show %s"), *AMAS_Describe(Station), Displays.Num(), *Entry.StationTextShown);
+			UE_LOG(LogAutomatedMachines, Log, TEXT("%s: %d display(s) show %s"), *AMAS_Describe(Station), Displays, *Entry.StationTextShown);
 		}
 		mStationDisplays.Add(Station);
 	}
@@ -1245,7 +1213,7 @@ void AAMAutomationSubsystem::UpdateStationDisplays()
 			else if (AFGBuildableCircuitSwitch* Switch = Cast<AFGBuildableCircuitSwitch>(It->Get()))
 			{
 				// Its own tag (and whether it shows one) again.
-				AMAS_ShowSwitchTag(Switch, IFGBuildingTagInterface::Execute_HasBuildingTag(Switch), IFGBuildingTagInterface::Execute_GetBuildingTag(Switch));
+				AMAS_RestoreSwitchTag(Switch);
 			}
 			It.RemoveCurrent();
 		}
