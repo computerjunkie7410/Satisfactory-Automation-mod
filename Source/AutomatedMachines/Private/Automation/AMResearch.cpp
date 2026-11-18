@@ -104,6 +104,32 @@ namespace
 		return bX && bY;
 	}
 
+	/** Reads a point from any struct with numeric X and Y. */
+	FIntPoint AMR_GetPoint(const FStructProperty* Field, const void* Value)
+	{
+		FIntPoint Point(0, 0);
+		for (TFieldIterator<FProperty> It(Field->Struct); It && Value; ++It)
+		{
+			const FNumericProperty* Number = CastField<FNumericProperty>(*It);
+			const FString Name = It->GetAuthoredName();
+			if (!Number)
+			{
+				continue;
+			}
+			const void* NumberValue = Number->ContainerPtrToValuePtr<void>(Value);
+			const int32 Coordinate = Number->IsFloatingPoint() ? FMath::RoundToInt(Number->GetFloatingPointPropertyValue(NumberValue)) : static_cast<int32>(Number->GetSignedIntPropertyValue(NumberValue));
+			if (Name == TEXT("X") || Name.StartsWith(TEXT("X_")))
+			{
+				Point.X = Coordinate;
+			}
+			else if (Name == TEXT("Y") || Name.StartsWith(TEXT("Y_")))
+			{
+				Point.Y = Coordinate;
+			}
+		}
+		return Point;
+	}
+
 	/** Logs a struct's fields, and those of the structs inside it (to see the game's node layout). */
 	void AMR_LogSchema(const UStruct* Struct, const FString& Indent)
 	{
@@ -116,26 +142,20 @@ namespace
 				Inner = Array->Inner;
 				UE_LOG(LogAutomatedMachines, Log, TEXT("[Research] schema %s  of [%s]"), *Indent, *Inner->GetCPPType());
 			}
+			else if (const FMapProperty* Map = CastField<FMapProperty>(Inner))
+			{
+				UE_LOG(LogAutomatedMachines, Log, TEXT("[Research] schema %s  key [%s] value [%s]"), *Indent, *Map->KeyProp->GetCPPType(), *Map->ValueProp->GetCPPType());
+				if (const FStructProperty* Value = CastField<FStructProperty>(Map->ValueProp); Value && Indent.Len() < 8)
+				{
+					AMR_LogSchema(Value->Struct, Indent + TEXT("    "));
+				}
+				Inner = Map->KeyProp;
+			}
 			if (const FStructProperty* Nested = CastField<FStructProperty>(Inner); Nested && Indent.Len() < 8)
 			{
 				AMR_LogSchema(Nested->Struct, Indent + TEXT("  "));
 			}
 		}
-	}
-
-	/** Adds Object to an array-of-objects field of a struct value. */
-	bool AMR_AddObject(const UStruct* Struct, void* StructValue, const TCHAR* Prefix, UObject* Object)
-	{
-		const FArrayProperty* Array = CastField<FArrayProperty>(AMR_Field(Struct, Prefix));
-		const FObjectPropertyBase* Inner = Array ? CastField<FObjectPropertyBase>(Array->Inner) : nullptr;
-		if (!Inner)
-		{
-			return false;
-		}
-		FScriptArrayHelper Helper(Array, Array->ContainerPtrToValuePtr<void>(StructValue));
-		const int32 Index = Helper.AddValue();
-		Inner->SetObjectPropertyValue(Helper.GetRawPtr(Index), Object);
-		return true;
 	}
 
 	/** Logs every field of a node's data (to see the game's own layout when ours does not show right). */
@@ -356,55 +376,55 @@ bool UAMResearchTree::PrepareDefaults()
 
 	// The game's node blueprint: from a vanilla tree (logged as a model), or by its path.
 	UClass* NodeClass = nullptr;
-	// The game's trees: from the asset registry (the paths above are only a guess).
+	// The game's trees: research tree blueprints from the asset registry (found by their parent
+	// class), else the guessed paths. Its nodes give the node class, and its root node and that
+	// root's first child give where to put ours (centred like the game's) and the road between them.
 	TArray<FString> TreePaths;
-	for (const TCHAR* TreePath : AMR_VanillaTrees)
-	{
-		TreePaths.Add(TreePath);
-	}
 	{
 		TArray<FAssetData> Assets;
 		IAssetRegistry::GetChecked().GetAssetsByPath(FName(TEXT("/Game/FactoryGame/Schematics/Research")), Assets, true);
 		for (const FAssetData& Asset : Assets)
 		{
-			const FString Name = Asset.AssetName.ToString();
-			if (Name.StartsWith(TEXT("Research_")) && TreePaths.Num() < 12)
+			const FString Parent = Asset.GetTagValueRef<FString>(FName(TEXT("NativeParentClass"))) + Asset.GetTagValueRef<FString>(FName(TEXT("ParentClass")));
+			if (Parent.Contains(TEXT("FGResearchTree")) && !Parent.Contains(TEXT("FGResearchTreeNode")))
 			{
-				TreePaths.AddUnique(FString::Printf(TEXT("%s.%s_C"), *Asset.PackageName.ToString(), *Name));
+				TreePaths.AddUnique(FString::Printf(TEXT("%s.%s_C"), *Asset.PackageName.ToString(), *Asset.AssetName.ToString()));
 			}
 		}
-		UE_LOG(LogAutomatedMachines, Log, TEXT("[Research] %d assets in /Game/FactoryGame/Schematics/Research"), Assets.Num());
+		UE_LOG(LogAutomatedMachines, Log, TEXT("[Research] %d assets in /Game/FactoryGame/Schematics/Research, %d research trees"), Assets.Num(), TreePaths.Num());
 	}
+	for (const TCHAR* TreePath : AMR_VanillaTrees)
+	{
+		TreePaths.AddUnique(TreePath);
+	}
+	TArray<UObject*> VanillaNodes;
+	FString VanillaTree;
+	const FArrayProperty* NodesProperty = CastField<FArrayProperty>(UFGResearchTree::StaticClass()->FindPropertyByName(TEXT("mNodes")));
+	const FObjectPropertyBase* NodesInner = NodesProperty ? CastField<FObjectPropertyBase>(NodesProperty->Inner) : nullptr;
 	for (const FString& TreePath : TreePaths)
 	{
 		UClass* TreeClass = LoadObject<UClass>(nullptr, *TreePath, nullptr, LOAD_NoWarn | LOAD_Quiet);
-		if (TreeClass && !TreeClass->IsChildOf(UFGResearchTree::StaticClass()))
-		{
-			TreeClass = nullptr;
-		}
-		if (!TreeClass)
+		if (!TreeClass || !TreeClass->IsChildOf(UFGResearchTree::StaticClass()) || !NodesInner)
 		{
 			continue;
 		}
 		// Read a vanilla tree's mNodes by reflection (protected, and not through our own type).
-		const FArrayProperty* NodesProperty = CastField<FArrayProperty>(UFGResearchTree::StaticClass()->FindPropertyByName(TEXT("mNodes")));
-		if (!NodesProperty)
-		{
-			break;
-		}
 		FScriptArrayHelper Nodes(NodesProperty, NodesProperty->ContainerPtrToValuePtr<void>(TreeClass->GetDefaultObject()));
-		const FObjectPropertyBase* Inner = CastField<FObjectPropertyBase>(NodesProperty->Inner);
-		for (int32 Index = 0; Inner && Index < Nodes.Num() && Index < 4; ++Index)
+		for (int32 Index = 0; Index < Nodes.Num(); ++Index)
 		{
-			UObject* Node = Inner->GetObjectPropertyValue(Nodes.GetRawPtr(Index));
-			if (Node && !NodeClass)
+			if (UObject* Node = NodesInner->GetObjectPropertyValue(Nodes.GetRawPtr(Index)))
 			{
-				NodeClass = Node->GetClass();
+				VanillaNodes.Add(Node);
 			}
-			AMR_LogNode(*TreeClass->GetName(), Node);
 		}
-		if (NodeClass)
+		if (VanillaNodes.Num() > 0)
 		{
+			VanillaTree = TreeClass->GetName();
+			NodeClass = VanillaNodes[0]->GetClass();
+			for (int32 Index = 0; Index < VanillaNodes.Num() && Index < 4; ++Index)
+			{
+				AMR_LogNode(*VanillaTree, VanillaNodes[Index]);
+			}
 			break;
 		}
 	}
@@ -425,71 +445,87 @@ bool UAMResearchTree::PrepareDefaults()
 	UE_LOG(LogAutomatedMachines, Log, TEXT("[Research] node class %s, data %s [%s]"), *NodeClass->GetPathName(), *DataProperty->GetName(), *DataProperty->Struct->GetName());
 	AMR_LogSchema(DataProperty->Struct, FString());
 
+	// Node data: Schematic, Coordinates (FIntVector2D), Parents / UnhiddenBy / NodesToUnhide
+	// (arrays of coordinates), ChildrenAndRoads (map: a child's coordinates -> the road to it).
+	const UStruct* Data = DataProperty->Struct;
+	const FObjectPropertyBase* SchematicField = CastField<FObjectPropertyBase>(AMR_Field(Data, TEXT("Schematic")));
+	const FStructProperty* CoordinatesField = CastField<FStructProperty>(AMR_Field(Data, TEXT("Coordinates")));
+	const FArrayProperty* ParentsField = CastField<FArrayProperty>(AMR_Field(Data, TEXT("Parents")));
+	const FMapProperty* ChildrenField = CastField<FMapProperty>(AMR_Field(Data, TEXT("ChildrenAndRoads")));
+
+	// Where the game puts a tree's first node and its first child (else our guess).
+	FIntPoint RootAt(3, 0);
+	FIntPoint ChildAt(3, 1);
+	const void* VanillaRoad = nullptr;
+	for (UObject* Node : VanillaNodes)
+	{
+		if (Node->GetClass() != NodeClass || !CoordinatesField || !ParentsField || !ChildrenField)
+		{
+			continue;
+		}
+		const void* NodeData = DataProperty->ContainerPtrToValuePtr<void>(Node);
+		FScriptArrayHelper Parents(ParentsField, ParentsField->ContainerPtrToValuePtr<void>(NodeData));
+		FScriptMapHelper Children(ChildrenField, ChildrenField->ContainerPtrToValuePtr<void>(NodeData));
+		if (Parents.Num() != 0 || Children.Num() == 0)
+		{
+			continue;
+		}
+		const FStructProperty* KeyField = CastField<FStructProperty>(ChildrenField->KeyProp);
+		for (int32 Index = 0; Index < Children.GetMaxIndex(); ++Index)
+		{
+			if (Children.IsValidIndex(Index) && KeyField)
+			{
+				RootAt = AMR_GetPoint(CoordinatesField, CoordinatesField->ContainerPtrToValuePtr<void>(NodeData));
+				ChildAt = AMR_GetPoint(KeyField, Children.GetKeyPtr(Index));
+				VanillaRoad = Children.GetValuePtr(Index);
+				break;
+			}
+		}
+		if (VanillaRoad)
+		{
+			break;
+		}
+	}
+	UE_LOG(LogAutomatedMachines, Log, TEXT("[Research] from %s: root at %d,%d, child at %d,%d, road %s"),
+		VanillaTree.IsEmpty() ? TEXT("(no vanilla tree)") : *VanillaTree, RootAt.X, RootAt.Y, ChildAt.X, ChildAt.Y, VanillaRoad ? TEXT("copied") : TEXT("none"));
+
 	AMR_Keep(NodeClass);
 	UFGResearchTreeNode* Root = AMR_Keep(NewObject<UFGResearchTreeNode>(Cdo, NodeClass));
 	UFGResearchTreeNode* Child = AMR_Keep(NewObject<UFGResearchTreeNode>(Cdo, NodeClass));
-	const UStruct* Data = DataProperty->Struct;
 	void* RootData = DataProperty->ContainerPtrToValuePtr<void>(Root);
 	void* ChildData = DataProperty->ContainerPtrToValuePtr<void>(Child);
-	const FIntPoint RootAt(0, 0);
-	const FIntPoint ChildAt(0, 1);
 
-	// Schematic, coordinates.
-	if (const FObjectPropertyBase* Schematic = CastField<FObjectPropertyBase>(AMR_Field(Data, TEXT("Schematic"))))
+	if (SchematicField)
 	{
-		Schematic->SetObjectPropertyValue_InContainer(RootData, UAMSchematic_Automation::StaticClass());
-		Schematic->SetObjectPropertyValue_InContainer(ChildData, UAMSchematic_Overflow::StaticClass());
+		SchematicField->SetObjectPropertyValue_InContainer(RootData, UAMSchematic_Automation::StaticClass());
+		SchematicField->SetObjectPropertyValue_InContainer(ChildData, UAMSchematic_Overflow::StaticClass());
 	}
 	else
 	{
 		UE_LOG(LogAutomatedMachines, Error, TEXT("[Research] node data has no Schematic field"));
 	}
-	if (const FStructProperty* Coordinates = CastField<FStructProperty>(AMR_Field(Data, TEXT("Coordinates"))))
+	if (CoordinatesField)
 	{
-		AMR_SetPoint(Coordinates, Coordinates->ContainerPtrToValuePtr<void>(RootData), RootAt);
-		AMR_SetPoint(Coordinates, Coordinates->ContainerPtrToValuePtr<void>(ChildData), ChildAt);
+		AMR_SetPoint(CoordinatesField, CoordinatesField->ContainerPtrToValuePtr<void>(RootData), RootAt);
+		AMR_SetPoint(CoordinatesField, CoordinatesField->ContainerPtrToValuePtr<void>(ChildData), ChildAt);
 	}
-	// The child hangs under the root.
-	AMR_AddObject(Data, ChildData, TEXT("Parents"), Root);
-	// The road from the root to the child (a list of children, each with roads made of points).
-	if (const FArrayProperty* Children = CastField<FArrayProperty>(AMR_Field(Data, TEXT("ChildrenAndRoads"))))
+	// The child hangs under the root: the MAM keeps it locked until the root is researched.
+	if (const FStructProperty* ParentPoint = ParentsField ? CastField<FStructProperty>(ParentsField->Inner) : nullptr)
 	{
-		if (const FStructProperty* Entry = CastField<FStructProperty>(Children->Inner))
+		FScriptArrayHelper Parents(ParentsField, ParentsField->ContainerPtrToValuePtr<void>(ChildData));
+		AMR_SetPoint(ParentPoint, Parents.GetRawPtr(Parents.AddValue()), RootAt);
+	}
+	// The road from the root to the child (copied from the game's tree, whose two nodes sit where ours do).
+	if (const FStructProperty* KeyField = ChildrenField ? CastField<FStructProperty>(ChildrenField->KeyProp) : nullptr)
+	{
+		FScriptMapHelper Children(ChildrenField, ChildrenField->ContainerPtrToValuePtr<void>(RootData));
+		const int32 Added = Children.AddDefaultValue_Invalid_NeedsRehash();
+		AMR_SetPoint(KeyField, Children.GetKeyPtr(Added), ChildAt);
+		if (VanillaRoad)
 		{
-			FScriptArrayHelper ChildList(Children, Children->ContainerPtrToValuePtr<void>(RootData));
-			void* EntryValue = ChildList.GetRawPtr(ChildList.AddValue());
-			if (const FObjectPropertyBase* ChildField = CastField<FObjectPropertyBase>(AMR_Field(Entry->Struct, TEXT("Child"))))
-			{
-				ChildField->SetObjectPropertyValue_InContainer(EntryValue, Child);
-			}
-			if (const FArrayProperty* Roads = CastField<FArrayProperty>(AMR_Field(Entry->Struct, TEXT("Road"))))
-			{
-				FScriptArrayHelper RoadList(Roads, Roads->ContainerPtrToValuePtr<void>(EntryValue));
-				const FStructProperty* RoadStruct = CastField<FStructProperty>(Roads->Inner);
-				void* RoadValue = RoadList.GetRawPtr(RoadList.AddValue());
-				// A road: points (from the root to the child), in its first array of points.
-				if (RoadStruct && !AMR_SetPoint(RoadStruct, RoadValue, RootAt))
-				{
-					for (TFieldIterator<FProperty> It(RoadStruct->Struct); It; ++It)
-					{
-						const FArrayProperty* Points = CastField<FArrayProperty>(*It);
-						const FStructProperty* Point = Points ? CastField<FStructProperty>(Points->Inner) : nullptr;
-						if (Point)
-						{
-							FScriptArrayHelper PointList(Points, Points->ContainerPtrToValuePtr<void>(RoadValue));
-							AMR_SetPoint(Point, PointList.GetRawPtr(PointList.AddValue()), RootAt);
-							AMR_SetPoint(Point, PointList.GetRawPtr(PointList.AddValue()), ChildAt);
-							break;
-						}
-					}
-				}
-				else if (RoadStruct)
-				{
-					// The road is a list of points itself: root, child.
-					AMR_SetPoint(RoadStruct, RoadList.GetRawPtr(RoadList.AddValue()), ChildAt);
-				}
-			}
+			ChildrenField->ValueProp->CopyCompleteValue(Children.GetValuePtr(Added), VanillaRoad);
 		}
+		Children.Rehash();
 	}
 
 	Cdo->mNodes.Reset();
