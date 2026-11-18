@@ -3298,6 +3298,19 @@ void UAMAutomationTab::RebuildOverview()
 			UTextBlock* CountLabel = nullptr;
 			UButton* CountButton = AMUI::MakeButton(WidgetTree, FString::Printf(TEXT("%d"), Count), Font, AMUI::CardField, &CountLabel);
 			AMUI::SetButtonRounded(CountButton, bOpen ? AMUI::Orange : AMUI::CardField, 6.f);
+			{
+				// The number in the middle of its box (no top / bottom padding pushing it down).
+				FButtonStyle Style = CountButton->GetStyle();
+				Style.SetNormalPadding(FMargin(4.f, 0.f));
+				Style.SetPressedPadding(FMargin(4.f, 1.f, 4.f, 0.f));
+				CountButton->SetStyle(Style);
+			}
+			if (UButtonSlot* LabelSlot = CountLabel ? Cast<UButtonSlot>(CountLabel->Slot) : nullptr)
+			{
+				LabelSlot->SetHorizontalAlignment(HAlign_Center);
+				LabelSlot->SetVerticalAlignment(VAlign_Center);
+				LabelSlot->SetPadding(FMargin(0.f));
+			}
 			if (CountLabel)
 			{
 				CountLabel->SetColorAndOpacity(FSlateColor(bOpen ? FLinearColor(FColor(30, 30, 30)) : (Count == 0 ? AMUI::Orange : AMUI::White)));
@@ -3723,6 +3736,7 @@ void UAMAutomationTab::BuildExpandedRows()
 		UButton* Locate = bCanLocate ? AMUI::MakeRemoveButton(WidgetTree, Font) : nullptr;
 		if (Locate)
 		{
+			AMUI::SetButtonRoundedSeeThrough(Locate, AMUI::Card, 6.f);
 			USizeBox* PinSize = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
 			PinSize->SetWidthOverride(20.f);
 			PinSize->SetHeightOverride(20.f);
@@ -3738,7 +3752,13 @@ void UAMAutomationTab::BuildExpandedRows()
 			Locate->OnClicked.AddDynamic(Handler, &UAMOverviewHandler::OnLocateClicked);
 			AddIconButton(Locate);
 		}
-		// No bin here (18 Nov 2026): events are deleted as a whole, with their row's bin.
+		// The bin: removes the event from this machine only (the machine stays), at once.
+		UButton* Bin = AMUI::MakeRemoveButton(WidgetTree, Font);
+		AMUI::SetButtonRoundedSeeThrough(Bin, AMUI::Card, 6.f);
+		Bin->SetToolTipText(FText::FromString(FString::Printf(TEXT("Remove %s from %s"), *mExpandedEvent, *Entry.Name)));
+		Bin->OnClicked.AddDynamic(Handler, &UAMOverviewHandler::OnSingleBinClicked);
+		Bin->OnHovered.AddDynamic(Handler, &UAMOverviewHandler::OnBinHovered);
+		AddIconButton(Bin);
 
 		if (UVerticalBoxSlot* RowSlot = mExpandedRows->AddChildToVerticalBox(Row))
 		{
@@ -3783,8 +3803,8 @@ void UAMAutomationTab::ExplainOverviewBin(const FString& Event, bool bRingers, b
 	if (bOne)
 	{
 		ShowInfo(FText::FromString(FString::Printf(TEXT("Remove from %s"), *TargetName)), FText::FromString(bRingers
-			? FString::Printf(TEXT("Removes the event %s from %s only: its event rows with this name are deleted, at once."), *Event, *TargetName)
-			: FString::Printf(TEXT("Removes the actions of %s on the event %s (a sign: its design for it), at once."), *TargetName, *Event)));
+			? FString::Printf(TEXT("Click: %s stops triggering %s (its conditions for it are removed). The machine stays."), *TargetName, *Event)
+			: FString::Printf(TEXT("Click: %s stops listening to %s (its actions or design for it are removed). The machine stays."), *TargetName, *Event)));
 		return;
 	}
 	int32 Ringers = 0;
