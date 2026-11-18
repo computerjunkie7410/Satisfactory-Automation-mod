@@ -336,3 +336,7 @@ Alarms and two actions, delete outgoing items and delete incoming items (outgoin
 - When an alarm rings the machine takes that alarm's settings and keeps them until another of its alarms rings (alarms have no "stopped"; use pairs). Default before any alarm rang.
 - No conditions and no Automation tab: a splitter or merger measures nothing here. They get the underglow like other machines while they have alarm settings (they are big and boxy).
 - Copy / paste and middle-click sampling carry the alarm settings. Saved small: only the rules (item class and output index per rule). Uninstall-safe: without the mod the machine keeps the rules it had.
+
+## Game updates (18 Nov 2026)
+
+A game update can change the game's code under the mod. When it does, the mod **pauses instead of crashing**: no tabs, no events, no actions, and the automation of every machine stays saved as it was. Players see one message after loading: "Automated Machines paused: this game update changed the game's code. The mod is paused (your automation is kept) until it is updated for this game version." A mod update built for the new game version brings everything back.

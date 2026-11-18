@@ -1,4 +1,6 @@
 #include "Automation/AMAutomationSubsystem.h"
+#include "Automation/AMLayoutCheck.h"
+#include "TimerManager.h"
 #include "Automation/AMResearch.h"
 #include "Automation/AMMarkers.h"
 #include "FGSchematicManager.h"
@@ -189,6 +191,33 @@ void AAMAutomationSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 void AAMAutomationSubsystem::BeginPlay()
 {
 	Super::BeginPlay();
+	// The game changed since this build: nothing runs (the rules stay saved as they are), the players are told.
+	if (AMLayout::IsMismatch())
+	{
+		UE_LOG(LogAutomatedMachines, Warning, TEXT("Automation subsystem paused: this game version changed (%s)"), *AMLayout::GetMismatchList());
+		if (!IsRunningDedicatedServer() && GetWorld())
+		{
+			FTimerHandle Handle;
+			TWeakObjectPtr<AAMAutomationSubsystem> WeakThis(this);
+			GetWorld()->GetTimerManager().SetTimer(Handle, [WeakThis]()
+			{
+				const AAMAutomationSubsystem* Self = WeakThis.Get();
+				const bool bUiChanged = AMLayout::GetMismatchList().Contains(TEXT("AFGHUD")) || AMLayout::GetMismatchList().Contains(TEXT("UFGGameUI"));
+				if (Self && !bUiChanged)
+				{
+					for (FConstPlayerControllerIterator It = Self->GetWorld()->GetPlayerControllerIterator(); It; ++It)
+					{
+						if (APlayerController* Player = It->Get(); Player && Player->IsLocalController())
+						{
+							UAMNotification::Show(Player, TEXT("Automated Machines paused"),
+								TEXT("This game update changed the game's code. The mod is paused (your automation is kept) until it is updated for this game version."));
+						}
+					}
+				}
+			}, 8.f, false);
+		}
+		return;
+	}
 	if (HasAuthority())
 	{
 		BindWorldEvents();
@@ -231,6 +260,11 @@ void AAMAutomationSubsystem::PostSaveGame_Implementation(int32 SaveVersion, int3
 
 void AAMAutomationSubsystem::PreSaveGame_Implementation(int32 SaveVersion, int32 GameVersion)
 {
+	// Paused (game changed): the loaded data is saved back unchanged.
+	if (AMLayout::IsMismatch())
+	{
+		return;
+	}
 
 	// The waiting wrong items are saved, so none is lost.
 	mHeldItems.Reset();
@@ -248,6 +282,11 @@ void AAMAutomationSubsystem::PreSaveGame_Implementation(int32 SaveVersion, int32
 
 void AAMAutomationSubsystem::PostLoadGame_Implementation(int32 SaveVersion, int32 GameVersion)
 {
+	// Paused (game changed): keep the loaded data as it is, touch no machine.
+	if (AMLayout::IsMismatch())
+	{
+		return;
+	}
 	for (const FAMHeldItem& Saved : mHeldItems)
 	{
 		if (IsValid(Saved.Machine) && Saved.Item)
@@ -1242,6 +1281,10 @@ void AAMAutomationSubsystem::UpdateStationDisplays()
 void AAMAutomationSubsystem::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	if (AMLayout::IsMismatch())
+	{
+		return;
+	}
 	if (!IsRunningDedicatedServer())
 	{
 		mTimeSinceDisplays += DeltaSeconds;

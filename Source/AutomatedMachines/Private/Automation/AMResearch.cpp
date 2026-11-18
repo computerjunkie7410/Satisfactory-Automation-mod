@@ -1,5 +1,6 @@
 #include "Automation/AMResearch.h"
 #include "AutomatedMachinesModule.h"
+#include "Automation/AMLayoutCheck.h"
 #include "FGSchematicManager.h"
 #include "FGResearchTreeNode.h"
 #include "ItemAmount.h"
@@ -540,6 +541,11 @@ bool UAMResearchTree::PrepareDefaults()
 
 void AMResearch::Register(UWorld* World)
 {
+	// The game changed since this build: no research tab (its setup writes into the game's classes).
+	if (AMLayout::IsMismatch())
+	{
+		return;
+	}
 	if (!bAMR_Prepared)
 	{
 		bAMR_Prepared = true;
@@ -573,6 +579,10 @@ namespace
 
 bool AMResearch::IsAutomationUnlocked(const UObject* WorldContext)
 {
+	if (AMLayout::IsMismatch())
+	{
+		return false;
+	}
 	return AMR_IsPurchased(WorldContext, UAMSchematic_Automation::StaticClass());
 }
 

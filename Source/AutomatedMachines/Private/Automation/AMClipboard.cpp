@@ -1,4 +1,5 @@
 #include "Automation/AMClipboard.h"
+#include "Automation/AMLayoutCheck.h"
 #include "AutomatedMachinesModule.h"
 #include "Automation/AMAutomationSubsystem.h"
 #include "Net/AMRemoteCallObject.h"
@@ -216,6 +217,7 @@ void AMClipboard::Install()
 	// hooked), our Copy / Paste automation settings buttons only the automation.
 	SUBSCRIBE_METHOD_AFTER(AFGCharacterPlayer::ClipboardCopy, [](AFGCharacterPlayer* Self)
 	{
+		if (AMLayout::IsMismatch()) { return; }
 		if (AActor* Target = Self ? Self->GetBestUsableActor() : nullptr)
 		{
 			Copy(Self->GetPlayerState<AFGPlayerState>(), Target);
@@ -223,6 +225,7 @@ void AMClipboard::Install()
 	});
 	SUBSCRIBE_METHOD_AFTER(AFGCharacterPlayer::ClipboardPaste, [](AFGCharacterPlayer* Self)
 	{
+		if (AMLayout::IsMismatch()) { return; }
 		if (AActor* Target = Self ? Self->GetBestUsableActor() : nullptr)
 		{
 			Paste(Self->GetPlayerState<AFGPlayerState>(), Target);
@@ -234,16 +237,19 @@ void AMClipboard::Install()
 	// the Default design stored on the sign; copies and pastes of signs are logged with their texts.
 	SUBSCRIBE_METHOD_AFTER(AFGPlayerState::CopyFactoryClipboard, [](AFGPlayerState* Self, UObject* Object)
 	{
+		if (AMLayout::IsMismatch()) { return; }
 		UAMSignTabs::OnGameClipboardCopied(Object, Self);
 	});
 	SUBSCRIBE_METHOD_AFTER(AFGPlayerState::PasteFactoryClipboard, [](AFGPlayerState* Self, UObject* Object)
 	{
+		if (AMLayout::IsMismatch()) { return; }
 		UAMSignTabs::OnGameClipboardPasted(Object, Self);
 	});
 
 	// Middle click: remember the sampled machine's automation for this build gun.
 	SUBSCRIBE_METHOD_AFTER(UFGBuildGunStateBuild::SampleClipboardSettingsFromActor, [](UFGBuildGunStateBuild* Self, AActor* Actor)
 	{
+		if (AMLayout::IsMismatch()) { return; }
 		AFGBuildable* Machine = Cast<AFGBuildable>(Actor);
 		FAMCBSample Sample;
 		if (!Self || !Machine || !AMCB_Read(Machine, Sample.Clip))
@@ -261,11 +267,13 @@ void AMClipboard::Install()
 	// next starts without automation (sampling again is one middle click).
 	SUBSCRIBE_METHOD_AFTER(UFGBuildGunStateBuild::SetActiveRecipe, [](UFGBuildGunStateBuild* Self, TSubclassOf<UFGRecipe> Recipe)
 	{
+		if (AMLayout::IsMismatch()) { return; }
 		AMCB_ForgetSample(Self, TEXT("a building was picked"));
 	});
 	SUBSCRIBE_METHOD_VIRTUAL_AFTER(UFGBuildGunStateBuild::EndState_Implementation, GetMutableDefault<UFGBuildGunStateBuild>(),
 		[](UFGBuildGunStateBuild* Self)
 		{
+			if (AMLayout::IsMismatch()) { return; }
 			AMCB_ForgetSample(Self, TEXT("build mode left"));
 		});
 

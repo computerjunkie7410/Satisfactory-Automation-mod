@@ -23,7 +23,7 @@ namespace
 	/** The reservation enters the block through a blocked signal. */
 	bool AMSG_EntersBlocked(const FFGRailroadBlockReservation* Reservation)
 	{
-		return Reservation && AMSG_IsBlocked(Reservation->EntrySignal.Get());
+		return Reservation && AMSG_BlockedCount.load() > 0 && AMSG_IsBlocked(Reservation->EntrySignal.Get());
 	}
 
 	/** The signal and the others of its block show their aspect again (ours or the game's). */

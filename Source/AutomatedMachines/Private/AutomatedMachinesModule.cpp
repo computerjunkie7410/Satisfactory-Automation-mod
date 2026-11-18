@@ -4,6 +4,7 @@
 #include "Automation/AMAutomationSubsystem.h"
 #include "Net/AMRemoteCallObject.h"
 #include "Automation/AMClipboard.h"
+#include "Automation/AMLayoutCheck.h"
 
 DEFINE_LOG_CATEGORY(LogAutomatedMachines);
 
@@ -12,6 +13,10 @@ void FAutomatedMachinesModule::StartupModule()
 	UE_LOG(LogAutomatedMachines, Log, TEXT("Automated Machines module started"));
 
 #if !WITH_EDITOR
+	// Game update guard: compares the game's classes with those the mod was built with (logs the result).
+	// On a difference the mod pauses itself (see AMLayoutCheck.h); the hooks below then do nothing.
+	AMLayout::IsMismatch();
+
 	// The save object with every machine's rules, and the engine that runs them.
 	AAMAutomationSubsystem::InstallRegistration();
 
