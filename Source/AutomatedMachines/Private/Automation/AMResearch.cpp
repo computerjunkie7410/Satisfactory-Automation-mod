@@ -135,16 +135,16 @@ namespace
 	{
 		for (TFieldIterator<FProperty> It(Struct); It; ++It)
 		{
-			UE_LOG(LogAutomatedMachines, Log, TEXT("[Research] schema %s%s [%s]"), *Indent, *It->GetAuthoredName(), *It->GetCPPType());
+			UE_LOG(LogAutomatedMachines, Verbose, TEXT("[Research] schema %s%s [%s]"), *Indent, *It->GetAuthoredName(), *It->GetCPPType());
 			const FProperty* Inner = *It;
 			if (const FArrayProperty* Array = CastField<FArrayProperty>(Inner))
 			{
 				Inner = Array->Inner;
-				UE_LOG(LogAutomatedMachines, Log, TEXT("[Research] schema %s  of [%s]"), *Indent, *Inner->GetCPPType());
+				UE_LOG(LogAutomatedMachines, Verbose, TEXT("[Research] schema %s  of [%s]"), *Indent, *Inner->GetCPPType());
 			}
 			else if (const FMapProperty* Map = CastField<FMapProperty>(Inner))
 			{
-				UE_LOG(LogAutomatedMachines, Log, TEXT("[Research] schema %s  key [%s] value [%s]"), *Indent, *Map->KeyProp->GetCPPType(), *Map->ValueProp->GetCPPType());
+				UE_LOG(LogAutomatedMachines, Verbose, TEXT("[Research] schema %s  key [%s] value [%s]"), *Indent, *Map->KeyProp->GetCPPType(), *Map->ValueProp->GetCPPType());
 				if (const FStructProperty* Value = CastField<FStructProperty>(Map->ValueProp); Value && Indent.Len() < 8)
 				{
 					AMR_LogSchema(Value->Struct, Indent + TEXT("    "));
@@ -169,7 +169,7 @@ namespace
 		{
 			FString Value;
 			It->ExportTextItem_Direct(Value, It->ContainerPtrToValuePtr<void>(Node), nullptr, Node, PPF_None);
-			UE_LOG(LogAutomatedMachines, Log, TEXT("[Research] %s %s.%s [%s] = %s"), What, *Node->GetClass()->GetName(), *It->GetAuthoredName(), *It->GetCPPType(), *Value.Left(600));
+			UE_LOG(LogAutomatedMachines, Verbose, TEXT("[Research] %s %s.%s [%s] = %s"), What, *Node->GetClass()->GetName(), *It->GetAuthoredName(), *It->GetCPPType(), *Value.Left(600));
 		}
 	}
 
@@ -391,7 +391,7 @@ bool UAMResearchTree::PrepareDefaults()
 				TreePaths.AddUnique(FString::Printf(TEXT("%s.%s_C"), *Asset.PackageName.ToString(), *Asset.AssetName.ToString()));
 			}
 		}
-		UE_LOG(LogAutomatedMachines, Log, TEXT("[Research] %d assets in /Game/FactoryGame/Schematics/Research, %d research trees"), Assets.Num(), TreePaths.Num());
+		UE_LOG(LogAutomatedMachines, Verbose, TEXT("[Research] %d assets in /Game/FactoryGame/Schematics/Research, %d research trees"), Assets.Num(), TreePaths.Num());
 	}
 	for (const TCHAR* TreePath : AMR_VanillaTrees)
 	{
@@ -442,7 +442,7 @@ bool UAMResearchTree::PrepareDefaults()
 		UE_LOG(LogAutomatedMachines, Error, TEXT("[Research] the game's research node class (or its data) was not found: no MAM tab"));
 		return false;
 	}
-	UE_LOG(LogAutomatedMachines, Log, TEXT("[Research] node class %s, data %s [%s]"), *NodeClass->GetPathName(), *DataProperty->GetName(), *DataProperty->Struct->GetName());
+	UE_LOG(LogAutomatedMachines, Verbose, TEXT("[Research] node class %s, data %s [%s]"), *NodeClass->GetPathName(), *DataProperty->GetName(), *DataProperty->Struct->GetName());
 	AMR_LogSchema(DataProperty->Struct, FString());
 
 	// Node data: Schematic, Coordinates (FIntVector2D), Parents / UnhiddenBy / NodesToUnhide
@@ -486,7 +486,7 @@ bool UAMResearchTree::PrepareDefaults()
 			break;
 		}
 	}
-	UE_LOG(LogAutomatedMachines, Log, TEXT("[Research] from %s: root at %d,%d, child at %d,%d, road %s"),
+	UE_LOG(LogAutomatedMachines, Verbose, TEXT("[Research] from %s: root at %d,%d, child at %d,%d, road %s"),
 		VanillaTree.IsEmpty() ? TEXT("(no vanilla tree)") : *VanillaTree, RootAt.X, RootAt.Y, ChildAt.X, ChildAt.Y, VanillaRoad ? TEXT("copied") : TEXT("none"));
 
 	AMR_Keep(NodeClass);

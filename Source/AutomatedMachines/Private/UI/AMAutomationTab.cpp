@@ -2158,7 +2158,7 @@ void UAMAutomationTab::RemoveRule(bool bFire, int32 Index, const FString& Expect
 	}
 	if (!bFire && mReactions.IsValidIndex(Index))
 	{
-		UE_LOG(LogAutomatedMachines, Log, TEXT("Automation tab: removing action %d (%s / %s) of %d"),
+		UE_LOG(LogAutomatedMachines, Verbose, TEXT("Automation tab: removing action %d (%s / %s) of %d"),
 			Index, *mReactions[Index].Event, *AMRules::GetActionText(mReactions[Index].Action).ToString(), mReactions.Num());
 	}
 	if (bFire && mFires.IsValidIndex(Index))

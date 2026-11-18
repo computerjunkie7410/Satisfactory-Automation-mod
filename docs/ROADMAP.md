@@ -1,18 +1,21 @@
-# Automated Machines — what is left (5 Nov 2026)
+# Automated Machines — what is left (18 Nov 2026)
 
 Done and tested so far: see the table in `DEV-NOTES.md` ("What works").
 
-## Left to do (before a first release)
+## Release 1.0.0 (18 Nov 2026)
 
-1. **Multiplayer test**: cannot be tested for now (17 Nov 2026). To say on the mod page: made for multiplayer (server-side rules, replicated), not tested with several players yet.
-2. **Blueprints (the game's Blueprint Designer)**: decided 17 Nov 2026: not for now. Machines built from a blueprint get no automation (Ctrl+C / Ctrl+V and middle click do copy it); say so on the mod page.
-3. **MAM research** (code in 17 Nov 2026, waiting for the in-game test): its own MAM tab "Automated Machines". Node "Automated Machines" (6 AI Limiter) unlocks the whole mod (tabs, side lists, rules running); under it "Output Overflow" (2 High-Speed Connector) unlocks the Output overflow option and actions. All in C++ (`AMResearch`), no editor assets.
-4. **Clean-up**:
-   - switch off the widget dump (`AMWidgetDump::Install()` in the module), it writes many lines to the log;
-   - make the sign copy / paste log lines (`UAMSignTabs::OnGameClipboardCopied` / `Pasted`) Verbose;
-   - remove the old Wi-Fi marker assets (`M_AM_Marker`, `SM_AM_Marker`, `T_AM_MarkerIcon`) from `Tools/create_assets.py`;
-   - debug logging added since: the "[Research]" node dumps, the "removing action" line, the sound dump;
-5. **Release**: mod icon, ficsit.app page text (what it does, "safe to uninstall: machines keep the last state the automation gave them"), version 0.1.0 → 1.0.0, upload.
+Ready: every feature tested in game. Done for the release:
+- MAM research tested (own tab, 6 AI Limiter, then Output Overflow for 2 High-Speed Connector).
+- Clean-up: widget dump off, sign copy / paste, "removing action" and "[Research]" logs Verbose, old Wi-Fi marker assets removed from `Tools/create_assets.py` (it deletes them from the project if present).
+- Version 1.0.0 in `AutomatedMachines.uplugin`.
+- Mod icon: isometric chip on a glowing circuit board with the white Wi-Fi (`Resources/Icon128.png`; sources and the 512 px upload logo in `Tools/IconSource/`).
+- ficsit.app page: `docs/FICSIT-PAGE.md` (screenshots in `docs/images/`, shown from GitHub).
+- Left: build, upload to ficsit.app.
+
+Known limits, said on the page:
+1. **Multiplayer**: made for it (server-side rules, replicated), not tested with several players.
+2. **Blueprints (Blueprint Designer)**: machines built from a blueprint get no automation; Ctrl+C / Ctrl+V and middle click do copy it.
+3. Not automated: pumps, trains, doors, Geothermal Generators, elevators.
 
 ## Settings (decided 5 Nov 2026: none for now)
 

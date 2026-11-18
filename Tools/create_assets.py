@@ -1,9 +1,9 @@
 # Automated Machines: creates the mod's few assets from the files in Tools/.
 #   /AutomatedMachines/Icons/T_AM_TabIcon     the Automation tab button icon (UI texture)
 #   /AutomatedMachines/Icons/T_AM_DropArrow   dropdown arrow, T_AM_Trash: remove button (UI textures)
-#   /AutomatedMachines/Icons/T_AM_MarkerIcon  the Wi-Fi picture of the marker
-#   /AutomatedMachines/Marker/M_AM_Marker     marker material: unlit, turns to the camera in the shader
-#   /AutomatedMachines/Marker/SM_AM_Marker    marker mesh: a flat 1 m square
+#   /AutomatedMachines/Marker/M_AM_Underglow  the circuit glow under automated machines (decal)
+#   /AutomatedMachines/Marker/M_AM_Overglow   the same glow projected up
+# (The old Wi-Fi marker assets are deleted if they still exist.)
 # Run inside the editor: UnrealEditor-Cmd.exe <uproject> -run=pythonscript -script=<this file>
 # Safe to re-run: existing assets are replaced / rebuilt, not duplicated.
 import os
@@ -59,7 +59,7 @@ def save(asset):
 
 # --- Textures ----------------------------------------------------------------------------------
 UI_ICONS = ["T_AM_TabIcon", "T_AM_DropArrow", "T_AM_Trash", "T_AM_TrashLarge", "T_AM_Locate", "T_AM_SwitchOff", "T_AM_SwitchOn", "T_AM_SwitchOffDisabled", "T_AM_SwitchOnDisabled"]
-for name in UI_ICONS + ["T_AM_MarkerIcon"]:
+for name in UI_ICONS:
     import_file(os.path.join(TOOLS, "Icons", name + ".png"), ROOT + "/Icons")
 
 for name in UI_ICONS:
@@ -72,14 +72,7 @@ for name in UI_ICONS:
         save(icon)
         log("  %s: UI texture, no mips" % name)
 
-marker_icon = load(ROOT + "/Icons/T_AM_MarkerIcon")
-if marker_icon:
-    marker_icon.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_DEFAULT)
-    marker_icon.set_editor_property("srgb", True)
-    save(marker_icon)
-
-
-# --- Marker material ---------------------------------------------------------------------------
+# --- Material helpers --------------------------------------------------------------------------
 def node(mat, cls, x, y, **props):
     n = MEL.create_material_expression(mat, cls, x, y)
     for k, v in props.items():
@@ -93,89 +86,6 @@ def link(a, out, b, inp):
 
 def vec3(mat, x, y, v):
     return node(mat, unreal.MaterialExpressionConstant3Vector, x, y, constant=unreal.LinearColor(v[0], v[1], v[2], 1.0))
-
-
-mat_path = ROOT + "/Marker/M_AM_Marker"
-if eal.does_asset_exist(mat_path):
-    mat = load(mat_path)
-    MEL.delete_all_material_expressions(mat)
-    log("Rebuilding " + mat_path)
-else:
-    mat = asset_tools.create_asset("M_AM_Marker", ROOT + "/Marker", unreal.Material, unreal.MaterialFactoryNew())
-    log("Created " + mat_path)
-
-mat.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
-mat.set_editor_property("blend_mode", unreal.BlendMode.BLEND_MASKED)
-mat.set_editor_property("two_sided", True)
-mat.set_editor_property("used_with_instanced_static_meshes", True)
-
-# Picture: emissive white (times Color and Brightness), cut out by the texture's alpha.
-tex = node(mat, unreal.MaterialExpressionTextureSample, -700, 0)
-if marker_icon:
-    tex.set_editor_property("texture", marker_icon)
-    tex.set_editor_property("sampler_type", unreal.MaterialSamplerType.SAMPLERTYPE_COLOR)
-colour = node(mat, unreal.MaterialExpressionVectorParameter, -700, 250, parameter_name="Color",
-              default_value=unreal.LinearColor(1.0, 1.0, 1.0, 1.0))
-brightness = node(mat, unreal.MaterialExpressionScalarParameter, -700, 400, parameter_name="Brightness", default_value=2.0)
-tinted = node(mat, unreal.MaterialExpressionMultiply, -400, 100)
-link(tex, "RGB", tinted, "A")
-link(colour, "", tinted, "B")
-emissive = node(mat, unreal.MaterialExpressionMultiply, -250, 150)
-link(tinted, "", emissive, "A")
-link(brightness, "", emissive, "B")
-MEL.connect_material_property(emissive, "", MP.MP_EMISSIVE_COLOR)
-MEL.connect_material_property(tex, "A", MP.MP_OPACITY_MASK)
-
-# Facing the camera on every axis: each corner is placed at
-#   (centre of the instance) + camera right * x + camera up * y
-# where x, y come from the corner's UV. The offset is that minus where the corner is now.
-uv = node(mat, unreal.MaterialExpressionTextureCoordinate, -1400, 700)
-right = node(mat, unreal.MaterialExpressionTransform, -1400, 850,
-             transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_VIEW,
-             transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
-link(vec3(mat, -1650, 850, (1.0, 0.0, 0.0)), "", right, "")
-up = node(mat, unreal.MaterialExpressionTransform, -1400, 1000,
-          transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_VIEW,
-          transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
-link(vec3(mat, -1650, 1000, (0.0, 1.0, 0.0)), "", up, "")
-size = node(mat, unreal.MaterialExpressionScalarParameter, -1400, 1150, parameter_name="Size", default_value=100.0)
-
-corner = node(mat, unreal.MaterialExpressionCustom, -1100, 850)
-corner.set_editor_property("code", "float a = (UV.x - 0.5) * Size;\nfloat b = (0.5 - UV.y) * Size;\nreturn normalize(R) * a + normalize(U) * b;")
-corner.set_editor_property("output_type", unreal.CustomMaterialOutputType.CMOT_FLOAT3)
-corner.set_editor_property("description", "BillboardCorner")
-inputs = []
-for name in ("UV", "R", "U", "Size"):
-    ci = unreal.CustomInput()
-    ci.set_editor_property("input_name", name)
-    inputs.append(ci)
-corner.set_editor_property("inputs", inputs)
-link(uv, "", corner, "UV")
-link(right, "", corner, "R")
-link(up, "", corner, "U")
-link(size, "", corner, "Size")
-
-# The instance's own origin: "Instance & Particle space" if this engine has it, else local space.
-PTS = unreal.MaterialPositionTransformSource
-instance_space = getattr(PTS, "TRANSFORMPOSSOURCE_INSTANCE", None) or PTS.TRANSFORMPOSSOURCE_LOCAL
-log("  pivot from %s" % instance_space)
-pivot = node(mat, unreal.MaterialExpressionTransformPosition, -1100, 1100,
-             transform_source_type=instance_space,
-             transform_type=PTS.TRANSFORMPOSSOURCE_WORLD)
-link(vec3(mat, -1350, 1300, (0.0, 0.0, 0.0)), "", pivot, "")
-world_pos = node(mat, unreal.MaterialExpressionWorldPosition, -1100, 1300,
-                 world_position_shader_offset=unreal.WorldPositionIncludedOffsets.WPT_EXCLUDE_ALL_SHADER_OFFSETS)
-to_pivot = node(mat, unreal.MaterialExpressionSubtract, -850, 1150)
-link(pivot, "", to_pivot, "A")
-link(world_pos, "", to_pivot, "B")
-offset = node(mat, unreal.MaterialExpressionAdd, -600, 950)
-link(to_pivot, "", offset, "A")
-link(corner, "", offset, "B")
-MEL.connect_material_property(offset, "", MP.MP_WORLD_POSITION_OFFSET)
-
-MEL.recompile_material(mat)
-save(mat)
-log("  material: unlit, masked, two-sided, camera-facing")
 
 
 # --- Underglow material (decal under automated machines) ---------------------------------------
@@ -390,24 +300,10 @@ save(over)
 log("  overglow: deferred decal projected up, surfaces facing down only")
 
 
-# --- Marker mesh -------------------------------------------------------------------------------
-mesh_options = unreal.FbxImportUI()
-mesh_options.set_editor_property("import_mesh", True)
-mesh_options.set_editor_property("import_as_skeletal", False)
-mesh_options.set_editor_property("import_materials", False)
-mesh_options.set_editor_property("import_textures", False)
-mesh_options.set_editor_property("import_animations", False)
-import_file(os.path.join(TOOLS, "Marker", "SM_AM_Marker.obj"), ROOT + "/Marker", mesh_options)
-
-mesh = load(ROOT + "/Marker/SM_AM_Marker")
-if mesh:
-    mesh.set_material(0, mat)
-    # The material moves the corners, up to the square's size away: keep the bounds big enough.
-    mesh.set_editor_property("positive_bounds_extension", unreal.Vector(80.0, 80.0, 80.0))
-    mesh.set_editor_property("negative_bounds_extension", unreal.Vector(80.0, 80.0, 80.0))
-    save(mesh)
-    log("  mesh ready, material assigned")
-else:
-    log("  ! marker mesh missing after import")
+# --- Old Wi-Fi marker (replaced by the underglow, removed for 1.0) -------------------------------
+for old in (ROOT + "/Marker/SM_AM_Marker", ROOT + "/Marker/M_AM_Marker", ROOT + "/Icons/T_AM_MarkerIcon"):
+    if eal.does_asset_exist(old):
+        eal.delete_asset(old)
+        log("  removed old asset " + old)
 
 log("Done")

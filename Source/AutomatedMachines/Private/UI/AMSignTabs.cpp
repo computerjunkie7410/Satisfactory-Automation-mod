@@ -463,13 +463,13 @@ void UAMSignTabs::OnGameClipboardCopied(UObject* Object, UObject* PlayerState)
 	{
 		if (const FPrefabSignData* Copied = AMST_ClipboardData(Clipboard))
 		{
-			UE_LOG(LogAutomatedMachines, Log, TEXT("Sign copied by the game (%s): %s"), *Sign->GetName(), *AMST_DescribeTexts(*Copied));
+			UE_LOG(LogAutomatedMachines, Verbose, TEXT("Sign copied by the game (%s): %s"), *Sign->GetName(), *AMST_DescribeTexts(*Copied));
 		}
 		if (CopyOpenEditor(Sign, Clipboard))
 		{
 			if (const FPrefabSignData* Fixed = AMST_ClipboardData(Clipboard))
 			{
-				UE_LOG(LogAutomatedMachines, Log, TEXT("  now the editor's design: %s"), *AMST_DescribeTexts(*Fixed));
+				UE_LOG(LogAutomatedMachines, Verbose, TEXT("  now the editor's design: %s"), *AMST_DescribeTexts(*Fixed));
 			}
 		}
 	}
@@ -486,7 +486,7 @@ void UAMSignTabs::OnGameClipboardPasted(UObject* Object, UObject* PlayerState)
 	{
 		if (const FPrefabSignData* Pasted = AMST_ClipboardData(Clipboard))
 		{
-			UE_LOG(LogAutomatedMachines, Log, TEXT("Sign pasted by the game onto %s: %s"), *Sign->GetName(), *AMST_DescribeTexts(*Pasted));
+			UE_LOG(LogAutomatedMachines, Verbose, TEXT("Sign pasted by the game onto %s: %s"), *Sign->GetName(), *AMST_DescribeTexts(*Pasted));
 		}
 	}
 	// What the editor holds a moment later (the window loads the pasted design itself).

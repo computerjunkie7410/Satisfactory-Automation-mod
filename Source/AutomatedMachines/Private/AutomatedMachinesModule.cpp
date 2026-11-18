@@ -25,8 +25,8 @@ void FAutomatedMachinesModule::StartupModule()
 	AMClipboard::Install();
 
 	// Development only: writes the widget tree of open machine windows to the log, so we can find
-	// where the Automation section can be inserted. Removed before release.
-	AMWidgetDump::Install();
+	// where the Automation section can be inserted. Off for releases (1.0.0); switch on when hooking a new window.
+	// AMWidgetDump::Install();
 	// Lists the game's UI / alert sounds (used to pick the Play sound sounds); off, not needed now.
 	// AMWidgetDump::InstallSoundDump();
 #endif
