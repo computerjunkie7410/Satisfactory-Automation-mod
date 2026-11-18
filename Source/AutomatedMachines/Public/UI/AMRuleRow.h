@@ -93,6 +93,22 @@ public:
 	/** Makes the row's widgets for rule Index of the tab (an alarm or an action). */
 	void Build(UAMAutomationTab* InTab, bool bInIsAlarm, int32 InIndex, bool bInGrouped = false);
 
+	/**
+	 * Card layout: a row with no widgets behind "+ condition" (bForCondition) or "+ event": it opens
+	 * the picker at Anchor and adds what is picked (a condition; an event, then its first action).
+	 */
+	void OpenAdder(UAMAutomationTab* InTab, bool bForCondition, UWidget* Anchor);
+
+	/** Card layout: pointing at a row explains it (condition / action rows, event headers). */
+	UFUNCTION()
+	void OnRowHovered();
+
+	/** Card layout: a percentage bar dragged (the value follows; sent when let go). */
+	UFUNCTION()
+	void OnSliderMoved(float Value);
+	UFUNCTION()
+	void OnSliderReleased();
+
 	/** The header of the actions of one alarm (Event empty: the alarm is not chosen yet); Count = its actions. */
 	void BuildGroupHeader(UAMAutomationTab* InTab, const FString& InEvent, int32 InCount);
 
@@ -213,6 +229,13 @@ private:
 	/** Behind a percentage: a bar filled to the value (Value / the value's maximum). */
 	UPROPERTY()
 	TObjectPtr<class UProgressBar> mValueBar;
+	/** Over the bar, invisible: drags the value. */
+	UPROPERTY()
+	TObjectPtr<class USlider> mValueSlider;
+	/** Behind "+ condition" / "+ event" (see OpenAdder). */
+	bool bAdder = false;
+	UPROPERTY()
+	TObjectPtr<UWidget> mAdderAnchor;
 	void BuildCompact();
 	void UpdateCompact();
 

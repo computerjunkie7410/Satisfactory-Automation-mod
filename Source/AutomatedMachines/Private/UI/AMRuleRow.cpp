@@ -25,6 +25,8 @@
 #include "TimerManager.h"
 #include "Styling/SlateBrush.h"
 #include "Components/ProgressBar.h"
+#include "Components/Slider.h"
+#include "Components/Spacer.h"
 #include "Components/Overlay.h"
 #include "Components/OverlaySlot.h"
 #include "Brushes/SlateRoundedBoxBrush.h"
@@ -90,11 +92,12 @@ namespace
 	constexpr float AMRR_CardEventWidth = 150.f;
 
 	/**
-	 * A number field for the card layout: [ 50 % ] on a dark rounded field; for a percentage a bar
-	 * behind it, filled in orange to the value. OutBar is null when there is no bar.
+	 * A number field for the card layout: [ 50 % ] on a dark rounded field. For a percentage a bar
+	 * behind it, filled in orange to the value, and over the bar an invisible slider to drag the
+	 * value (the number itself stays clickable to type one). OutBar / OutSlider are null otherwise.
 	 */
-	UWidget* AMRR_CardNumberField(UWidgetTree* Tree, const FSlateFontInfo& Font, bool bBar, float Width,
-		TObjectPtr<UAMUppercaseText>& OutText, TObjectPtr<UTextBlock>& OutUnit, TObjectPtr<UProgressBar>& OutBar)
+	UWidget* AMRR_CardNumberField(UWidgetTree* Tree, const FSlateFontInfo& Font, bool bBar, float Width, const AMRules::FValueInfo& Info,
+		TObjectPtr<UAMUppercaseText>& OutText, TObjectPtr<UTextBlock>& OutUnit, TObjectPtr<UProgressBar>& OutBar, TObjectPtr<USlider>& OutSlider)
 	{
 		UOverlay* Field = Tree->ConstructWidget<UOverlay>(UOverlay::StaticClass());
 		if (bBar)
@@ -113,6 +116,20 @@ namespace
 				BarSlot->SetVerticalAlignment(VAlign_Fill);
 			}
 			OutBar = Bar;
+			USlider* Slider = Tree->ConstructWidget<USlider>(USlider::StaticClass());
+			Slider->SetMinValue(Info.Min);
+			Slider->SetMaxValue(Info.Max);
+			Slider->SetStepSize(1.f);
+			Slider->SetIndentHandle(false);
+			Slider->SetSliderBarColor(FLinearColor::Transparent);
+			Slider->SetSliderHandleColor(FLinearColor::Transparent);
+			Slider->SetCursor(EMouseCursor::ResizeLeftRight);
+			if (UOverlaySlot* SliderSlot = Field->AddChildToOverlay(Slider))
+			{
+				SliderSlot->SetHorizontalAlignment(HAlign_Fill);
+				SliderSlot->SetVerticalAlignment(VAlign_Fill);
+			}
+			OutSlider = Slider;
 		}
 		else
 		{
@@ -122,22 +139,32 @@ namespace
 				BackSlot->SetVerticalAlignment(VAlign_Fill);
 			}
 		}
+		// [ ......... 50 % ]: only the number takes the mouse (to type); the rest is the slider's.
 		UHorizontalBox* Line = Tree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass());
+		Line->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 		if (UOverlaySlot* LineSlot = Field->AddChildToOverlay(Line))
 		{
 			LineSlot->SetHorizontalAlignment(HAlign_Fill);
 			LineSlot->SetVerticalAlignment(VAlign_Center);
 			LineSlot->SetPadding(FMargin(8.f, 0.f));
 		}
+		if (UHorizontalBoxSlot* SpaceSlot = Line->AddChildToHorizontalBox(Tree->ConstructWidget<USpacer>(USpacer::StaticClass())))
+		{
+			SpaceSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+		}
 		OutText = Tree->ConstructWidget<UAMUppercaseText>(UAMUppercaseText::StaticClass());
 		OutText->SetFont(Font);
 		OutText->SetJustification(ETextJustify::Right);
-		if (UHorizontalBoxSlot* TextSlot = Line->AddChildToHorizontalBox(OutText))
+		OutText->SetTextColor(AMUI::White);
+		USizeBox* TextSize = Tree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
+		TextSize->SetMinDesiredWidth(36.f);
+		TextSize->AddChild(OutText);
+		if (UHorizontalBoxSlot* TextSlot = Line->AddChildToHorizontalBox(TextSize))
 		{
-			TextSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 			TextSlot->SetVerticalAlignment(VAlign_Center);
 		}
 		OutUnit = AMUI::MakeText(Tree, TEXT(""), Font, AMUI::White);
+		OutUnit->SetVisibility(ESlateVisibility::HitTestInvisible);
 		if (UHorizontalBoxSlot* UnitSlot = Line->AddChildToHorizontalBox(OutUnit))
 		{
 			UnitSlot->SetPadding(FMargin(2.f, 0.f, 0.f, 0.f));
@@ -150,9 +177,41 @@ namespace
 		return Size;
 	}
 
-	/** Sets a card number field: the text, and its bar filled to Value / Max. */
-	void AMRR_SetCardNumber(UAMUppercaseText* Text, UProgressBar* Bar, float Value, float Max)
+	/**
+	 * A card row: a button with a rounded background (a little lighter when pointed at) whose
+	 * OnHovered explains the row; its clicks do nothing (the widgets on it have their own).
+	 */
+	UButton* AMRR_CardRowButton(UWidgetTree* Tree, const FLinearColor& Color, const FMargin& Padding)
 	{
+		UButton* Button = Tree->ConstructWidget<UButton>(UButton::StaticClass());
+		FButtonStyle Style;
+		Style.SetNormal(FSlateRoundedBoxBrush(Color, 8.f));
+		Style.SetHovered(FSlateRoundedBoxBrush(FLinearColor(Color.R * 1.12f, Color.G * 1.12f, Color.B * 1.12f, Color.A), 8.f));
+		Style.SetPressed(FSlateRoundedBoxBrush(FLinearColor(Color.R * 1.12f, Color.G * 1.12f, Color.B * 1.12f, Color.A), 8.f));
+		Style.SetNormalPadding(Padding);
+		Style.SetPressedPadding(Padding);
+		Button->SetStyle(Style);
+		return Button;
+	}
+
+	/** Puts a row's line into its row button, filling it. */
+	void AMRR_FillButton(UButton* Button, UWidget* Content)
+	{
+		if (UButtonSlot* ContentSlot = Cast<UButtonSlot>(Button->AddChild(Content)))
+		{
+			ContentSlot->SetHorizontalAlignment(HAlign_Fill);
+			ContentSlot->SetVerticalAlignment(VAlign_Fill);
+			ContentSlot->SetPadding(FMargin(0.f));
+		}
+	}
+
+	/** Sets a card number field: the text, and its bar filled to Value / Max. */
+	void AMRR_SetCardNumber(UAMUppercaseText* Text, UProgressBar* Bar, float Value, float Max, USlider* Slider = nullptr)
+	{
+		if (Slider)
+		{
+			Slider->SetValue(Value);
+		}
 		if (Text)
 		{
 			Text->ShowText(FString::Printf(TEXT("%.0f"), Value));
@@ -241,9 +300,8 @@ void UAMRuleRow::BuildGroupHeader(UAMAutomationTab* InTab, const FString& InEven
 	{
 		// Card layout: [ EVENT NAME ............ + action  bin ] (no footer line).
 		bCard = true;
-		UBorder* Box = AMUI::MakeRoundedBox(Tree, AMUI::CardRow, FMargin(6.f, 0.f, 4.f, 0.f), 8.f);
-		Box->SetVerticalAlignment(VAlign_Fill);
-		Box->SetHorizontalAlignment(HAlign_Fill);
+		UButton* Box = AMRR_CardRowButton(Tree, AMUI::CardRow, FMargin(14.f, 0.f, 4.f, 0.f));
+		Box->OnHovered.AddDynamic(this, &UAMRuleRow::OnRowHovered);
 		USizeBox* BoxSize = Tree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
 		BoxSize->SetHeightOverride(AMRR_CardRowHeight);
 		BoxSize->AddChild(Box);
@@ -252,7 +310,7 @@ void UAMRuleRow::BuildGroupHeader(UAMAutomationTab* InTab, const FString& InEven
 			BoxSlot->SetHorizontalAlignment(HAlign_Fill);
 		}
 		UHorizontalBox* CardLine = Tree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass());
-		Box->AddChild(CardLine);
+		AMRR_FillButton(Box, CardLine);
 		auto AddToLine = [CardLine](UWidget* Widget, float LeftPadding, bool bFill)
 		{
 			if (UHorizontalBoxSlot* LineSlot = CardLine->AddChildToHorizontalBox(Widget))
@@ -276,12 +334,11 @@ void UAMRuleRow::BuildGroupHeader(UAMAutomationTab* InTab, const FString& InEven
 			Size->AddChild(Widget);
 			return Size;
 		};
-		UTextBlock* EventLabel = nullptr;
-		UButton* EventButton = AMRR_CardTextButton(Tree, TEXT(""), Font, AMUI::CardRow, EventLabel);
+		// The event's name (fixed: picked with "+ event").
+		UTextBlock* EventLabel = AMUI::MakeText(Tree, TEXT(""), Font, AMUI::White);
+		EventLabel->SetTextOverflowPolicy(ETextOverflowPolicy::Ellipsis);
 		mAlarmLabel = EventLabel;
-		mAlarmButton = EventButton;
-		EventButton->OnClicked.AddDynamic(this, &UAMRuleRow::OnAlarmCellClicked);
-		AddToLine(Sized(EventButton, 0.f), 0.f, true);
+		AddToLine(EventLabel, 0.f, true);
 
 		UTextBlock* AddLabel = nullptr;
 		UButton* AddButton = AMRR_CardTextButton(Tree, TEXT("+ action"), Font, AMUI::CardRow, AddLabel);
@@ -382,25 +439,26 @@ void UAMRuleRow::BuildCompact()
 	// only the value, the bin and "+ action" react to the mouse), the bin next to it.
 	const float BoxWidth = AMRowLayout::Do + AMRowLayout::Gap + AMRowLayout::OnAlarm - AMRowLayout::GroupIndent;
 	UBorder* Box = Tree->ConstructWidget<UBorder>(UBorder::StaticClass());
-	if (bCardRow)
-	{
-		Box->SetBrush(FSlateRoundedBoxBrush(AMUI::CardSubRow, 8.f));
-		Box->SetPadding(FMargin(14.f, 0.f, 4.f, 0.f));
-	}
-	else
-	{
-		Box->SetBrush(FSlateNoResource());
-		Box->SetPadding(FMargin(12.f, 0.f, 0.f, 0.f));
-	}
+	Box->SetBrush(FSlateNoResource());
+	Box->SetPadding(bCardRow ? FMargin(0.f) : FMargin(12.f, 0.f, 0.f, 0.f));
 	Box->SetHorizontalAlignment(HAlign_Fill);
 	Box->SetVerticalAlignment(VAlign_Fill);
+	// Card layout: the row is a button (rounded, lit when pointed at, explains its action).
+	UWidget* BoxRoot = Box;
+	if (bCardRow)
+	{
+		UButton* RowButton = AMRR_CardRowButton(Tree, AMUI::CardSubRow, FMargin(14.f, 0.f, 4.f, 0.f));
+		RowButton->OnHovered.AddDynamic(this, &UAMRuleRow::OnRowHovered);
+		AMRR_FillButton(RowButton, Box);
+		BoxRoot = RowButton;
+	}
 	USizeBox* BoxSize = Tree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
 	if (!bCardRow)
 	{
 		BoxSize->SetWidthOverride(BoxWidth);
 	}
 	BoxSize->SetHeightOverride(bCardRow ? AMRR_CardRowHeight : AMRR_CompactHeight);
-	BoxSize->AddChild(Box);
+	BoxSize->AddChild(BoxRoot);
 	if (UHorizontalBoxSlot* BoxInOuter = Outer->AddChildToHorizontalBox(BoxSize))
 	{
 		if (bCardRow)
@@ -449,8 +507,13 @@ void UAMRuleRow::BuildCompact()
 	{
 		// [ 25 % ] on a bar filled to the value (a percentage), else a plain field.
 		const bool bBar = FCString::Strcmp(Info.Unit, TEXT("%")) == 0;
-		AddValue(AMRR_CardNumberField(Tree, Font, bBar, 180.f, mValueText, mValueUnit, mValueBar), 8.f);
+		AddValue(AMRR_CardNumberField(Tree, Font, bBar, 180.f, Info, mValueText, mValueUnit, mValueBar, mValueSlider), 8.f);
 		mValueText->OnTextCommitted.AddDynamic(this, &UAMRuleRow::OnValueCommitted);
+		if (mValueSlider)
+		{
+			mValueSlider->OnValueChanged.AddDynamic(this, &UAMRuleRow::OnSliderMoved);
+			mValueSlider->OnMouseCaptureEnd.AddDynamic(this, &UAMRuleRow::OnSliderReleased);
+		}
 		mValueUnit->SetText(FText::FromString(Info.Unit));
 	}
 	else if (Info.bNeeded)
@@ -517,6 +580,10 @@ void UAMRuleRow::BuildCompact()
 		mMessageText->OnTextCommitted.AddDynamic(this, &UAMRuleRow::OnMessageCommitted);
 		MessageField->AddChild(mMessageText);
 		AMUI::MarkAsInputBox(MessageField);
+		if (bCardRow)
+		{
+			mMessageText->SetTextColor(AMUI::White);
+		}
 		AddValue(AMRR_Cell(Tree, bCardRow ? 220.f : BoxWidth - 150.f, MessageField), 8.f);
 	}
 
@@ -558,7 +625,7 @@ void UAMRuleRow::UpdateCompact()
 	}
 	if (mValueText)
 	{
-		AMRR_SetCardNumber(mValueText, mValueBar, Rule->Value, AMRules::GetActionValueInfo(Rule->Action).Max);
+		AMRR_SetCardNumber(mValueText, mValueBar, Rule->Value, AMRules::GetActionValueInfo(Rule->Action).Max, mValueSlider);
 	}
 	if (mRecipeLabel)
 	{
@@ -881,15 +948,59 @@ void UAMRuleRow::Build(UAMAutomationTab* InTab, bool bInIsAlarm, int32 InIndex, 
 	UpdateLabels();
 }
 
+void UAMRuleRow::OpenAdder(UAMAutomationTab* InTab, bool bForCondition, UWidget* Anchor)
+{
+	mTab = InTab;
+	bAdder = true;
+	bIsAlarm = bForCondition;
+	bGroupHeader = false;
+	mGroupEvent.Reset();
+	mIndex = INDEX_NONE;
+	mAdderAnchor = Anchor;
+	OpenPicker(bForCondition ? EAMChoiceKind::MachineEvent : EAMChoiceKind::Alarm, Anchor);
+}
+
+void UAMRuleRow::OnRowHovered()
+{
+	if (bGroupHeader)
+	{
+		mTab->ShowAlarmInfo(mGroupEvent);
+		return;
+	}
+	ExplainCurrent();
+}
+
+void UAMRuleRow::OnSliderMoved(float Value)
+{
+	// While dragging: the number and the bar follow; the machine gets it when let go.
+	const AMRules::FValueInfo Info = GetValueInfo();
+	const float Rounded = FMath::Clamp(FMath::RoundToFloat(Value), Info.Min, Info.Max);
+	SetRuleValue(Rounded);
+	if (mValueText)
+	{
+		mValueText->ShowText(FString::Printf(TEXT("%.0f"), Rounded));
+	}
+	if (mValueBar)
+	{
+		mValueBar->SetPercent(Info.Max > 0.f ? FMath::Clamp(Rounded / Info.Max, 0.f, 1.f) : 0.f);
+	}
+}
+
+void UAMRuleRow::OnSliderReleased()
+{
+	const AMRules::FValueInfo Info = GetValueInfo();
+	mTab->OnRulesEdited();
+	mTab->ShowInfo(FText::FromString(Info.Label), FText::FromString(FString::Printf(TEXT("Set to %.0f%s."), GetRuleValue(), Info.Unit)));
+}
+
 void UAMRuleRow::BuildConditionCard()
 {
 	// [ Condition name ......  [ 50 % ] [item]  ->  [ EVENT NAME ]  bin ]
 	UWidgetTree* Tree = mTab->GetTree();
 	const FSlateFontInfo Font = mTab->GetRowFont();
 	mRoot = Tree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass());
-	UBorder* Box = AMUI::MakeRoundedBox(Tree, AMUI::CardRow, FMargin(6.f, 0.f, 4.f, 0.f), 8.f);
-	Box->SetVerticalAlignment(VAlign_Fill);
-	Box->SetHorizontalAlignment(HAlign_Fill);
+	UButton* Box = AMRR_CardRowButton(Tree, AMUI::CardRow, FMargin(14.f, 0.f, 4.f, 0.f));
+	Box->OnHovered.AddDynamic(this, &UAMRuleRow::OnRowHovered);
 	USizeBox* BoxSize = Tree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
 	BoxSize->SetHeightOverride(AMRR_CardRowHeight);
 	BoxSize->AddChild(Box);
@@ -898,7 +1009,7 @@ void UAMRuleRow::BuildConditionCard()
 		BoxSlot->SetHorizontalAlignment(HAlign_Fill);
 	}
 	UHorizontalBox* Line = Tree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass());
-	Box->AddChild(Line);
+	AMRR_FillButton(Box, Line);
 	auto Add = [Line](UWidget* Widget, float LeftPadding, bool bFill = false)
 	{
 		if (UHorizontalBoxSlot* LineSlot = Line->AddChildToHorizontalBox(Widget))
@@ -912,16 +1023,11 @@ void UAMRuleRow::BuildConditionCard()
 		}
 	};
 
-	// The condition's name: click to pick another.
-	UTextBlock* NameLabel = nullptr;
-	UButton* NameButton = AMRR_CardTextButton(Tree, TEXT(""), Font, AMUI::CardRow, NameLabel);
+	// The condition's name (fixed: picked with "+ condition").
+	UTextBlock* NameLabel = AMUI::MakeText(Tree, TEXT(""), Font, AMUI::White);
+	NameLabel->SetTextOverflowPolicy(ETextOverflowPolicy::Ellipsis);
 	mSecondLabel = NameLabel;
-	mSecondButton = NameButton;
-	NameButton->OnClicked.AddDynamic(this, &UAMRuleRow::OnSecondCellClicked);
-	USizeBox* NameSize = Tree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
-	NameSize->SetHeightOverride(AMRR_CardFieldHeight);
-	NameSize->AddChild(NameButton);
-	Add(NameSize, 0.f, true);
+	Add(NameLabel, 0.f, true);
 
 	// The number (with its bar for a percentage) and, for item counts, the item.
 	UHorizontalBox* ValueLine = Tree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass());
@@ -931,11 +1037,16 @@ void UAMRuleRow::BuildConditionCard()
 	const bool bNeedsItem = Rule && AMRules::ConditionNeedsItem(Rule->Condition);
 	const bool bBar = FCString::Strcmp(Info.Unit, TEXT("%")) == 0;
 	if (UHorizontalBoxSlot* NumberSlot = ValueLine->AddChildToHorizontalBox(
-		AMRR_CardNumberField(Tree, Font, bBar, bNeedsItem ? AMRR_CardNumberWidth - 38.f : AMRR_CardNumberWidth, mValueText, mValueUnit, mValueBar)))
+		AMRR_CardNumberField(Tree, Font, bBar, bNeedsItem ? AMRR_CardNumberWidth - 38.f : AMRR_CardNumberWidth, Info, mValueText, mValueUnit, mValueBar, mValueSlider)))
 	{
 		NumberSlot->SetVerticalAlignment(VAlign_Center);
 	}
 	mValueText->OnTextCommitted.AddDynamic(this, &UAMRuleRow::OnValueCommitted);
+	if (mValueSlider)
+	{
+		mValueSlider->OnValueChanged.AddDynamic(this, &UAMRuleRow::OnSliderMoved);
+		mValueSlider->OnMouseCaptureEnd.AddDynamic(this, &UAMRuleRow::OnSliderReleased);
+	}
 	{
 		// The item: its icon in a small square (click to pick).
 		mItemButton = Tree->ConstructWidget<UButton>(UButton::StaticClass());
@@ -1024,7 +1135,7 @@ void UAMRuleRow::UpdateConditionCard()
 	}
 	if (Info.bNeeded)
 	{
-		AMRR_SetCardNumber(mValueText, mValueBar, Rule->Value, Info.Max);
+		AMRR_SetCardNumber(mValueText, mValueBar, Rule->Value, Info.Max, mValueSlider);
 	}
 	const bool bNeedsItem = AMRules::ConditionNeedsItem(Rule->Condition);
 	if (mItemCell)
@@ -1460,6 +1571,37 @@ void UAMRuleRow::CommitAlarmName(const FString& Typed)
 
 void UAMRuleRow::Choose(const UAMChoice& Choice)
 {
+	if (bAdder)
+	{
+		if (Choice.Kind == EAMChoiceKind::MachineEvent)
+		{
+			// "+ condition": the row comes with the picked condition.
+			HideChoices();
+			mTab->ClosePicker(true);
+			mTab->AddCondition(static_cast<EAMCondition>(Choice.Value));
+			return;
+		}
+		if (Choice.Kind == EAMChoiceKind::Alarm)
+		{
+			// "+ event": then its first action (the group exists once it has one).
+			mGroupEvent = Choice.Alarm;
+			bGroupHeader = true;
+			HideChoices();
+			mTab->ClosePicker(true);
+			TWeakObjectPtr<UAMRuleRow> WeakThis(this);
+			if (UWorld* World = mTab->GetWorld())
+			{
+				World->GetTimerManager().SetTimerForNextTick([WeakThis]()
+				{
+					if (UAMRuleRow* Row = WeakThis.Get())
+					{
+						Row->OpenPicker(EAMChoiceKind::Action, Row->mAdderAnchor);
+					}
+				});
+			}
+			return;
+		}
+	}
 	switch (Choice.Kind)
 	{
 	case EAMChoiceKind::Alarm:

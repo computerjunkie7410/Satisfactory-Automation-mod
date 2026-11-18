@@ -101,6 +101,15 @@ public:
 	/** Makes the rows again on the next tick (a row whose shape changed, e.g. another condition). */
 	void RebuildRowsLater();
 
+	/** Card layout: a condition picked with "+ condition" becomes a new row. */
+	void AddCondition(EAMCondition Condition);
+
+	/** Card layout: pointing at "+ condition" / "+ event" explains them. */
+	UFUNCTION()
+	void OnAddFireHovered();
+	UFUNCTION()
+	void OnAddReactionHovered();
+
 	/**
 	 * A list floating on the popup layer right under the anchor (e.g. alarm name suggestions under
 	 * the name field), without the click-catching background of the dropdown window: the field keeps
@@ -275,6 +284,14 @@ private:
 	/** BuildLayout for machines (see UsesCardLayout). */
 	void BuildCardLayout(class UHorizontalBox* Page);
 	bool bCardLayout = false;
+
+	/** Card layout: the "+ condition" / "+ event" buttons (the picker opens there), and the row behind the picker. */
+	UPROPERTY()
+	TObjectPtr<UButton> mAddFireButton;
+	UPROPERTY()
+	TObjectPtr<UButton> mAddReactionButton;
+	UPROPERTY()
+	TObjectPtr<UAMRuleRow> mAdder;
 
 	/** The explanations shown in the middle of an empty Conditions / Actions card. */
 	UPROPERTY()

@@ -22,6 +22,9 @@ For machines (production, extractors, generators, storage, stations, switches, P
 - **Empty card:** an explanation in its middle of what conditions / actions are and how to add one.
 - **Bottom:** the machine's option on the left (**Overflow** switch); on the right the **info line** "Title: what it does", for what was last pointed at or picked. The side info panel is gone.
 - Colours: the game's dark greys with the mod's orange (the mockup's light greys were taken as a wireframe).
+- **Adding (18 Nov 2026, second pass):** "+ condition" opens the condition picker; the picked condition becomes a row, then its event name is typed. "+ event" opens the event picker, then the action picker; the group appears with that first action. A placed row's condition, and a group's event, cannot be changed (remove and add again): no row ever changes shape.
+- **Info line:** 3 lines at most, never stretching the page: the description's first paragraph, else its first sentence, else nothing. It follows the mouse: pointing at a row, an event header or an add button explains it.
+- **Values:** numbers in white; a percentage bar can be dragged with the mouse (the number on it can still be clicked to type).
 
 ## Words the player sees
 

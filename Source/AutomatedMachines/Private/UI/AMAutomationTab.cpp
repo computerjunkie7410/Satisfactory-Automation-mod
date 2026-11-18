@@ -15,6 +15,8 @@
 #include "GameFramework/Pawn.h"
 #include "Styling/SlateTypes.h"
 #include "Framework/Application/SlateApplication.h"
+#include "Fonts/FontMeasure.h"
+#include "Rendering/SlateRenderer.h"
 #include "InputCoreTypes.h"
 #include "Automation/AMAutomationSubsystem.h"
 #include "Net/AMRemoteCallObject.h"
@@ -98,7 +100,10 @@ namespace
 	constexpr float AMAT_CardPadding = 14.f;
 	constexpr float AMAT_CardGap = 16.f;
 	/** The info line at the bottom right wraps at this width. */
-	constexpr float AMAT_InfoLineWidth = 640.f;
+	constexpr float AMAT_InfoLineWidth = 660.f;
+	/** ... and is 3 lines high at most. */
+	constexpr int32 AMAT_InfoLines = 3;
+	constexpr float AMAT_InfoLineHeight = 66.f;
 
 	const TCHAR* const AMAT_TabTitle = TEXT("Automation");
 
@@ -829,13 +834,16 @@ void UAMAutomationTab::BuildCardLayout(UHorizontalBox* Page)
 	const FString ConditionsEmpty = bAlarmsOnlyMode
 		? FString(TEXT("No conditions yet.\n\nA condition watches the batteries of this power grid: when it is met (for example they are almost empty), it triggers the event you name next to it. Machines listening to that event then act: start backup generators, show a message, play a sound...\n\nThe list is the same on every Power Storage of the grid, and each event is triggered once for the grid.\n\nClick + condition to add one."))
 		: FString(TEXT("No conditions yet.\n\nA condition watches this machine: when it is met (for example its output fills up, or its power goes), the machine triggers the event you name next to it.\n\nEvery machine listening to that event then acts on it: pause, change clock speed, show a message, play a sound...\n\nClick + condition to add one."));
-	MakeCard(TEXT("Conditions"), TEXT("+ condition"), ConditionsEmpty, mFireRowsBox, mFireEmptyText, 0.f)
-		->OnClicked.AddDynamic(this, &UAMAutomationTab::OnAddFireClicked);
+	mAddFireButton = MakeCard(TEXT("Conditions"), TEXT("+ condition"), ConditionsEmpty, mFireRowsBox, mFireEmptyText, 0.f);
+	mAddFireButton->OnClicked.AddDynamic(this, &UAMAutomationTab::OnAddFireClicked);
+	mAddFireButton->OnHovered.AddDynamic(this, &UAMAutomationTab::OnAddFireHovered);
 	if (!bAlarmsOnlyMode)
 	{
-		MakeCard(TEXT("Actions"), TEXT("+ event"),
+		mAddReactionButton = MakeCard(TEXT("Actions"), TEXT("+ event"),
 			TEXT("No actions yet.\n\nActions are what this machine does when an event is triggered, by this machine or by any other: pause or resume, change its clock speed, show a message, play a sound...\n\nClick + event to choose the event to listen to, then + action to add what to do."),
-			mReactionRowsBox, mReactionEmptyText, AMAT_CardGap)->OnClicked.AddDynamic(this, &UAMAutomationTab::OnAddReactionClicked);
+			mReactionRowsBox, mReactionEmptyText, AMAT_CardGap);
+		mAddReactionButton->OnClicked.AddDynamic(this, &UAMAutomationTab::OnAddReactionClicked);
+		mAddReactionButton->OnHovered.AddDynamic(this, &UAMAutomationTab::OnAddReactionHovered);
 	}
 	else
 	{
@@ -885,22 +893,54 @@ void UAMAutomationTab::BuildCardLayout(UHorizontalBox* Page)
 	{
 		SpacerSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 	}
-	// "Title:   what it does..." (what was last pointed at or picked).
-	mInfoTitle = MakeText(TEXT(""), 14, AMUI::White);
+	// "Title:   what it does..." (what was last pointed at): a fixed room of 3 lines, so a long
+	// text never makes the page taller (ShowInfo shortens it, or leaves it out).
+	USizeBox* InfoSize = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("AMInfoLine"));
+	InfoSize->SetWidthOverride(AMAT_InfoLineWidth);
+	InfoSize->SetHeightOverride(AMAT_InfoLineHeight);
+	InfoSize->SetClipping(EWidgetClipping::ClipToBounds);
+	if (UHorizontalBoxSlot* InfoSlot = Bottom->AddChildToHorizontalBox(InfoSize))
+	{
+		InfoSlot->SetVerticalAlignment(VAlign_Top);
+	}
+	UHorizontalBox* InfoLine = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass());
+	InfoSize->AddChild(InfoLine);
+	mInfoTitle = MakeText(TEXT(""), 15, AMUI::White);
 	mInfoTitle->SetAutoWrapText(false);
-	if (UHorizontalBoxSlot* TitleSlot = Bottom->AddChildToHorizontalBox(mInfoTitle))
+	if (UHorizontalBoxSlot* TitleSlot = InfoLine->AddChildToHorizontalBox(mInfoTitle))
 	{
 		TitleSlot->SetVerticalAlignment(VAlign_Top);
 	}
-	mInfoBody = MakeText(TEXT(""), 14, AMUI::Grey);
-	mInfoBody->SetAutoWrapText(false);
-	mInfoBody->SetWrapTextAt(AMAT_InfoLineWidth);
-	if (UHorizontalBoxSlot* BodySlot = Bottom->AddChildToHorizontalBox(mInfoBody))
+	mInfoBody = MakeText(TEXT(""), 15, AMUI::Grey);
+	mInfoBody->SetAutoWrapText(true);
+	if (UHorizontalBoxSlot* BodySlot = InfoLine->AddChildToHorizontalBox(mInfoBody))
 	{
 		BodySlot->SetPadding(FMargin(14.f, 0.f, 0.f, 0.f));
 		BodySlot->SetVerticalAlignment(VAlign_Top);
+		BodySlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 	}
 	ShowDefaultInfo();
+}
+
+void UAMAutomationTab::AddCondition(EAMCondition Condition)
+{
+	FAMFireRule& NewRule = mFires.AddDefaulted_GetRef();
+	NewRule.Condition = Condition;
+	NewRule.Value = AMRules::GetConditionValueInfo(Condition).Default;
+	// No event name yet: nothing is sent until one is typed (a condition without one does nothing).
+	RebuildRows();
+	ScrollToEndLater(mFireRowsBox);
+	ShowInfo(AMRules::GetConditionText(Condition), FText::FromString(TEXT("Now type the name of the event it triggers, on the right.")));
+}
+
+void UAMAutomationTab::OnAddFireHovered()
+{
+	ShowInfo(FText::FromString(TEXT("+ condition")), FText::FromString(TEXT("Pick something to watch on this machine; then name the event it triggers when it happens.")));
+}
+
+void UAMAutomationTab::OnAddReactionHovered()
+{
+	ShowInfo(FText::FromString(TEXT("+ event")), FText::FromString(TEXT("Pick an event to listen to, then what this machine does when it is triggered.")));
 }
 
 void UAMAutomationTab::RebuildRowsLater()
@@ -915,9 +955,49 @@ void UAMAutomationTab::ShowInfo(const FText& Title, const FText& Body)
 {
 	if (mInfoTitle && mInfoBody)
 	{
-		// The card layout's info is one line: "Title:  text".
-		mInfoTitle->SetText(bCardLayout && !Title.IsEmpty() ? FText::FromString(Title.ToString() + TEXT(":")) : Title);
-		mInfoBody->SetText(Body);
+		if (!bCardLayout)
+		{
+			mInfoTitle->SetText(Title);
+			mInfoBody->SetText(Body);
+			return;
+		}
+		// The card layout's info: "Title:  text" in 3 lines at most. The text's first paragraph;
+		// if longer, its first sentence; if that is still longer, no text.
+		const FString TitleText = Title.IsEmpty() ? FString() : Title.ToString() + TEXT(":");
+		mInfoTitle->SetText(FText::FromString(TitleText));
+		FString Paragraph = Body.ToString();
+		int32 Break = INDEX_NONE;
+		if (Paragraph.FindChar(TEXT('\n'), Break))
+		{
+			Paragraph = Paragraph.Left(Break);
+		}
+		Paragraph.TrimStartAndEndInline();
+		FString Shown;
+		if (FSlateApplication::IsInitialized())
+		{
+			const TSharedRef<FSlateFontMeasure> Measure = FSlateApplication::Get().GetRenderer()->GetFontMeasureService();
+			const float Room = AMAT_InfoLineWidth - (TitleText.IsEmpty() ? 0.f : Measure->Measure(TitleText, mInfoTitle->GetFont()).X + 14.f);
+			// A wrapped line holds a little less than its width (words do not split): 85%.
+			auto Fits = [&Measure, this, Room](const FString& Text)
+			{
+				return Room > 0.f && Measure->Measure(Text, mInfoBody->GetFont()).X <= Room * 0.85f * AMAT_InfoLines;
+			};
+			if (Fits(Paragraph))
+			{
+				Shown = Paragraph;
+			}
+			else
+			{
+				int32 End = Paragraph.Find(TEXT(". "));
+				const FString Sentence = End == INDEX_NONE ? Paragraph : Paragraph.Left(End + 1);
+				Shown = Fits(Sentence) ? Sentence : FString();
+			}
+		}
+		else
+		{
+			Shown = Paragraph.Len() <= 200 ? Paragraph : FString();
+		}
+		mInfoBody->SetText(FText::FromString(Shown));
 	}
 }
 
@@ -1925,6 +2005,13 @@ bool UAMAutomationTab::IsConditionAvailableHere(EAMCondition Condition) const
 
 void UAMAutomationTab::OnAddFireClicked()
 {
+	if (bCardLayout)
+	{
+		// Card layout: the condition is picked first (and fixed after).
+		mAdder = NewObject<UAMRuleRow>(this);
+		mAdder->OpenAdder(this, true, mAddFireButton);
+		return;
+	}
 	FAMFireRule& NewRule = mFires.AddDefaulted_GetRef();
 	// The first machine event this machine has (a container has no "Output full").
 	for (uint8 Value = 0; Value < static_cast<uint8>(EAMCondition::Count); ++Value)
@@ -1942,6 +2029,13 @@ void UAMAutomationTab::OnAddFireClicked()
 
 void UAMAutomationTab::OnAddReactionClicked()
 {
+	if (bCardLayout)
+	{
+		// Card layout: the event is picked first, then its first action (both fixed after).
+		mAdder = NewObject<UAMRuleRow>(this);
+		mAdder->OpenAdder(this, false, mAddReactionButton);
+		return;
+	}
 	// A new alarm group (its alarm chosen in its header). One without an alarm already: that one.
 	if (HasActionGroup(FString()))
 	{
