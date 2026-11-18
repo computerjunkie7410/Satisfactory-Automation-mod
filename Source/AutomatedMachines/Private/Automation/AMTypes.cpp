@@ -372,7 +372,7 @@ FText AMRules::GetActionDescription(EAMAction Action)
 	case EAMAction::DeleteIncoming:
 		return AMTY_Text(TEXT("Destroys everything in the incoming buffer: the items the drones brought. They are gone for good: no points, no refund.\n\nWith \"Output full\" on the same port it keeps the port from blocking when nothing takes the items."));
 	case EAMAction::DeleteContents:
-		return AMTY_Text(TEXT("Destroys everything in the container. The items are gone for good: no points, no refund.\n\nWith \"Full\" or \"Filled above\" on the same container, it works as an overflow that throws away what nobody uses."));
+		return AMTY_Text(TEXT("Destroys everything in the container that a player could throw in the trash (the rest stays). The items are gone for good: no points, no refund.\n\nWith \"Full\" or \"Filled above\" on the same container, it works as an overflow that throws away what nobody uses."));
 	case EAMAction::ChangeRecipe:
 		return AMTY_Text(TEXT("Switches the machine to the recipe you choose.\n\nThe game only allows this with empty slots, so everything in the input and output slots is destroyed first (no refund). Does nothing if the machine already makes this recipe."));
 	case EAMAction::SwitchOn:

@@ -2615,14 +2615,24 @@ int32 AAMAutomationSubsystem::DeleteAllItems(UFGInventoryComponent* Inventory)
 	{
 		return 0;
 	}
+	// Only what a player could throw in the trash: items the game marks as not discardable stay
+	// (no deleting what the game does not let players delete).
 	int32 Slots = 0;
 	for (int32 Index = 0; Index < Inventory->GetSizeLinear(); ++Index)
 	{
-		if (!Inventory->IsIndexEmpty(Index))
+		FInventoryStack Stack;
+		if (!Inventory->GetStackFromIndex(Index, Stack) || !Stack.HasItems())
 		{
-			Inventory->RemoveAllFromIndex(Index);
-			++Slots;
+			continue;
 		}
+		const TSubclassOf<UFGItemDescriptor> Item = Stack.Item.GetItemClass();
+		if (Item && !UFGItemDescriptor::CanBeDiscarded(Item))
+		{
+			UE_LOG(LogAutomatedMachines, Log, TEXT("%s: %s kept (it cannot be discarded)"), *GetNameSafe(Inventory->GetOwner()), *UFGItemDescriptor::GetItemName(Item).ToString());
+			continue;
+		}
+		Inventory->RemoveAllFromIndex(Index);
+		++Slots;
 	}
 	return Slots;
 }
