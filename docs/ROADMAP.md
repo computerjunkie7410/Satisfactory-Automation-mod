@@ -2,7 +2,7 @@
 
 Done and tested so far: see the table in `DEV-NOTES.md` ("What works").
 
-## Release 1.0.0 (18 Nov 2026)
+## Release 1.0.0 (released 18 Nov 2026)
 
 Ready: every feature tested in game. Done for the release:
 - MAM research tested (own tab, 6 AI Limiter, then Output Overflow for 2 High-Speed Connector).
@@ -10,7 +10,7 @@ Ready: every feature tested in game. Done for the release:
 - Version 1.0.0 in `AutomatedMachines.uplugin`.
 - Mod icon: isometric chip on a glowing circuit board with the white Wi-Fi (`Resources/Icon128.png`; sources and the 512 px upload logo in `Tools/IconSource/`).
 - ficsit.app page: `docs/FICSIT-PAGE.md` (screenshots in `docs/images/`, shown from GitHub).
-- Left: build, upload to ficsit.app.
+- Released on ficsit.app on 18 Nov 2026 (tag `v1.0.0`).
 
 Known limits, said on the page:
 1. **Multiplayer**: made for it (server-side rules, replicated), not tested with several players.
