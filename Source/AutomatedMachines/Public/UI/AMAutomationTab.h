@@ -295,6 +295,8 @@ private:
 
 	/** The Conditions card's explanation while empty (replaced on machines with no condition at all). */
 	FString mConditionsEmptyText;
+	/** The same for the Actions card. */
+	FString mActionsEmptyText;
 
 	/** The explanations shown in the middle of an empty Conditions / Actions card. */
 	UPROPERTY()

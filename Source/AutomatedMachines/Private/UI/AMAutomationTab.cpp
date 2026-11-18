@@ -843,19 +843,29 @@ void UAMAutomationTab::BuildCardLayout(UHorizontalBox* Page)
 	mAddFireButton = MakeCard(TEXT("Conditions"), TEXT("+ condition"), mConditionsEmptyText, mFireRowsBox, mFireEmptyText, 0.f);
 	mAddFireButton->OnClicked.AddDynamic(this, &UAMAutomationTab::OnAddFireClicked);
 	mAddFireButton->OnHovered.AddDynamic(this, &UAMAutomationTab::OnAddFireHovered);
-	if (!bAlarmsOnlyMode && !bMamMode)
+	// The Actions card is always there; where nothing can be done, it has no button and says why.
+	if (bMamMode)
 	{
-		mAddReactionButton = MakeCard(TEXT("Actions"), TEXT("+ event"), bWorldMode
-			? FString(TEXT("No actions yet.\n\nThe HUB hears every event in the world. Its actions need no machine: show a message on every player's screen, play a sound...\n\nClick + event to choose the event to listen to, then + action to add what to do."))
-			: FString(TEXT("No actions yet.\n\nActions are what this machine does when an event is triggered, by this machine or by any other: pause or resume, change its clock speed, show a message, play a sound...\n\nClick + event to choose the event to listen to, then + action to add what to do.")),
-			mReactionRowsBox, mReactionEmptyText, AMAT_CardGap);
-		mAddReactionButton->OnClicked.AddDynamic(this, &UAMAutomationTab::OnAddReactionClicked);
-		mAddReactionButton->OnHovered.AddDynamic(this, &UAMAutomationTab::OnAddReactionHovered);
+		mActionsEmptyText = TEXT("The MAM has no actions: nothing in it can be switched by an event.\n\nTo act on its events, add actions where it should happen: on a machine, a sign, or in the HUB's Automation tab (show a message, play a sound).");
+	}
+	else if (bAlarmsOnlyMode)
+	{
+		mActionsEmptyText = TEXT("A Power Storage has no actions: a battery cannot be switched on or off, it only charges and discharges with its grid.\n\nTo act on its events, add actions to the machines that should react (backup generators, power switches) or to the HUB.");
+	}
+	else if (bWorldMode)
+	{
+		mActionsEmptyText = TEXT("No actions yet.\n\nThe HUB hears every event in the world. Its actions need no machine: show a message on every player's screen, play a sound...\n\nClick + event to choose the event to listen to, then + action to add what to do.");
 	}
 	else
 	{
-		// A battery / the MAM have nothing to do: the list exists, hidden.
-		mReactionRowsBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass());
+		mActionsEmptyText = TEXT("No actions yet.\n\nActions are what this machine does when an event is triggered, by this machine or by any other: pause or resume, change its clock speed, show a message, play a sound...\n\nClick + event to choose the event to listen to, then + action to add what to do.");
+	}
+	const bool bCanAct = !bMamMode && !bAlarmsOnlyMode;
+	mAddReactionButton = MakeCard(TEXT("Actions"), bCanAct ? TEXT("+ event") : TEXT(""), mActionsEmptyText, mReactionRowsBox, mReactionEmptyText, AMAT_CardGap);
+	if (mAddReactionButton)
+	{
+		mAddReactionButton->OnClicked.AddDynamic(this, &UAMAutomationTab::OnAddReactionClicked);
+		mAddReactionButton->OnHovered.AddDynamic(this, &UAMAutomationTab::OnAddReactionHovered);
 	}
 
 	// Bottom: the option on the left, the info line on the right.
@@ -1572,6 +1582,20 @@ void UAMAutomationTab::RebuildRows()
 	}
 	if (mReactionEmptyText)
 	{
+		// A machine that can do no action at all (and is not the MAM / a Power Storage, which say why
+		// already): no "+ event", and the card says so.
+		if (bCardLayout && bRulesLoaded && mAddReactionButton)
+		{
+			bool bAnyAction = false;
+			for (uint8 Value = 0; Value < static_cast<uint8>(EAMAction::Count) && !bAnyAction; ++Value)
+			{
+				bAnyAction = IsActionAvailableHere(static_cast<EAMAction>(Value));
+			}
+			mAddReactionButton->SetVisibility(bAnyAction ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+			const FString Name = mMachineText ? mMachineText->GetText().ToString() : FString();
+			mReactionEmptyText->SetText(FText::FromString(bAnyAction ? mActionsEmptyText
+				: FString::Printf(TEXT("%s has no actions: nothing in it can be changed by an event.\n\nUse its conditions to make other machines act."), Name.IsEmpty() ? TEXT("This machine") : *Name)));
+		}
 		mReactionEmptyText->SetVisibility(mReactions.Num() == 0 ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 	}
 	if (mFires.Num() == 0 && !bCardLayout)
