@@ -11,7 +11,7 @@ Done and tested so far: see the table in `DEV-NOTES.md` ("What works").
    - switch off the widget dump (`AMWidgetDump::Install()` in the module), it writes many lines to the log;
    - make the sign copy / paste log lines (`UAMSignTabs::OnGameClipboardCopied` / `Pasted`) Verbose;
    - remove the old Wi-Fi marker assets (`M_AM_Marker`, `SM_AM_Marker`, `T_AM_MarkerIcon`) from `Tools/create_assets.py`;
-   - the `.uplugin` description still says "events": use the player's words (alarms, actions).
+   - debug logging added since: the "[Research]" node dumps, the "removing action" line, the sound dump;
 5. **Release**: mod icon, ficsit.app page text (what it does, "safe to uninstall: machines keep the last state the automation gave them"), version 0.1.0 → 1.0.0, upload.
 
 ## Settings (decided 5 Nov 2026: none for now)
@@ -47,13 +47,13 @@ Done and tested: production machines (production window), miners, Water / Oil Ex
 
 **Power switch display (17 Nov 2026, done and tested, no flicker):** the switches get the train stations' "Display text" action: the switch's sign shows the text; empty = its own name (tag) again. Only the sign's picture changes, the tag stays.
 
-**Words (18 Nov 2026, code in, waiting for the in-game look):** Alarm -> Event, ring -> trigger, machine / world event -> condition, in every text players see (tabs, tooltips, condition and action descriptions, messages, research, the `.uplugin`). 
+**Words (18 Nov 2026, done):** Alarm -> Event, ring -> trigger, machine / world event -> condition, in every text players see (tabs, tooltips, condition and action descriptions, messages, research, the `.uplugin`). 
 
 **Machine tab card layout (18 Nov 2026, code in, waiting for the in-game test):** see DESIGN "Machine Automation tab: card layout". Conditions / Actions cards, one-line condition rows with value bars, event headers with "+ action", Copy / Paste at the top, Overflow and the info line at the bottom, explanations in empty cards. Tested and working (18 Nov 2026). HUB and MAM moved to it too (18 Nov 2026, waiting for the test); Overview unchanged.
 
-**Events Overview rework (18 Nov 2026, code in, waiting for the test):** search, sortable columns, Last triggered column, one bin per event held 1.2 s with a ring, card style. See DESIGN "Events Overview".
+**Events Overview rework (18 Nov 2026, done and tested):** search, sortable columns, Last triggered column, one bin per event held 1.2 s with a ring, card style. See DESIGN "Events Overview".
 
-**AND between events (18 Nov 2026, code in, waiting for the test):** "+ and" on event headers; see DESIGN "AND between events".
+**AND between events (18 Nov 2026, done and tested):** "+ and" on event headers; see DESIGN "AND between events".
 
 ## Useful optional features
 
