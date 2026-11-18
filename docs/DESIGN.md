@@ -14,7 +14,7 @@ These docs and the code still say "alarm" / "ring" / "event" (`Event` field, `Fi
 
 
 ## Machine Automation tab: card layout (decided 18 Nov 2026, from a mockup)
-For machines (production, extractors, generators, storage, stations, switches, Power Storage...). The HUB, the MAM and the Events Overview keep the older layout for now.
+For machines (production, extractors, generators, storage, stations, switches, Power Storage...), and since 18 Nov 2026 also the HUB (world conditions and world actions, title "The HUB", no Copy / Paste, no option) and the MAM (Conditions card only, like the Power Storage). The Events Overview keeps its table. A machine with no condition at all gets no "+ condition"; its Conditions card says "There are no conditions to check on <machine name>."
 - **Top:** the machine's name, centred and large; **Copy** and **Paste** (the automation only) on the right.
 - **Two cards side by side:**
   - **Conditions** with an orange **+ condition** button. One line per condition: `Condition name   [ 50 % ]  ->  [ EVENT ]  bin`. A percentage shows as a bar filled in orange to the value; an item count shows the number and a small square with the item's icon (click to pick the item). The event name is typed (orange), with the names in use suggested under it.

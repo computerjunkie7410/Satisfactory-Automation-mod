@@ -412,3 +412,4 @@ Second pass (18 Nov 2026): "+ condition" / "+ event" open the picker through a w
 
 ## Deleting only discardable items (18 Nov 2026)
 `DeleteAllItems` (used by every delete action: contents, input, output, fuel, drone buffers, uplink slot, and Change recipe's emptying) skips stacks whose item has `UFGItemDescriptor::CanBeDiscarded` false (the game's "cannot be thrown in the trash"), and logs "... kept (it cannot be discarded)". Before, every slot was emptied.
+HUB / MAM (18 Nov 2026): `bCardLayout = !bOverviewMode`. In `BuildCardLayout` the world tabs get no Copy / Paste and no option; the MAM, like the Power Storage, has no Actions card (hidden `mReactionRowsBox`). Empty texts per tab (`mConditionsEmptyText`). `RebuildRows` checks whether any condition is available here (`IsConditionAvailableHere`): if none, "+ condition" is collapsed and the card reads "There are no conditions to check on <name>." (the name from the title).

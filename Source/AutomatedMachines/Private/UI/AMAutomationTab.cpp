@@ -348,7 +348,8 @@ void UAMAutomationTab::BuildLayout()
 	}
 
 	// Machines: the card layout.
-	bCardLayout = !bWorldMode && !bOverviewMode && !bMamMode;
+	// Machines, the HUB and the MAM: the card layout (the Events Overview keeps its table).
+	bCardLayout = !bOverviewMode;
 	if (bCardLayout)
 	{
 		BuildCardLayout(Page);
@@ -709,6 +710,7 @@ void UAMAutomationTab::BuildCardLayout(UHorizontalBox* Page)
 		NameSlot->SetHorizontalAlignment(HAlign_Center);
 		NameSlot->SetVerticalAlignment(VAlign_Center);
 	}
+	if (!bWorldMode)
 	{
 		UHorizontalBox* ClipboardRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("AMClipboardRow"));
 		mClipboardRow = ClipboardRow;
@@ -831,29 +833,35 @@ void UAMAutomationTab::BuildCardLayout(UHorizontalBox* Page)
 		}
 		return AddButton;
 	};
-	const FString ConditionsEmpty = bAlarmsOnlyMode
+	mConditionsEmptyText = bMamMode
+		? FString(TEXT("No conditions yet.\n\nThe MAM's conditions are what happens in it, like a research completed: when one is met, the MAM triggers the event you name next to it.\n\nWhat happens then is set where it happens: on a machine, a sign, or in the HUB's Automation tab (show a message, play a sound).\n\nClick + condition to add one."))
+		: bWorldMode
+		? FString(TEXT("No conditions yet.\n\nThe HUB's conditions are what happens in the whole world, like a milestone completed: when one is met, the HUB triggers the event you name next to it.\n\nEvery machine listening to that event then acts on it.\n\nClick + condition to add one."))
+		: bAlarmsOnlyMode
 		? FString(TEXT("No conditions yet.\n\nA condition watches the batteries of this power grid: when it is met (for example they are almost empty), it triggers the event you name next to it. Machines listening to that event then act: start backup generators, show a message, play a sound...\n\nThe list is the same on every Power Storage of the grid, and each event is triggered once for the grid.\n\nClick + condition to add one."))
 		: FString(TEXT("No conditions yet.\n\nA condition watches this machine: when it is met (for example its output fills up, or its power goes), the machine triggers the event you name next to it.\n\nEvery machine listening to that event then acts on it: pause, change clock speed, show a message, play a sound...\n\nClick + condition to add one."));
-	mAddFireButton = MakeCard(TEXT("Conditions"), TEXT("+ condition"), ConditionsEmpty, mFireRowsBox, mFireEmptyText, 0.f);
+	mAddFireButton = MakeCard(TEXT("Conditions"), TEXT("+ condition"), mConditionsEmptyText, mFireRowsBox, mFireEmptyText, 0.f);
 	mAddFireButton->OnClicked.AddDynamic(this, &UAMAutomationTab::OnAddFireClicked);
 	mAddFireButton->OnHovered.AddDynamic(this, &UAMAutomationTab::OnAddFireHovered);
-	if (!bAlarmsOnlyMode)
+	if (!bAlarmsOnlyMode && !bMamMode)
 	{
-		mAddReactionButton = MakeCard(TEXT("Actions"), TEXT("+ event"),
-			TEXT("No actions yet.\n\nActions are what this machine does when an event is triggered, by this machine or by any other: pause or resume, change its clock speed, show a message, play a sound...\n\nClick + event to choose the event to listen to, then + action to add what to do."),
+		mAddReactionButton = MakeCard(TEXT("Actions"), TEXT("+ event"), bWorldMode
+			? FString(TEXT("No actions yet.\n\nThe HUB hears every event in the world. Its actions need no machine: show a message on every player's screen, play a sound...\n\nClick + event to choose the event to listen to, then + action to add what to do."))
+			: FString(TEXT("No actions yet.\n\nActions are what this machine does when an event is triggered, by this machine or by any other: pause or resume, change its clock speed, show a message, play a sound...\n\nClick + event to choose the event to listen to, then + action to add what to do.")),
 			mReactionRowsBox, mReactionEmptyText, AMAT_CardGap);
 		mAddReactionButton->OnClicked.AddDynamic(this, &UAMAutomationTab::OnAddReactionClicked);
 		mAddReactionButton->OnHovered.AddDynamic(this, &UAMAutomationTab::OnAddReactionHovered);
 	}
 	else
 	{
-		// A battery has nothing to do: the list exists, hidden.
+		// A battery / the MAM have nothing to do: the list exists, hidden.
 		mReactionRowsBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass());
 	}
 
 	// Bottom: the option on the left, the info line on the right.
 	UHorizontalBox* Bottom = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("AMBottom"));
 	AddTo(mContentBox, Bottom, 16.f);
+	if (!bWorldMode)
 	{
 		UButton* Option = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("AMOptionOverflow"));
 		AMUI::SetButtonRoundedSeeThrough(Option, AMUI::Card, 10.f);
@@ -1009,6 +1017,12 @@ void UAMAutomationTab::ShowDefaultInfo()
 			FText::FromString(TEXT("Triggered by: how many machines trigger the event. Listening: how many machines, signs and the HUB do something when it is triggered.\n\nAn event nobody triggers never makes its listeners act; one nobody listens to does nothing.\n\nThe bins remove the event from all of them at once: hold one down for 2.5 seconds.")));
 		return;
 	}
+	if (bCardLayout)
+	{
+		// The empty cards explain themselves; the info line says how to get more.
+		ShowInfo(FText::GetEmpty(), FText::FromString(TEXT("Point at a condition, an action or an event to see what it does here.")));
+		return;
+	}
 	if (bMamMode)
 	{
 		ShowInfo(FText::FromString(TEXT("Events of the MAM")),
@@ -1019,12 +1033,6 @@ void UAMAutomationTab::ShowDefaultInfo()
 	{
 		ShowInfo(FText::FromString(TEXT("Events and actions of the whole world")),
 			FText::FromString(TEXT("On the left: events the world triggers when world conditions are met, such as a milestone completed.\n\nOn the right: what happens when an event is triggered by any machine or by the world. These actions need no machine.\n\nClick a world condition, an action or an event to see what it does.")));
-		return;
-	}
-	if (bCardLayout)
-	{
-		// The empty cards explain themselves; the info line says how to get more.
-		ShowInfo(FText::GetEmpty(), FText::FromString(TEXT("Point at a condition, an action or an event to see what it does here.")));
 		return;
 	}
 	ShowInfo(FText::FromString(TEXT("Events connect your machines")),
@@ -1544,6 +1552,22 @@ void UAMAutomationTab::RebuildRows()
 	}
 	if (mFireEmptyText)
 	{
+		// A machine with no condition at all: no "+ condition", and the card says so.
+		bool bAnyCondition = false;
+		for (uint8 Value = 0; Value < static_cast<uint8>(EAMCondition::Count) && !bAnyCondition; ++Value)
+		{
+			bAnyCondition = IsConditionAvailableHere(static_cast<EAMCondition>(Value));
+		}
+		if (bCardLayout && bRulesLoaded)
+		{
+			if (mAddFireButton)
+			{
+				mAddFireButton->SetVisibility(bAnyCondition ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+			}
+			const FString Name = mMachineText ? mMachineText->GetText().ToString() : FString();
+			mFireEmptyText->SetText(FText::FromString(bAnyCondition ? mConditionsEmptyText
+				: FString::Printf(TEXT("There are no conditions to check on %s."), Name.IsEmpty() ? TEXT("this machine") : *Name)));
+		}
 		mFireEmptyText->SetVisibility(mFires.Num() == 0 ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 	}
 	if (mReactionEmptyText)
@@ -2146,6 +2170,14 @@ UObject* UAMAutomationTab::GetMachine() const
 
 void UAMAutomationTab::UpdateMachineName()
 {
+	if (bWorldMode && bCardLayout)
+	{
+		if (mMachineText)
+		{
+			mMachineText->SetText(FText::FromString(bMamMode ? TEXT("MAM") : TEXT("The HUB")));
+		}
+		return;
+	}
 	if (bWorldMode)
 	{
 		if (mMachineText)

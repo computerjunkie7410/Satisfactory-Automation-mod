@@ -293,6 +293,9 @@ private:
 	UPROPERTY()
 	TObjectPtr<UAMRuleRow> mAdder;
 
+	/** The Conditions card's explanation while empty (replaced on machines with no condition at all). */
+	FString mConditionsEmptyText;
+
 	/** The explanations shown in the middle of an empty Conditions / Actions card. */
 	UPROPERTY()
 	TObjectPtr<UTextBlock> mFireEmptyText;
