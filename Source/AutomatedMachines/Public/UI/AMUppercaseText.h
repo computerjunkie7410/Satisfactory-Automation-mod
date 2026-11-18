@@ -19,4 +19,7 @@ public:
 
 	/** Shows this text now (on the Slate widget: works also right after the field was committed). */
 	void ShowText(const FString& NewText);
+
+	/** The text's colour (UEditableText has no setter for it: its style, by reflection). */
+	void SetTextColor(const FLinearColor& Color);
 };

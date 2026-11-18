@@ -27,3 +27,16 @@ void UAMUppercaseText::ShowText(const FString& NewText)
 		MyEditableText->SetText(FText::FromString(NewText));
 	}
 }
+
+void UAMUppercaseText::SetTextColor(const FLinearColor& Color)
+{
+	// The style is a public property whose direct use is deprecated: through reflection.
+	const FStructProperty* StyleProperty = CastField<FStructProperty>(GetClass()->FindPropertyByName(TEXT("WidgetStyle")));
+	if (!StyleProperty || StyleProperty->Struct != FEditableTextStyle::StaticStruct())
+	{
+		return;
+	}
+	FEditableTextStyle* Style = StyleProperty->ContainerPtrToValuePtr<FEditableTextStyle>(this);
+	Style->ColorAndOpacity = FSlateColor(Color);
+	SynchronizeProperties();
+}

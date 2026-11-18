@@ -100,10 +100,9 @@ namespace
 		if (bBar)
 		{
 			UProgressBar* Bar = Tree->ConstructWidget<UProgressBar>(UProgressBar::StaticClass());
-			FProgressBarStyle Style = Bar->GetWidgetStyle();
+			FProgressBarStyle Style;
 			Style.SetBackgroundImage(FSlateRoundedBoxBrush(AMUI::CardField, 6.f));
 			Style.SetFillImage(FSlateRoundedBoxBrush(FLinearColor::White, 6.f));
-			Style.SetMarqueeImage(FSlateNoResource());
 			Bar->SetWidgetStyle(Style);
 			Bar->SetFillColorAndOpacity(AMUI::Orange);
 			Bar->SetPercent(0.f);
@@ -973,7 +972,7 @@ void UAMRuleRow::BuildConditionCard()
 	Field->SetVerticalAlignment(VAlign_Center);
 	mAlarmNameText = Tree->ConstructWidget<UAMUppercaseText>(UAMUppercaseText::StaticClass());
 	mAlarmNameText->SetFont(Font);
-	mAlarmNameText->SetColorAndOpacity(FSlateColor(AMUI::Orange));
+	mAlarmNameText->SetTextColor(AMUI::Orange);
 	mAlarmNameText->SetHintText(FText::FromString(TEXT("EVENT NAME")));
 	mAlarmNameText->OnTextChanged.AddDynamic(this, &UAMRuleRow::OnAlarmNameChanged);
 	mAlarmNameText->OnTextCommitted.AddDynamic(this, &UAMRuleRow::OnAlarmNameCommitted);
