@@ -5,7 +5,7 @@ Copy each part into the matching field on ficsit.app.
 - **Name:** Automated Machines
 - **Mod reference:** AutomatedMachines
 - **Logo:** `Tools/IconSource/mod_icon_512.png`
-- **Source URL:** https://github.com/jollyeye/satisfactory-automation-mod
+- **Source URL:** https://github.com/jollyeye/Satisfactory-Automation-mod
 - **Short description** (fits the 128-character limit):
 
 > Machines trigger events when something happens to them, and other machines react. Automate your factory, no programming.
@@ -14,7 +14,7 @@ Copy each part into the matching field on ficsit.app.
 
 ## Full description (Markdown)
 
-![Automated Machines in a Constructor](https://raw.githubusercontent.com/jollyeye/satisfactory-automation-mod/main/docs/images/construct.jpg)
+![Automated Machines in a Constructor](https://raw.githubusercontent.com/jollyeye/Satisfactory-Automation-mod/main/docs/images/construct.jpg)
 
 **Automated Machines** adds an **Automation** tab to your machines' own windows. A machine watches itself and **triggers an event** when something happens to it. Any machine that **listens** to that event then **acts**.
 
@@ -31,20 +31,20 @@ No logic gates, no wiring, no programming: name an event on one machine, then pi
 - **Percentages** are bars you can drag. Item counts let you pick the item.
 - Pointing at anything explains it at the bottom of the window.
 
-![A Storage Container that stops its suppliers when it fills up](https://raw.githubusercontent.com/jollyeye/satisfactory-automation-mod/main/docs/images/container.jpg)
+![A Storage Container that stops its suppliers when it fills up](https://raw.githubusercontent.com/jollyeye/Satisfactory-Automation-mod/main/docs/images/container.jpg)
 
 ### Signs, lights, splitters
 
 Signs, lights and light control panels, Smart and Programmable Splitters and the Priority Merger get a list of **designs / settings per event** at the side of their own window. A sign can turn green with *WORKING* while the line runs, and red with *NO FUEL* when a generator empties. A splitter can send iron to another line when a container fills up.
 
-![A sign with one design per event](https://raw.githubusercontent.com/jollyeye/satisfactory-automation-mod/main/docs/images/signs.jpg)
+![A sign with one design per event](https://raw.githubusercontent.com/jollyeye/Satisfactory-Automation-mod/main/docs/images/signs.jpg)
 
 ### The HUB
 
 - The **HUB's Automation tab** has world conditions (*milestone completed*) and world actions (*show a message*, *play a sound*) that need no machine. The MAM has *research completed*.
 - The **Events Overview** in the HUB lists every event of your world. It shows how many machines trigger it, how many listen, and when it was last triggered. You can search, sort by any column, and see each event's machines, nearest first, with a Locate button. Hold the bin to delete an event everywhere.
 
-![The Events Overview in the HUB](https://raw.githubusercontent.com/jollyeye/satisfactory-automation-mod/main/docs/images/hub.jpg)
+![The Events Overview in the HUB](https://raw.githubusercontent.com/jollyeye/Satisfactory-Automation-mod/main/docs/images/hub.jpg)
 
 ### Good to know
 
@@ -66,4 +66,4 @@ Production machines (Smelter, Constructor, Assembler, Foundry, Manufacturer, Ref
 
 ### Feedback
 
-Bug reports and ideas are welcome on the [GitHub repository](https://github.com/jollyeye/satisfactory-automation-mod/issues).
+Bug reports and ideas are welcome on the [GitHub repository](https://github.com/jollyeye/Satisfactory-Automation-mod/issues).
