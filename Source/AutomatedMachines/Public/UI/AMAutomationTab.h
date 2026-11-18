@@ -287,9 +287,9 @@ private:
 
 	/** Card layout: the "+ condition" / "+ event" buttons (the picker opens there), and the row behind the picker. */
 	UPROPERTY()
-	TObjectPtr<UButton> mAddFireButton;
+	TObjectPtr<class UButton> mAddFireButton;
 	UPROPERTY()
-	TObjectPtr<UButton> mAddReactionButton;
+	TObjectPtr<class UButton> mAddReactionButton;
 	UPROPERTY()
 	TObjectPtr<UAMRuleRow> mAdder;
 
