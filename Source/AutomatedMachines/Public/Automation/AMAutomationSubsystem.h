@@ -52,6 +52,9 @@ public:
 	/** How many machines ring this event, and how many act on it. */
 	void CountEventUses(const FString& Event, int32& OutRingers, int32& OutActors) const;
 
+	/** When Event was last triggered (FDateTime UTC ticks), 0 if never (since the stamps were kept). */
+	int64 GetLastTriggered(const FString& Event) const;
+
 	/** Every machine with rules. */
 	const TArray<FAMMachineRules>& GetAllMachines() const { return mMachines; }
 
@@ -226,6 +229,10 @@ private:
 
 	UPROPERTY(SaveGame, ReplicatedUsing = OnRep_Machines)
 	TArray<FAMFireRule> mWorldFires;
+
+	/** When each event was last triggered (the Events Overview's Last triggered column). */
+	UPROPERTY(SaveGame, Replicated)
+	TArray<FAMEventStamp> mEventStamps;
 
 	/** Server: the game's schematic manager tells us about milestones (bound once it exists). */
 	void BindWorldEvents();

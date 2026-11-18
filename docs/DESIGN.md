@@ -26,6 +26,16 @@ For machines (production, extractors, generators, storage, stations, switches, P
 - **Info line:** 3 lines at most, never stretching the page: the description's first paragraph, else its first sentence, else nothing. It follows the mouse: pointing at a row, an event header or an add button explains it.
 - **Values:** numbers in white; a percentage bar can be dragged with the mouse (the number on it can still be clicked to type).
 
+
+## Events Overview (decided 18 Nov 2026)
+The HUB's second tab, in the card style.
+- **Left card:** a **search** field (filters events by name) and the table **Event | Triggered by | Listening | Last triggered | bin**. Click a column's name to sort by it; again to reverse; an arrow shows the order. Last triggered reads "12s ago", "18m ago", "3h ago", "2d ago" or "Never" (orange within the last minute) and counts on by itself; it is kept in the save.
+- **One bin per event:** held 1.2 s, a circle fills up clockwise on the bin itself (no popup), then the event is deleted everywhere: from every machine (and the HUB / MAM) triggering it and every listener (actions, sign designs, light and belt settings). Let go before: nothing happens.
+- A count of 0 shows in orange (the event is half-made).
+- **Right card:** click a count to list its machines, nearest first, each with a Locate button. No bins there any more.
+- **Info line** at the bottom right, like the machine tabs.
+The same 1.2 s ring replaces the popup on the bin of an event with several actions in a machine tab.
+
 ## Words the player sees
 
 No programming words in the game. Decided 4 Nov 2026:

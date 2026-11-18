@@ -51,6 +51,8 @@ Done and tested: production machines (production window), miners, Water / Oil Ex
 
 **Machine tab card layout (18 Nov 2026, code in, waiting for the in-game test):** see DESIGN "Machine Automation tab: card layout". Conditions / Actions cards, one-line condition rows with value bars, event headers with "+ action", Copy / Paste at the top, Overflow and the info line at the bottom, explanations in empty cards. Tested and working (18 Nov 2026). HUB and MAM moved to it too (18 Nov 2026, waiting for the test); Overview unchanged.
 
+**Events Overview rework (18 Nov 2026, code in, waiting for the test):** search, sortable columns, Last triggered column, one bin per event held 1.2 s with a ring, card style. See DESIGN "Events Overview".
+
 ## Useful optional features
 
 - **Find an alarm's machines**: clicking an alarm name in the HUB overview lists the machines that ring it and listen to it (name, distance, direction), optionally with a map marker.

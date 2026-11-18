@@ -183,6 +183,7 @@ void AAMAutomationSubsystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 	DOREPLIFETIME(AAMAutomationSubsystem, mMachines);
 	DOREPLIFETIME(AAMAutomationSubsystem, mWorldActions);
 	DOREPLIFETIME(AAMAutomationSubsystem, mWorldFires);
+	DOREPLIFETIME(AAMAutomationSubsystem, mEventStamps);
 }
 
 void AAMAutomationSubsystem::BeginPlay()
@@ -1391,11 +1392,31 @@ void AAMAutomationSubsystem::EvaluateFireRules()
 	}
 }
 
+int64 AAMAutomationSubsystem::GetLastTriggered(const FString& Event) const
+{
+	const FAMEventStamp* Stamp = mEventStamps.FindByPredicate([&Event](const FAMEventStamp& S) { return S.Event == Event; });
+	return Stamp ? Stamp->UtcTicks : 0;
+}
+
 void AAMAutomationSubsystem::FireEvent(const FString& Event, const AActor* Ringer, const FString& RungBy)
 {
 	if (!HasAuthority() || !AMResearch::IsAutomationUnlocked(this))
 	{
 		return;
+	}
+	// When (the Events Overview shows it).
+	{
+		const int64 Now = FDateTime::UtcNow().GetTicks();
+		if (FAMEventStamp* Stamp = mEventStamps.FindByPredicate([&Event](const FAMEventStamp& S) { return S.Event == Event; }))
+		{
+			Stamp->UtcTicks = Now;
+		}
+		else
+		{
+			FAMEventStamp& Added = mEventStamps.AddDefaulted_GetRef();
+			Added.Event = Event;
+			Added.UtcTicks = Now;
+		}
 	}
 	// Who listens (in the log: an alarm that rings and changes nothing is easy to spot).
 	int32 Listeners = 0;

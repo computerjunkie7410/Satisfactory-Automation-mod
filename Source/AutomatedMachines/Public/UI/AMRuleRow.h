@@ -234,6 +234,9 @@ private:
 	TObjectPtr<class USlider> mValueSlider;
 	/** Behind "+ condition" / "+ event" (see OpenAdder). */
 	bool bAdder = false;
+	/** Card event header: the ring on its bin, filling while the bin is held. */
+	UPROPERTY()
+	TObjectPtr<class UAMHoldRing> mGroupRing;
 	UPROPERTY()
 	TObjectPtr<UWidget> mAdderAnchor;
 	void BuildCompact();

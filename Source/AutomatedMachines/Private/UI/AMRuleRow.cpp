@@ -25,6 +25,7 @@
 #include "TimerManager.h"
 #include "Styling/SlateBrush.h"
 #include "Components/ProgressBar.h"
+#include "UI/AMHoldRing.h"
 #include "Components/Slider.h"
 #include "Components/Spacer.h"
 #include "Components/Overlay.h"
@@ -348,6 +349,32 @@ void UAMRuleRow::BuildGroupHeader(UAMAutomationTab* InTab, const FString& InEven
 
 		UButton* RemoveButton = AMUI::MakeRemoveButton(Tree, Font);
 		AMUI::SetButtonRoundedSeeThrough(RemoveButton, AMUI::CardRow, 6.f);
+		{
+			// The bin's icon with a ring over it (filling while held, when the event has several actions).
+			UWidget* Icon = RemoveButton->GetChildAt(0);
+			UOverlay* Content = Tree->ConstructWidget<UOverlay>(UOverlay::StaticClass());
+			if (Icon)
+			{
+				RemoveButton->RemoveChild(Icon);
+				if (UOverlaySlot* IconSlot = Content->AddChildToOverlay(Icon))
+				{
+					IconSlot->SetHorizontalAlignment(HAlign_Center);
+					IconSlot->SetVerticalAlignment(VAlign_Center);
+				}
+			}
+			mGroupRing = Tree->ConstructWidget<UAMHoldRing>(UAMHoldRing::StaticClass());
+			mGroupRing->SetVisibility(ESlateVisibility::Collapsed);
+			if (UOverlaySlot* RingSlot = Content->AddChildToOverlay(mGroupRing))
+			{
+				RingSlot->SetHorizontalAlignment(HAlign_Fill);
+				RingSlot->SetVerticalAlignment(VAlign_Fill);
+			}
+			if (UButtonSlot* ContentSlot = Cast<UButtonSlot>(RemoveButton->AddChild(Content)))
+			{
+				ContentSlot->SetHorizontalAlignment(HAlign_Center);
+				ContentSlot->SetVerticalAlignment(VAlign_Center);
+			}
+		}
 		RemoveButton->OnClicked.AddDynamic(this, &UAMRuleRow::OnGroupBinClicked);
 		RemoveButton->OnPressed.AddDynamic(this, &UAMRuleRow::OnGroupBinPressed);
 		RemoveButton->OnReleased.AddDynamic(this, &UAMRuleRow::OnGroupBinReleased);
@@ -694,7 +721,7 @@ void UAMRuleRow::OnGroupBinPressed()
 	// More than one action: hold the bin down (they all go). One: a click is enough.
 	if (mGroupCount > 1)
 	{
-		mTab->StartGroupHold(mGroupEvent, mGroupCount);
+		mTab->StartGroupHold(mGroupEvent, mGroupCount, mGroupRing);
 	}
 }
 

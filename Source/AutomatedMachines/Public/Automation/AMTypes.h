@@ -340,6 +340,19 @@ struct AUTOMATEDMACHINES_API FAMLightSetting
  * settings, no event): a splitter's sort rules (an item and the output it goes to, side by side in the
  * two arrays), a merger's priority per input.
  */
+/** When an event was last triggered (Events Overview): UTC ticks of FDateTime, so it means the same after loading. */
+USTRUCT(BlueprintType)
+struct AUTOMATEDMACHINES_API FAMEventStamp
+{
+	GENERATED_BODY()
+
+	UPROPERTY(SaveGame)
+	FString Event;
+
+	UPROPERTY(SaveGame)
+	int64 UtcTicks = 0;
+};
+
 USTRUCT(BlueprintType)
 struct AUTOMATEDMACHINES_API FAMBeltSetting
 {

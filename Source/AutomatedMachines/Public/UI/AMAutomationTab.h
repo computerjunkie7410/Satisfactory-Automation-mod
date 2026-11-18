@@ -80,6 +80,19 @@ public:
 
 	UFUNCTION()
 	void OnNameHovered();
+
+	/** An event row's one bin (held 1.2 s: the event is deleted everywhere), and the ring on it. */
+	UPROPERTY()
+	TObjectPtr<class UAMHoldRing> Ring;
+
+	UFUNCTION()
+	void OnEventBinPressed();
+
+	/** A column header (sorts the table by it; again: the other way). */
+	int32 Column = 0;
+
+	UFUNCTION()
+	void OnHeaderClicked();
 };
 
 UCLASS()
@@ -153,7 +166,7 @@ public:
 	bool IsActionAvailableHere(EAMAction Action) const;
 
 	/** The bin of an alarm with several actions is held down (like the overview's bins). */
-	void StartGroupHold(const FString& Event, int32 Count);
+	void StartGroupHold(const FString& Event, int32 Count, class UAMHoldRing* Ring = nullptr);
 
 	/** The info panel on the right of the page. */
 	void ShowInfo(const FText& Title, const FText& Body);
@@ -189,8 +202,18 @@ public:
 	 */
 	bool IsWorldMode() const { return bWorldMode; }
 
-	/** Overview: a bin is held down (2.5 s with the big bin filling up in the middle of the screen: clears), or let go. */
-	void StartOverviewHold(const FString& Event, bool bRingers, AFGBuildable* OnlyMachine = nullptr, bool bOnlyHub = false, bool bOne = false, const FString& TargetName = FString());
+	/** Overview: a bin is held down (1.2 s, its ring filling up: clears), or let go. */
+	void StartOverviewHold(const FString& Event, bool bRingers, AFGBuildable* OnlyMachine = nullptr, bool bOnlyHub = false, bool bOne = false, const FString& TargetName = FString(), class UAMHoldRing* Ring = nullptr);
+
+	/** Overview: an event's bin held down: when its ring is full, the event is deleted everywhere (triggers and listeners). */
+	void StartEventHold(const FString& Event, class UAMHoldRing* Ring);
+
+	/** Overview: a column header clicked (0 name, 1 triggered by, 2 listening, 3 last triggered). */
+	void OnOverviewHeaderClicked(int32 Column);
+
+	/** Overview: the search field. */
+	UFUNCTION()
+	void OnOverviewSearchChanged(const FText& Text);
 	void StopOverviewHold(bool bDone);
 	void ExplainOverviewBin(const FString& Event, bool bRingers, bool bOne = false, const FString& TargetName = FString());
 
@@ -490,6 +513,28 @@ private:
 
 	/** Rules changed while a bin was held: the rows are made again when it is let go. */
 	bool bOverviewDirty = false;
+
+	/** Overview (18 Nov 2026): the search text, the sort column and order, the column headers' labels. */
+	FString mOverviewSearch;
+	int32 mSortColumn = 0;
+	bool bSortAscending = true;
+	UPROPERTY()
+	TArray<TObjectPtr<UTextBlock>> mHeaderLabels;
+	/** The headers' click handlers (kept: the headers are made once). */
+	UPROPERTY()
+	TArray<TObjectPtr<UAMOverviewHandler>> mHeaderHandlers;
+	/** The Last triggered cells, updated every second. */
+	TArray<TPair<TWeakObjectPtr<UTextBlock>, FString>> mTimeCells;
+	FTimerHandle mTimeCellsTimer;
+	void UpdateTimeCells();
+	/** The overview's layout (cards, search, sortable headers, info line). */
+	void BuildOverviewLayout(class UHorizontalBox* Page);
+	/** A hold deletes the whole event (triggers and listeners). */
+	bool bHoldAll = false;
+	/** The ring of the bin being held. */
+	TWeakObjectPtr<class UAMHoldRing> mHoldRing;
+	/** The info line at the bottom (card layouts and the overview): shortened to 3 lines. */
+	bool bInfoLine = false;
 
 	/** The bin held is an alarm's group of actions on this page (removed here, not in the world). */
 	bool bHoldGroup = false;
