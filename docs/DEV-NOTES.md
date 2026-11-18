@@ -433,3 +433,9 @@ Actions card always present (18 Nov 2026): MAM and Power Storage get the card wi
 - `Tools/create_assets.py`: marker material / mesh / icon sections removed; it deletes `SM_AM_Marker`, `M_AM_Marker`, `T_AM_MarkerIcon` from the project if they exist. `Tools/Marker/` and `Tools/Icons/T_AM_MarkerIcon.png` removed.
 - Mod icon: `Resources/Icon128.png` (SML / Mod Manager icon). Sources in `Tools/IconSource/` (`make_mod_icon.py`, svg, 1024 and 512 px; the 512 is the ficsit.app logo).
 - ficsit.app text: `docs/FICSIT-PAGE.md`; its screenshots are `docs/images/*.jpg` (1600 px, from `Tools/images/*.png`), linked through raw.githubusercontent.com, so the repo must stay public and the files on `main`.
+
+## Game update crash (18 Nov 2026)
+- The game updated from CL517554 to CL520140 on 18 Nov 2026 (afternoon). 1.0.0 then crashed on load in `GetFillLevel` (access violation reading the container's inventory): the mod's code reads the game's classes with the memory layout of the headers it was built with, and the new game build has a different layout.
+- The starter project `D:\SFMods\SML` was cloned on SML commit `8eebc9e` (headers CL513885) and never updated; 1.0.0 was built on those headers and happened to work on CL517554.
+- SML had no headers for CL520140 yet (newest: `a7e8550` "Update headers to CL517554", assets `7ad6c73` on dev).
+- Fix: when SML publishes "Update headers to CL520140", `git pull` in `D:\SFMods\SML` (master), rebuild with the update script, test, Alpakit Release 1.0.1. After every game patch: check the SML repo for new headers before building a release.
