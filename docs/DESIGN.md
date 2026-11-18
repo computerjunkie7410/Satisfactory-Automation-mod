@@ -36,6 +36,14 @@ The HUB's second tab, in the card style.
 - **Info line** at the bottom right, like the machine tabs.
 The same 1.2 s ring replaces the popup on the bin of an event with several actions in a machine tab.
 
+
+## AND between events (decided 18 Nov 2026, option 2)
+- An event is **active** while at least one of the conditions triggering it is true (checked every second). A condition that is only a moment (train arrives, recipe changed, milestone / research completed) makes its event active only at that moment.
+- In the Actions card an event header has **+ and**: pick another event. The header then reads `PLATES BACKED UP  and  POWER LOW`, and its actions run when **one of these events is triggered while all the others are active** (once, also if two of them are triggered at the same time).
+- A group is its event plus its AND events: the same event can have a plain group and AND groups side by side. To undo an AND, remove the group and add it again.
+- Deleting an event (Events Overview) also removes the AND actions that need it. The Listening count includes AND listeners.
+- Signs, lights, splitters and the merger stay one event per setting (no AND).
+
 ## Words the player sees
 
 No programming words in the game. Decided 4 Nov 2026:

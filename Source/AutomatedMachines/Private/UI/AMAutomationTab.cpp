@@ -1889,7 +1889,8 @@ void UAMAutomationTab::RebuildRows()
 	TArray<FString> PresentEvents;
 	for (const FAMReactionRule& Rule : mReactions)
 	{
-		PresentEvents.AddUnique(Rule.Event);
+		// A group per event and AND set (AMRules::GroupKey).
+		PresentEvents.AddUnique(AMRules::GroupKey(Rule));
 	}
 	TArray<FString> GroupEvents;
 	for (const FString& Known : mGroupOrder)
@@ -1914,7 +1915,7 @@ void UAMAutomationTab::RebuildRows()
 		{
 			for (const FAMReactionRule& Rule : mReactions)
 			{
-				if (Rule.Event == Event)
+				if (AMRules::GroupKey(Rule) == Event)
 				{
 					Ordered.Add(Rule);
 				}
@@ -1923,7 +1924,7 @@ void UAMAutomationTab::RebuildRows()
 		bool bMoved = false;
 		for (int32 Index = 0; !bMoved && Index < Ordered.Num(); ++Index)
 		{
-			bMoved = Ordered[Index].Event != mReactions[Index].Event;
+			bMoved = AMRules::GroupKey(Ordered[Index]) != AMRules::GroupKey(mReactions[Index]);
 		}
 		if (bMoved && Ordered.Num() == mReactions.Num())
 		{
@@ -1937,7 +1938,7 @@ void UAMAutomationTab::RebuildRows()
 		int32 Count = 0;
 		for (const FAMReactionRule& Rule : mReactions)
 		{
-			Count += Rule.Event == Event ? 1 : 0;
+			Count += AMRules::GroupKey(Rule) == Event ? 1 : 0;
 		}
 		UAMRuleRow* Header = NewObject<UAMRuleRow>(this);
 		Header->BuildGroupHeader(this, Event, Count);
@@ -1952,7 +1953,7 @@ void UAMAutomationTab::RebuildRows()
 		}
 		for (int32 Index = 0; Index < mReactions.Num(); ++Index)
 		{
-			if (mReactions[Index].Event != Event)
+			if (AMRules::GroupKey(mReactions[Index]) != Event)
 			{
 				continue;
 			}
@@ -2073,7 +2074,7 @@ void UAMAutomationTab::OnWorldRulesChanged()
 	{
 		bSame = Reactions[Index].Event == mReactions[Index].Event && Reactions[Index].Action == mReactions[Index].Action
 			&& Reactions[Index].Value == mReactions[Index].Value && Reactions[Index].Recipe.Get() == mReactions[Index].Recipe.Get()
-			&& Reactions[Index].Message == mReactions[Index].Message;
+			&& Reactions[Index].Message == mReactions[Index].Message && Reactions[Index].AndEvents == mReactions[Index].AndEvents;
 	}
 	if (bSame)
 	{
@@ -2182,7 +2183,7 @@ void UAMAutomationTab::RemoveRule(bool bFire, int32 Index, const FString& Expect
 
 bool UAMAutomationTab::HasActionGroup(const FString& Event) const
 {
-	return mReactions.ContainsByPredicate([&Event](const FAMReactionRule& Rule) { return Rule.Event == Event; });
+	return mReactions.ContainsByPredicate([&Event](const FAMReactionRule& Rule) { return AMRules::GroupKey(Rule) == Event; });
 }
 
 bool UAMAutomationTab::ActionClashesInGroup(int32 Index, EAMAction Action) const
@@ -2191,10 +2192,10 @@ bool UAMAutomationTab::ActionClashesInGroup(int32 Index, EAMAction Action) const
 	{
 		return false;
 	}
-	const FString& Event = mReactions[Index].Event;
+	const FString Key = AMRules::GroupKey(mReactions[Index]);
 	for (int32 Other = 0; Other < mReactions.Num(); ++Other)
 	{
-		if (Other != Index && mReactions[Other].Event == Event && AMRules::ActionsConflict(mReactions[Other].Action, Action))
+		if (Other != Index && AMRules::GroupKey(mReactions[Other]) == Key && AMRules::ActionsConflict(mReactions[Other].Action, Action))
 		{
 			return true;
 		}
@@ -2206,7 +2207,7 @@ bool UAMAutomationTab::ActionClashesWithAlarm(const FString& Event, EAMAction Ac
 {
 	return mReactions.ContainsByPredicate([&Event, Action](const FAMReactionRule& Rule)
 	{
-		return Rule.Event == Event && AMRules::ActionsConflict(Rule.Action, Action);
+		return AMRules::GroupKey(Rule) == Event && AMRules::ActionsConflict(Rule.Action, Action);
 	});
 }
 
@@ -2229,8 +2230,9 @@ void UAMAutomationTab::AddActionToGroup(const FString& Event, EAMAction Chosen)
 			}
 			continue;
 		}
+		// Event is the group's key: its event and AND events.
 		FAMReactionRule& NewRule = mReactions.AddDefaulted_GetRef();
-		NewRule.Event = Event;
+		AMRules::SplitGroupKey(Event, NewRule.Event, NewRule.AndEvents);
 		NewRule.Action = Action;
 		NewRule.Value = AMRules::GetActionValueInfo(Action).Default;
 		OnRulesEdited();
@@ -2240,7 +2242,7 @@ void UAMAutomationTab::AddActionToGroup(const FString& Event, EAMAction Chosen)
 		}
 		return;
 	}
-	ShowInfo(FText::FromString(Event.IsEmpty() ? TEXT("Actions") : Event),
+	ShowInfo(FText::FromString(Event.IsEmpty() ? TEXT("Actions") : AMRules::GroupLabel(Event)),
 		FText::FromString(TEXT("Every action of this machine is already used for this event (actions of one kind, like Pause and Resume, cannot go together).")));
 }
 
@@ -2252,9 +2254,9 @@ void UAMAutomationTab::RenameActionGroup(const FString& OldEvent, const FString&
 	}
 	for (FAMReactionRule& Rule : mReactions)
 	{
-		if (Rule.Event == OldEvent)
+		if (AMRules::GroupKey(Rule) == OldEvent)
 		{
-			Rule.Event = NewEvent;
+			AMRules::SplitGroupKey(NewEvent, Rule.Event, Rule.AndEvents);
 		}
 	}
 	// The renamed group stays where it was (or joins the group it now shares a name with).
@@ -2278,9 +2280,36 @@ void UAMAutomationTab::RenameActionGroup(const FString& OldEvent, const FString&
 	ShowAlarmInfo(NewEvent);
 }
 
+void UAMAutomationTab::AddAndEvent(const FString& Key, const FString& Other)
+{
+	FString Event;
+	TArray<FString> AndEvents;
+	AMRules::SplitGroupKey(Key, Event, AndEvents);
+	const FString Name = AMRules::NormalizeEventName(Other);
+	if (Name.IsEmpty() || Name == Event || AndEvents.Contains(Name))
+	{
+		return;
+	}
+	AndEvents.Add(Name);
+	AndEvents.Sort();
+	FString NewKey = Event;
+	for (const FString& And : AndEvents)
+	{
+		NewKey += TEXT("|") + And;
+	}
+	if (HasActionGroup(NewKey))
+	{
+		ShowInfo(FText::FromString(AMRules::GroupLabel(NewKey)), FText::FromString(TEXT("There is already a group for these events: add the actions there.")));
+		return;
+	}
+	RenameActionGroup(Key, NewKey);
+	ShowInfo(FText::FromString(AMRules::GroupLabel(NewKey)), FText::FromString(
+		TEXT("These actions now run when one of these events is triggered while all the others are active.")));
+}
+
 void UAMAutomationTab::RemoveActionGroup(const FString& Event)
 {
-	const int32 Removed = mReactions.RemoveAll([&Event](const FAMReactionRule& Rule) { return Rule.Event == Event; });
+	const int32 Removed = mReactions.RemoveAll([&Event](const FAMReactionRule& Rule) { return AMRules::GroupKey(Rule) == Event; });
 	if (Removed == 0)
 	{
 		return;
@@ -2297,7 +2326,7 @@ void UAMAutomationTab::StartGroupHold(const FString& Event, int32 Count, UAMHold
 {
 	StartOverviewHold(Event, false, nullptr, false, false, FString(), Ring);
 	bHoldGroup = true;
-	ShowInfo(FText::FromString(Event.IsEmpty() ? TEXT("this event") : Event),
+	ShowInfo(FText::FromString(Event.IsEmpty() ? TEXT("this event") : AMRules::GroupLabel(Event)),
 		FText::FromString(FString::Printf(TEXT("Keep holding to remove its %d actions."), Count)));
 }
 
@@ -3545,7 +3574,7 @@ void UAMAutomationTab::AddExpandedList()
 		}
 		const bool bUses = bExpandedRingers
 			? Entry.Fires.ContainsByPredicate([&Event](const FAMFireRule& Rule) { return Rule.Event == Event; })
-			: (Entry.Reactions.ContainsByPredicate([&Event](const FAMReactionRule& Rule) { return Rule.Event == Event; })
+			: (Entry.Reactions.ContainsByPredicate([&Event](const FAMReactionRule& Rule) { return AMRules::ReactionUses(Rule, Event); })
 				|| Entry.SignDesigns.ContainsByPredicate([&Event](const FAMSignDesign& Design) { return Design.Event == Event; })
 				|| Entry.LightSettings.ContainsByPredicate([&Event](const FAMLightSetting& Setting) { return Setting.Event == Event; })
 				|| Entry.BeltSettings.ContainsByPredicate([&Event](const FAMBeltSetting& Setting) { return Setting.Event == Event; }));
@@ -3583,7 +3612,7 @@ void UAMAutomationTab::AddExpandedList()
 			AddWorldEntry(TEXT("The HUB (world conditions)"), false);
 		}
 	}
-	else if (Subsystem->GetWorldActions().ContainsByPredicate([&Event](const FAMReactionRule& Rule) { return Rule.Event == Event; }))
+	else if (Subsystem->GetWorldActions().ContainsByPredicate([&Event](const FAMReactionRule& Rule) { return AMRules::ReactionUses(Rule, Event); }))
 	{
 		AddWorldEntry(TEXT("The HUB (world actions)"), false);
 	}

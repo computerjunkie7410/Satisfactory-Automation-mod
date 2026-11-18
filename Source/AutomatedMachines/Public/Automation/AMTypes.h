@@ -202,6 +202,14 @@ struct AUTOMATEDMACHINES_API FAMReactionRule
 	/** The text of "Show message" (empty: machine and alarm), else unused. */
 	UPROPERTY(SaveGame, BlueprintReadWrite, Category = "Automation")
 	FString Message;
+
+	/**
+	 * AND (18 Nov 2026): more events that must be active too. The action runs when one of
+	 * Event / AndEvents is triggered while all the others are active (an event is active while one
+	 * of the conditions triggering it is true). Empty: Event alone, as before. Sorted, no duplicates.
+	 */
+	UPROPERTY(SaveGame, BlueprintReadWrite, Category = "Automation")
+	TArray<FString> AndEvents;
 };
 
 /** A wrong item taken off a machine's input belt, waiting to leave on its output belt (saved). */
@@ -436,8 +444,20 @@ struct AUTOMATEDMACHINES_API FAMMachineRules
 
 namespace AMRules
 {
-	/** Event names are uppercase, without spaces at the ends. */
+	/** Event names are uppercase, without spaces at the ends (and without "|", used in group keys). */
 	AUTOMATEDMACHINES_API FString NormalizeEventName(const FString& Name);
+
+	/** AND: whether an action listens to Event (its own event or one of its AND events). */
+	AUTOMATEDMACHINES_API bool ReactionUses(const FAMReactionRule& Rule, const FString& Event);
+
+	/**
+	 * The actions' group in the UI: one per event and AND set. Its key is "EVENT|AND1|AND2" (the AND
+	 * events sorted); a plain event's key is its name.
+	 */
+	AUTOMATEDMACHINES_API FString GroupKey(const FAMReactionRule& Rule);
+	AUTOMATEDMACHINES_API void SplitGroupKey(const FString& Key, FString& OutEvent, TArray<FString>& OutAndEvents);
+	/** "PLATES BACKED UP and POWER LOW". */
+	AUTOMATEDMACHINES_API FString GroupLabel(const FString& Key);
 
 	/** Text shown in the UI for a condition / an action. */
 	AUTOMATEDMACHINES_API FText GetConditionText(EAMCondition Condition);

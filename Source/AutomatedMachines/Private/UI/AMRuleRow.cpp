@@ -341,6 +341,12 @@ void UAMRuleRow::BuildGroupHeader(UAMAutomationTab* InTab, const FString& InEven
 		mAlarmLabel = EventLabel;
 		AddToLine(EventLabel, 0.f, true);
 
+		UTextBlock* AndLabel = nullptr;
+		UButton* AndButton = AMRR_CardTextButton(Tree, TEXT("+ and"), Font, AMUI::CardRow, AndLabel);
+		AndButton->OnClicked.AddDynamic(this, &UAMRuleRow::OnGroupAndClicked);
+		mGroupAndButton = AndButton;
+		AddToLine(Sized(AndButton, 0.f), 8.f, false);
+
 		UTextBlock* AddLabel = nullptr;
 		UButton* AddButton = AMRR_CardTextButton(Tree, TEXT("+ action"), Font, AMUI::CardRow, AddLabel);
 		AddButton->OnClicked.AddDynamic(this, &UAMRuleRow::OnGroupAddClicked);
@@ -380,7 +386,7 @@ void UAMRuleRow::BuildGroupHeader(UAMAutomationTab* InTab, const FString& InEven
 		RemoveButton->OnReleased.AddDynamic(this, &UAMRuleRow::OnGroupBinReleased);
 		AddToLine(Sized(RemoveButton, AMRowLayout::Remove), 6.f, false);
 
-		mAlarmLabel->SetText(FText::FromString(mGroupEvent.IsEmpty() ? TEXT("choose an event") : mGroupEvent));
+		mAlarmLabel->SetText(FText::FromString(mGroupEvent.IsEmpty() ? TEXT("choose an event") : AMRules::GroupLabel(mGroupEvent)));
 		mAlarmLabel->SetColorAndOpacity(FSlateColor(mGroupEvent.IsEmpty() ? AMUI::Grey : AMUI::White));
 		mFooter = nullptr;
 		return;
@@ -439,8 +445,18 @@ void UAMRuleRow::BuildGroupHeader(UAMAutomationTab* InTab, const FString& InEven
 	mFooter = FooterLine;
 }
 
+void UAMRuleRow::OnGroupAndClicked()
+{
+	// "+ and": the events these actions also need active.
+	bAndPick = true;
+	mTab->ShowInfo(FText::FromString(TEXT("+ and")), FText::FromString(
+		TEXT("Pick another event: the actions then run only when one of the events is triggered while the others are active.")));
+	OpenPicker(EAMChoiceKind::Alarm, mGroupAndButton);
+}
+
 void UAMRuleRow::OnGroupAddClicked()
 {
+	bAndPick = false;
 	// Which action: the list of those this alarm can still have.
 	OpenPicker(EAMChoiceKind::Action, mGroupAddButton);
 }
@@ -991,6 +1007,12 @@ void UAMRuleRow::OnRowHovered()
 {
 	if (bGroupHeader)
 	{
+		if (mGroupEvent.Contains(TEXT("|")))
+		{
+			mTab->ShowInfo(FText::FromString(AMRules::GroupLabel(mGroupEvent)), FText::FromString(
+				TEXT("AND: these actions run when one of these events is triggered while all the others are active.")));
+			return;
+		}
 		mTab->ShowAlarmInfo(mGroupEvent);
 		return;
 	}
@@ -1635,6 +1657,15 @@ void UAMRuleRow::Choose(const UAMChoice& Choice)
 		if (bIsAlarm)
 		{
 			CommitAlarmName(Choice.Alarm);
+		}
+		else if (bGroupHeader && bAndPick)
+		{
+			// "+ and": the group needs this event active too (rows made again on the next tick).
+			bAndPick = false;
+			HideChoices();
+			mTab->ClosePicker(true);
+			mTab->AddAndEvent(mGroupEvent, Choice.Alarm);
+			return;
 		}
 		else if (bGroupHeader)
 		{

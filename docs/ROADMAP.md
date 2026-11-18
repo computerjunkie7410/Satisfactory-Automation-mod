@@ -53,6 +53,8 @@ Done and tested: production machines (production window), miners, Water / Oil Ex
 
 **Events Overview rework (18 Nov 2026, code in, waiting for the test):** search, sortable columns, Last triggered column, one bin per event held 1.2 s with a ring, card style. See DESIGN "Events Overview".
 
+**AND between events (18 Nov 2026, code in, waiting for the test):** "+ and" on event headers; see DESIGN "AND between events".
+
 ## Useful optional features
 
 - **Find an alarm's machines**: clicking an alarm name in the HUB overview lists the machines that ring it and listen to it (name, distance, direction), optionally with a map marker.

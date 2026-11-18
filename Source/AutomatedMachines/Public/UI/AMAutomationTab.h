@@ -156,6 +156,9 @@ public:
 	void RemoveActionGroup(const FString& Event);
 	bool HasActionGroup(const FString& Event) const;
 
+	/** AND: Other joins the group Key (its actions then need Other active too). */
+	void AddAndEvent(const FString& Key, const FString& Other);
+
 	/** Would this action clash with another action of the same alarm as action Index (AMRules::ActionsConflict)? */
 	bool ActionClashesInGroup(int32 Index, EAMAction Action) const;
 

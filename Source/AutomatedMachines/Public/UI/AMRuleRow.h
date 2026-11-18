@@ -118,6 +118,10 @@ public:
 	UFUNCTION()
 	void OnGroupAddClicked();
 
+	/** Card event header: "+ and" (pick another event the actions also need active). */
+	UFUNCTION()
+	void OnGroupAndClicked();
+
 	UFUNCTION()
 	void OnGroupBinPressed();
 
@@ -234,6 +238,10 @@ private:
 	TObjectPtr<class USlider> mValueSlider;
 	/** Behind "+ condition" / "+ event" (see OpenAdder). */
 	bool bAdder = false;
+	/** The event picker is open for "+ and" (not to rename the group). */
+	bool bAndPick = false;
+	UPROPERTY()
+	TObjectPtr<class UButton> mGroupAndButton;
 	/** Card event header: the ring on its bin, filling while the bin is held. */
 	UPROPERTY()
 	TObjectPtr<class UAMHoldRing> mGroupRing;

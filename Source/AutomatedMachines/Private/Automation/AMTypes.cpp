@@ -62,7 +62,39 @@ namespace
 
 FString AMRules::NormalizeEventName(const FString& Name)
 {
-	return Name.TrimStartAndEnd().ToUpper();
+	return Name.Replace(TEXT("|"), TEXT(" ")).TrimStartAndEnd().ToUpper();
+}
+
+bool AMRules::ReactionUses(const FAMReactionRule& Rule, const FString& Event)
+{
+	return Rule.Event == Event || Rule.AndEvents.Contains(Event);
+}
+
+FString AMRules::GroupKey(const FAMReactionRule& Rule)
+{
+	FString Key = Rule.Event;
+	for (const FString& Other : Rule.AndEvents)
+	{
+		Key += TEXT("|") + Other;
+	}
+	return Key;
+}
+
+void AMRules::SplitGroupKey(const FString& Key, FString& OutEvent, TArray<FString>& OutAndEvents)
+{
+	TArray<FString> Parts;
+	Key.ParseIntoArray(Parts, TEXT("|"), false);
+	OutEvent = Parts.Num() > 0 ? Parts[0] : FString();
+	OutAndEvents.Reset();
+	for (int32 Index = 1; Index < Parts.Num(); ++Index)
+	{
+		OutAndEvents.Add(Parts[Index]);
+	}
+}
+
+FString AMRules::GroupLabel(const FString& Key)
+{
+	return Key.Replace(TEXT("|"), TEXT("  and  "));
 }
 
 FText AMRules::GetConditionText(EAMCondition Condition)

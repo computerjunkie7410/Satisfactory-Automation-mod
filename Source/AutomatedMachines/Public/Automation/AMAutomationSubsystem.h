@@ -230,6 +230,16 @@ private:
 	UPROPERTY(SaveGame, ReplicatedUsing = OnRep_Machines)
 	TArray<FAMFireRule> mWorldFires;
 
+	/**
+	 * AND: the events active at the last check (one of the conditions triggering them is true), and
+	 * the AND actions already run in this check (two of their events triggered at once: once).
+	 */
+	TSet<FString> mActiveEvents;
+	TSet<const FAMReactionRule*> mAndRanThisCheck;
+
+	/** Whether Rule acts on Event now: its event, or (AND) one of its events with all the others active. */
+	bool Hears(const FAMReactionRule& Rule, const FString& Event);
+
 	/** When each event was last triggered (the Events Overview's Last triggered column). */
 	UPROPERTY(SaveGame, Replicated)
 	TArray<FAMEventStamp> mEventStamps;

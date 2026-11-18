@@ -511,7 +511,8 @@ void AAMAutomationSubsystem::ClearAlarm(const FString& Event, bool bRingers, con
 		}
 		else
 		{
-			const int32 RemovedReactions = Entry.Reactions.RemoveAll([&Event](const FAMReactionRule& Rule) { return Rule.Event == Event; });
+			// AND actions that need this event go too (they could never run without it).
+			const int32 RemovedReactions = Entry.Reactions.RemoveAll([&Event](const FAMReactionRule& Rule) { return AMRules::ReactionUses(Rule, Event); });
 			Removed += RemovedReactions;
 			if (RemovedReactions > 0)
 			{
@@ -587,7 +588,7 @@ void AAMAutomationSubsystem::ClearAlarm(const FString& Event, bool bRingers, con
 	}
 	if (!bRingers && !OnlyMachine && !(bOnlyHub && bMam))
 	{
-		Removed += mWorldActions.RemoveAll([&Event](const FAMReactionRule& Rule) { return Rule.Event == Event; });
+		Removed += mWorldActions.RemoveAll([&Event](const FAMReactionRule& Rule) { return AMRules::ReactionUses(Rule, Event); });
 	}
 	for (AFGBuildableWidgetSign* Sign : SignsToRefresh)
 	{
@@ -903,6 +904,17 @@ FAMReactionRule AAMAutomationSubsystem::CleanReaction(const FAMReactionRule& Rul
 		Clean.Recipe = nullptr;
 	}
 	Clean.Message = AMRules::ActionNeedsMessage(Rule.Action) ? Rule.Message.TrimStartAndEnd().Left(AMRules::MaxMessageLength) : FString();
+	// AND events: named like events, not the action's own event, once each, sorted.
+	Clean.AndEvents.Reset();
+	for (const FString& Other : Rule.AndEvents)
+	{
+		const FString Name = AMRules::NormalizeEventName(Other);
+		if (!Name.IsEmpty() && Name != Clean.Event)
+		{
+			Clean.AndEvents.AddUnique(Name);
+		}
+	}
+	Clean.AndEvents.Sort();
 	return Clean;
 }
 
@@ -960,7 +972,7 @@ void AAMAutomationSubsystem::MoveWorldActionsFromMachines()
 			}
 			const bool bAlready = mWorldActions.ContainsByPredicate([&Rule](const FAMReactionRule& Other)
 			{
-				return Other.Action == Rule.Action && Other.Event == Rule.Event && Other.Message == Rule.Message;
+				return Other.Action == Rule.Action && Other.Event == Rule.Event && Other.AndEvents == Rule.AndEvents && Other.Message == Rule.Message;
 			});
 			if (!bAlready)
 			{
@@ -982,6 +994,7 @@ TArray<FString> AAMAutomationSubsystem::GetAllEventNames() const
 	for (const FAMReactionRule& Rule : mWorldActions)
 	{
 		Names.Add(Rule.Event);
+		Names.Append(Rule.AndEvents);
 	}
 	for (const FAMFireRule& Rule : mWorldFires)
 	{
@@ -996,6 +1009,7 @@ TArray<FString> AAMAutomationSubsystem::GetAllEventNames() const
 		for (const FAMReactionRule& Rule : Entry.Reactions)
 		{
 			Names.Add(Rule.Event);
+			Names.Append(Rule.AndEvents);
 		}
 		for (const FAMSignDesign& Design : Entry.SignDesigns)
 		{
@@ -1025,7 +1039,7 @@ void AAMAutomationSubsystem::CountEventUses(const FString& Event, int32& OutRing
 		{
 			++OutRingers;
 		}
-		if (Entry.Reactions.ContainsByPredicate([&Event](const FAMReactionRule& Rule) { return Rule.Event == Event; })
+		if (Entry.Reactions.ContainsByPredicate([&Event](const FAMReactionRule& Rule) { return AMRules::ReactionUses(Rule, Event); })
 			|| Entry.SignDesigns.ContainsByPredicate([&Event](const FAMSignDesign& Design) { return Design.Event == Event; })
 			|| Entry.LightSettings.ContainsByPredicate([&Event](const FAMLightSetting& Setting) { return Setting.Event == Event; })
 			|| Entry.BeltSettings.ContainsByPredicate([&Event](const FAMBeltSetting& Setting) { return Setting.Event == Event; }))
@@ -1034,7 +1048,7 @@ void AAMAutomationSubsystem::CountEventUses(const FString& Event, int32& OutRing
 		}
 	}
 	// The HUB listens, and rings world events, too.
-	if (mWorldActions.ContainsByPredicate([&Event](const FAMReactionRule& Rule) { return Rule.Event == Event; }))
+	if (mWorldActions.ContainsByPredicate([&Event](const FAMReactionRule& Rule) { return AMRules::ReactionUses(Rule, Event); }))
 	{
 		++OutActors;
 	}
@@ -1296,9 +1310,43 @@ void AAMAutomationSubsystem::Tick(float DeltaSeconds)
 	}
 }
 
+bool AAMAutomationSubsystem::Hears(const FAMReactionRule& Rule, const FString& Event)
+{
+	if (Rule.AndEvents.Num() == 0)
+	{
+		return Rule.Event == Event;
+	}
+	if (!AMRules::ReactionUses(Rule, Event))
+	{
+		return false;
+	}
+	// AND: every other event of the action must be active right now.
+	if (Rule.Event != Event && !mActiveEvents.Contains(Rule.Event))
+	{
+		return false;
+	}
+	for (const FString& Other : Rule.AndEvents)
+	{
+		if (Other != Event && !mActiveEvents.Contains(Other))
+		{
+			return false;
+		}
+	}
+	if (mAndRanThisCheck.Contains(&Rule))
+	{
+		return false;
+	}
+	mAndRanThisCheck.Add(&Rule);
+	UE_LOG(LogAutomatedMachines, Log, TEXT("AND %s: all active, runs %s"), *AMRules::GroupLabel(AMRules::GroupKey(Rule)), *AMRules::GetActionText(Rule.Action).ToString());
+	return true;
+}
+
 void AAMAutomationSubsystem::EvaluateFireRules()
 {
 	TArray<TPair<FString, const AActor*>> EventsToFire;
+	// AND: which events are active in this check (made again each time).
+	mActiveEvents.Reset();
+	mAndRanThisCheck.Reset();
 	// Power Storage: one battery per grid checks and rings (the first by name); they all hold the same alarms.
 	TMap<const UFGPowerCircuit*, const AActor*> BatteryLeaders;
 	for (const FAMMachineRules& Entry : mMachines)
@@ -1377,6 +1425,10 @@ void AAMAutomationSubsystem::EvaluateFireRules()
 			}
 			const bool bBecameTrue = bNow && LastValues[Index] != 1;
 			LastValues[Index] = bNow ? 1 : 0;
+			if (bNow && !Rule.Event.IsEmpty())
+			{
+				mActiveEvents.Add(Rule.Event);
+			}
 			if (bBecameTrue)
 			{
 				UE_LOG(LogAutomatedMachines, Log, TEXT("%s fires %s (%s)"), *AMAS_Describe(Machine), *Rule.Event,
@@ -1404,6 +1456,8 @@ void AAMAutomationSubsystem::FireEvent(const FString& Event, const AActor* Ringe
 	{
 		return;
 	}
+	// A world event (milestone, research) is active at the moment it is triggered (for AND).
+	mActiveEvents.Add(Event);
 	// When (the Events Overview shows it).
 	{
 		const int64 Now = FDateTime::UtcNow().GetTicks();
@@ -1425,7 +1479,7 @@ void AAMAutomationSubsystem::FireEvent(const FString& Event, const AActor* Ringe
 	{
 		for (const FAMReactionRule& Rule : Entry.Reactions)
 		{
-			if (Rule.Event == Event)
+			if (AMRules::ReactionUses(Rule, Event))
 			{
 				++Listeners;
 				ListenerText += FString::Printf(TEXT(" %s:%s"), *GetNameSafe(Entry.Machine), *AMRules::GetActionText(Rule.Action).ToString());
@@ -1435,7 +1489,7 @@ void AAMAutomationSubsystem::FireEvent(const FString& Event, const AActor* Ringe
 	UE_LOG(LogAutomatedMachines, Log, TEXT("Event %s triggered: %d machine action(s)%s"), *Event, Listeners, *ListenerText);
 	for (const FAMReactionRule& Rule : mWorldActions)
 	{
-		if (Rule.Event == Event)
+		if (Hears(Rule, Event))
 		{
 			ApplyWorldAction(Rule, Ringer, RungBy);
 		}
@@ -1474,7 +1528,7 @@ void AAMAutomationSubsystem::FireEvent(const FString& Event, const AActor* Ringe
 		{
 			for (const FAMReactionRule& Rule : Entry.Reactions)
 			{
-				if (Rule.Event == Event && AMRules::IsSignalAction(Rule.Action))
+				if (AMRules::IsSignalAction(Rule.Action) && Hears(Rule, Event))
 				{
 					Entry.bSignalBlocked = Rule.Action == EAMAction::BlockSignal;
 					AMSignal::SetBlocked(Signal, Entry.bSignalBlocked);
@@ -1488,7 +1542,7 @@ void AAMAutomationSubsystem::FireEvent(const FString& Event, const AActor* Ringe
 		{
 			for (const FAMReactionRule& Rule : Entry.Reactions)
 			{
-				if (Rule.Event == Event)
+				if (Hears(Rule, Event))
 				{
 					ApplySwitchAction(Switch, Rule);
 				}
@@ -1502,7 +1556,7 @@ void AAMAutomationSubsystem::FireEvent(const FString& Event, const AActor* Ringe
 		}
 		for (const FAMReactionRule& Rule : Entry.Reactions)
 		{
-			if (Rule.Event == Event)
+			if (Hears(Rule, Event))
 			{
 				ApplyAction(Factory, Rule);
 			}
