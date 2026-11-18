@@ -400,3 +400,11 @@ Fourth run (17-18 Nov 2026): both nodes showed, not centred, no road, and Output
 
 ## Words: Alarm -> Event (18 Nov 2026)
 Every `TEXT("...")` players see was rewritten by a script (scratchpad `rename.py`): Alarm(s) -> Event(s), ring / rings / rung / ringing -> trigger / triggers / triggered / triggering (intransitive "the alarm rings" -> "the event is triggered"), World / Machine Event -> World / Machine Condition, a few sentences reworded by hand. Skipped: asset paths, sound dump / widget dump lines, the merger log. The Pressurizer sound is described as its "warning siren". Code identifiers, enum names and save fields are unchanged.
+
+## Machine tab card layout (18 Nov 2026)
+`UAMAutomationTab::bCardLayout` (= not HUB / MAM / Overview) picks `BuildCardLayout` instead of the old body of `BuildLayout`. Cards are rounded borders (`AMUI::MakeRoundedBox`, `FSlateRoundedBoxBrush`), colours `AMUI::Card / CardRow / CardField / CardSubRow`, add buttons `AMUI::SetButtonRounded(.., Orange)`. Rows: `UAMRuleRow::bCard`.
+- Condition rows: `BuildConditionCard` / `UpdateConditionCard` (name = see-through text button opening the condition picker; `AMRR_CardNumberField` = overlay of a `UProgressBar` (percentages only, fill = Value / FValueInfo::Max) and the editable number + unit; item square = `mItemButton` with `mItemIcon`; arrow U+2192; event field orange `mAlarmNameText`). A row is rebuilt (`RebuildRowsLater`) when its condition changes, since the field's shape depends on it.
+- Event headers: card branch of `BuildGroupHeader` (event button, "+ action", bin; no footer: `RebuildRows` skips a null footer).
+- Action rows: card branch of `BuildCompact` (rounded `CardSubRow`, indented 40, fill width; bar for percentages; rounded dropdowns; bin inside the row).
+- `RebuildRows`: in card mode rows fill the card width (right padding 12 for the scroll bar), no "No events / actions yet" lines: `mFireEmptyText` / `mReactionEmptyText` (overlaid on the scroll box, centred) show while a list is empty.
+- `ShowInfo` writes "Title:" and the text into the bottom info line; `UpdateMachineName` writes just the name.

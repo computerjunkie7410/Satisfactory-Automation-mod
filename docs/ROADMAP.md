@@ -47,7 +47,9 @@ Done and tested: production machines (production window), miners, Water / Oil Ex
 
 **Power switch display (17 Nov 2026, done and tested, no flicker):** the switches get the train stations' "Display text" action: the switch's sign shows the text; empty = its own name (tag) again. Only the sign's picture changes, the tag stays.
 
-**Words (18 Nov 2026, code in, waiting for the in-game look):** Alarm -> Event, ring -> trigger, machine / world event -> condition, in every text players see (tabs, tooltips, condition and action descriptions, messages, research, the `.uplugin`). Next: UI changes (to be described).
+**Words (18 Nov 2026, code in, waiting for the in-game look):** Alarm -> Event, ring -> trigger, machine / world event -> condition, in every text players see (tabs, tooltips, condition and action descriptions, messages, research, the `.uplugin`). 
+
+**Machine tab card layout (18 Nov 2026, code in, waiting for the in-game test):** see DESIGN "Machine Automation tab: card layout". Conditions / Actions cards, one-line condition rows with value bars, event headers with "+ action", Copy / Paste at the top, Overflow and the info line at the bottom, explanations in empty cards. Machines only; HUB / MAM / Overview unchanged.
 
 ## Useful optional features
 

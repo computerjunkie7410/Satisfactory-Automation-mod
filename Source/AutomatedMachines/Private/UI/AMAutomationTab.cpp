@@ -93,6 +93,13 @@ namespace
 	/** The side panel, like the recipe tab's info panel. */
 	constexpr float AMAT_InfoWidth = 312.f;
 
+	/** Card layout (machines, 18 Nov 2026): each card's width (the two about as wide as the old two panels plus the info panel). */
+	constexpr float AMAT_CardWidth = 584.f;
+	constexpr float AMAT_CardPadding = 14.f;
+	constexpr float AMAT_CardGap = 16.f;
+	/** The info line at the bottom right wraps at this width. */
+	constexpr float AMAT_InfoLineWidth = 640.f;
+
 	const TCHAR* const AMAT_TabTitle = TEXT("Automation");
 
 
@@ -333,6 +340,14 @@ void UAMAutomationTab::BuildLayout()
 	{
 		LayerSlot->SetHorizontalAlignment(HAlign_Fill);
 		LayerSlot->SetVerticalAlignment(VAlign_Fill);
+	}
+
+	// Machines: the card layout.
+	bCardLayout = !bWorldMode && !bOverviewMode && !bMamMode;
+	if (bCardLayout)
+	{
+		BuildCardLayout(Page);
+		return;
 	}
 
 	mContentBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("AMContent"));
@@ -651,11 +666,257 @@ void UAMAutomationTab::BuildLayout()
 	ShowDefaultInfo();
 }
 
+void UAMAutomationTab::BuildCardLayout(UHorizontalBox* Page)
+{
+	// [ Machine name (centred)                       Copy  Paste ]
+	// [ Conditions      [+ condition] ] [ Actions        [+ event] ]
+	// [   rows / an explanation when empty ] [   groups / an explanation ]
+	// [ (o) Overflow                     Title: what it does ...     ]
+	mContentBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("AMContent"));
+	UBorder* PageBorder = AMUI::MakeBox(WidgetTree, AMUI::PageBackground, FMargin(AMAT_PagePadding, 14.f));
+	PageBorder->AddChild(mContentBox);
+	if (UHorizontalBoxSlot* PageSlot = Page->AddChildToHorizontalBox(PageBorder))
+	{
+		PageSlot->SetVerticalAlignment(VAlign_Fill);
+	}
+	auto AddTo = [](UVerticalBox* Box, UWidget* Widget, float TopPadding, bool bFill = false)
+	{
+		if (UVerticalBoxSlot* RowSlot = Box->AddChildToVerticalBox(Widget))
+		{
+			RowSlot->SetPadding(FMargin(0.f, TopPadding, 0.f, 0.f));
+			RowSlot->SetHorizontalAlignment(HAlign_Fill);
+			if (bFill)
+			{
+				RowSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+			}
+		}
+	};
+	const float TotalWidth = 2.f * AMAT_CardWidth + AMAT_CardGap;
+
+	// Top: the machine's name in the middle, Copy / Paste on the right.
+	UOverlay* Top = WidgetTree->ConstructWidget<UOverlay>(UOverlay::StaticClass(), TEXT("AMTop"));
+	AddTo(mContentBox, Top, 0.f);
+	mMachineText = MakeText(TEXT(""), 26, AMUI::White);
+	mMachineText->SetAutoWrapText(false);
+	mMachineText->SetJustification(ETextJustify::Center);
+	if (UOverlaySlot* NameSlot = Top->AddChildToOverlay(mMachineText))
+	{
+		NameSlot->SetHorizontalAlignment(HAlign_Center);
+		NameSlot->SetVerticalAlignment(VAlign_Center);
+	}
+	{
+		UHorizontalBox* ClipboardRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("AMClipboardRow"));
+		mClipboardRow = ClipboardRow;
+		auto AddClipboardButton = [this, ClipboardRow](const FString& Label, float LeftPadding) -> UButton*
+		{
+			UTextBlock* ButtonLabel = nullptr;
+			UButton* Button = AMUI::MakeButton(WidgetTree, Label, GetGameFont(), AMUI::Button, &ButtonLabel);
+			AMUI::SetButtonRounded(Button, AMUI::CardRow);
+			mAddLabels.Add(ButtonLabel);
+			Button->OnHovered.AddDynamic(this, &UAMAutomationTab::OnCopyPasteHovered);
+			USizeBox* ButtonSize = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
+			ButtonSize->SetWidthOverride(110.f);
+			ButtonSize->AddChild(Button);
+			if (UHorizontalBoxSlot* ButtonSlot = ClipboardRow->AddChildToHorizontalBox(ButtonSize))
+			{
+				ButtonSlot->SetPadding(FMargin(LeftPadding, 0.f, 0.f, 0.f));
+			}
+			return Button;
+		};
+		AddClipboardButton(TEXT("Copy"), 0.f)->OnClicked.AddDynamic(this, &UAMAutomationTab::OnCopyAutomationClicked);
+		AddClipboardButton(TEXT("Paste"), 10.f)->OnClicked.AddDynamic(this, &UAMAutomationTab::OnPasteAutomationClicked);
+		ClipboardRow->SetVisibility(ESlateVisibility::Collapsed);
+		if (UOverlaySlot* ClipboardSlot = Top->AddChildToOverlay(ClipboardRow))
+		{
+			ClipboardSlot->SetHorizontalAlignment(HAlign_Right);
+			ClipboardSlot->SetVerticalAlignment(VAlign_Center);
+		}
+	}
+	mNoticeText = MakeText(TEXT(""), 14, AMUI::Orange);
+	mNoticeText->SetVisibility(ESlateVisibility::Collapsed);
+	AddTo(mContentBox, mNoticeText, 6.f);
+	mGridWarningText = MakeText(TEXT("Power Grid A and B are joined by a cable somewhere else: they are one grid. This switch separates nothing, and the A / B usage and power events cannot be triggered until the cable is removed."), 14, AMUI::Orange);
+	mGridWarningText->SetVisibility(ESlateVisibility::Collapsed);
+	AddTo(mContentBox, mGridWarningText, 6.f);
+	for (UTextBlock* LongText : { mNoticeText.Get(), mGridWarningText.Get() })
+	{
+		LongText->SetAutoWrapText(false);
+		LongText->SetWrapTextAt(TotalWidth);
+	}
+
+	// The two cards.
+	UHorizontalBox* Cards = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("AMCards"));
+	AddTo(mContentBox, Cards, 16.f, true);
+	auto MakeCard = [this, Cards](const FString& Title, const FString& AddLabel, const FString& EmptyText,
+		TObjectPtr<UVerticalBox>& OutRows, TObjectPtr<UTextBlock>& OutEmpty, float LeftPadding) -> UButton*
+	{
+		USizeBox* CardSize = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
+		CardSize->SetWidthOverride(AMAT_CardWidth);
+		if (UHorizontalBoxSlot* CardSlot = Cards->AddChildToHorizontalBox(CardSize))
+		{
+			CardSlot->SetPadding(FMargin(LeftPadding, 0.f, 0.f, 0.f));
+			CardSlot->SetVerticalAlignment(VAlign_Fill);
+		}
+		UBorder* Card = AMUI::MakeRoundedBox(WidgetTree, AMUI::Card, FMargin(AMAT_CardPadding), 14.f);
+		CardSize->AddChild(Card);
+		UVerticalBox* Inside = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass());
+		Card->AddChild(Inside);
+
+		// "Title            [+ add]"
+		UHorizontalBox* Head = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass());
+		if (UVerticalBoxSlot* HeadSlot = Inside->AddChildToVerticalBox(Head))
+		{
+			HeadSlot->SetHorizontalAlignment(HAlign_Fill);
+		}
+		UTextBlock* TitleText = MakeText(Title, 22, AMUI::White);
+		TitleText->SetAutoWrapText(false);
+		if (UHorizontalBoxSlot* TitleSlot = Head->AddChildToHorizontalBox(TitleText))
+		{
+			TitleSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+			TitleSlot->SetVerticalAlignment(VAlign_Center);
+			TitleSlot->SetPadding(FMargin(4.f, 0.f, 0.f, 0.f));
+		}
+		UButton* AddButton = nullptr;
+		if (!AddLabel.IsEmpty())
+		{
+			UTextBlock* AddText = nullptr;
+			AddButton = AMUI::MakeButton(WidgetTree, AddLabel, GetGameFont(), AMUI::Orange, &AddText);
+			AMUI::SetButtonRounded(AddButton, AMUI::Orange, 10.f);
+			if (AddText)
+			{
+				AddText->SetColorAndOpacity(FSlateColor(FLinearColor(FColor(30, 30, 30))));
+				mAddLabels.Add(AddText);
+			}
+			USizeBox* AddSize = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
+			AddSize->SetMinDesiredWidth(170.f);
+			AddSize->SetHeightOverride(44.f);
+			AddSize->AddChild(AddButton);
+			if (UHorizontalBoxSlot* AddSlot = Head->AddChildToHorizontalBox(AddSize))
+			{
+				AddSlot->SetVerticalAlignment(VAlign_Center);
+			}
+		}
+
+		// The rows (scrolling), and over them the explanation while there are none.
+		UOverlay* Body = WidgetTree->ConstructWidget<UOverlay>(UOverlay::StaticClass());
+		if (UVerticalBoxSlot* BodySlot = Inside->AddChildToVerticalBox(Body))
+		{
+			BodySlot->SetPadding(FMargin(0.f, 16.f, 0.f, 0.f));
+			BodySlot->SetHorizontalAlignment(HAlign_Fill);
+			BodySlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+		}
+		UScrollBox* Scroll = WidgetTree->ConstructWidget<UScrollBox>(UScrollBox::StaticClass());
+		Scroll->SetScrollbarThickness(FVector2D(6.f, 6.f));
+		if (UOverlaySlot* ScrollSlot = Body->AddChildToOverlay(Scroll))
+		{
+			ScrollSlot->SetHorizontalAlignment(HAlign_Fill);
+			ScrollSlot->SetVerticalAlignment(VAlign_Fill);
+		}
+		OutRows = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass());
+		Scroll->AddChild(OutRows);
+		OutEmpty = MakeText(EmptyText, 15, AMUI::Grey);
+		OutEmpty->SetAutoWrapText(false);
+		OutEmpty->SetWrapTextAt(AMAT_CardWidth - 2.f * AMAT_CardPadding - 60.f);
+		OutEmpty->SetJustification(ETextJustify::Center);
+		OutEmpty->SetVisibility(ESlateVisibility::Collapsed);
+		if (UOverlaySlot* EmptySlot = Body->AddChildToOverlay(OutEmpty))
+		{
+			EmptySlot->SetHorizontalAlignment(HAlign_Center);
+			EmptySlot->SetVerticalAlignment(VAlign_Center);
+		}
+		return AddButton;
+	};
+	const FString ConditionsEmpty = bAlarmsOnlyMode
+		? FString(TEXT("No conditions yet.\n\nA condition watches the batteries of this power grid: when it is met (for example they are almost empty), it triggers the event you name next to it. Machines listening to that event then act: start backup generators, show a message, play a sound...\n\nThe list is the same on every Power Storage of the grid, and each event is triggered once for the grid.\n\nClick + condition to add one."))
+		: FString(TEXT("No conditions yet.\n\nA condition watches this machine: when it is met (for example its output fills up, or its power goes), the machine triggers the event you name next to it.\n\nEvery machine listening to that event then acts on it: pause, change clock speed, show a message, play a sound...\n\nClick + condition to add one."));
+	MakeCard(TEXT("Conditions"), TEXT("+ condition"), ConditionsEmpty, mFireRowsBox, mFireEmptyText, 0.f)
+		->OnClicked.AddDynamic(this, &UAMAutomationTab::OnAddFireClicked);
+	if (!bAlarmsOnlyMode)
+	{
+		MakeCard(TEXT("Actions"), TEXT("+ event"),
+			TEXT("No actions yet.\n\nActions are what this machine does when an event is triggered, by this machine or by any other: pause or resume, change its clock speed, show a message, play a sound...\n\nClick + event to choose the event to listen to, then + action to add what to do."),
+			mReactionRowsBox, mReactionEmptyText, AMAT_CardGap)->OnClicked.AddDynamic(this, &UAMAutomationTab::OnAddReactionClicked);
+	}
+	else
+	{
+		// A battery has nothing to do: the list exists, hidden.
+		mReactionRowsBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass());
+	}
+
+	// Bottom: the option on the left, the info line on the right.
+	UHorizontalBox* Bottom = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("AMBottom"));
+	AddTo(mContentBox, Bottom, 16.f);
+	{
+		UButton* Option = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("AMOptionOverflow"));
+		AMUI::SetButtonRoundedSeeThrough(Option, AMUI::Card, 10.f);
+		UHorizontalBox* OptionRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass());
+		if (UButtonSlot* RowSlot = Cast<UButtonSlot>(Option->AddChild(OptionRow)))
+		{
+			RowSlot->SetHorizontalAlignment(HAlign_Left);
+			RowSlot->SetVerticalAlignment(VAlign_Center);
+		}
+		mPassWrongSwitch = AMUI::MakeImage(WidgetTree, AMUI::SwitchOffPath, FVector2D(56.f, 28.f));
+		USizeBox* SwitchSize = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
+		SwitchSize->SetWidthOverride(56.f);
+		SwitchSize->SetHeightOverride(28.f);
+		SwitchSize->AddChild(mPassWrongSwitch);
+		if (UHorizontalBoxSlot* SwitchSlot = OptionRow->AddChildToHorizontalBox(SwitchSize))
+		{
+			SwitchSlot->SetVerticalAlignment(VAlign_Center);
+		}
+		UTextBlock* OptionName = MakeText(TEXT("Overflow"), 22, AMUI::White);
+		OptionName->SetAutoWrapText(false);
+		if (UHorizontalBoxSlot* NameSlot = OptionRow->AddChildToHorizontalBox(OptionName))
+		{
+			NameSlot->SetPadding(FMargin(14.f, 0.f, 0.f, 0.f));
+			NameSlot->SetVerticalAlignment(VAlign_Center);
+		}
+		mPassWrongButton = Option;
+		Option->OnClicked.AddDynamic(this, &UAMAutomationTab::OnPassWrongClicked);
+		Option->OnHovered.AddDynamic(this, &UAMAutomationTab::OnPassWrongHovered);
+		mOptionsWidgets.Add(Option);
+		if (UHorizontalBoxSlot* OptionSlot = Bottom->AddChildToHorizontalBox(Option))
+		{
+			OptionSlot->SetVerticalAlignment(VAlign_Top);
+		}
+		RefreshOptions();
+	}
+	if (UHorizontalBoxSlot* SpacerSlot = Bottom->AddChildToHorizontalBox(WidgetTree->ConstructWidget<USpacer>(USpacer::StaticClass())))
+	{
+		SpacerSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+	}
+	// "Title:   what it does..." (what was last pointed at or picked).
+	mInfoTitle = MakeText(TEXT(""), 14, AMUI::White);
+	mInfoTitle->SetAutoWrapText(false);
+	if (UHorizontalBoxSlot* TitleSlot = Bottom->AddChildToHorizontalBox(mInfoTitle))
+	{
+		TitleSlot->SetVerticalAlignment(VAlign_Top);
+	}
+	mInfoBody = MakeText(TEXT(""), 14, AMUI::Grey);
+	mInfoBody->SetAutoWrapText(false);
+	mInfoBody->SetWrapTextAt(AMAT_InfoLineWidth);
+	if (UHorizontalBoxSlot* BodySlot = Bottom->AddChildToHorizontalBox(mInfoBody))
+	{
+		BodySlot->SetPadding(FMargin(14.f, 0.f, 0.f, 0.f));
+		BodySlot->SetVerticalAlignment(VAlign_Top);
+	}
+	ShowDefaultInfo();
+}
+
+void UAMAutomationTab::RebuildRowsLater()
+{
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateUObject(this, &UAMAutomationTab::RebuildRows));
+	}
+}
+
 void UAMAutomationTab::ShowInfo(const FText& Title, const FText& Body)
 {
 	if (mInfoTitle && mInfoBody)
 	{
-		mInfoTitle->SetText(Title);
+		// The card layout's info is one line: "Title:  text".
+		mInfoTitle->SetText(bCardLayout && !Title.IsEmpty() ? FText::FromString(Title.ToString() + TEXT(":")) : Title);
 		mInfoBody->SetText(Body);
 	}
 }
@@ -678,6 +939,12 @@ void UAMAutomationTab::ShowDefaultInfo()
 	{
 		ShowInfo(FText::FromString(TEXT("Events and actions of the whole world")),
 			FText::FromString(TEXT("On the left: events the world triggers when world conditions are met, such as a milestone completed.\n\nOn the right: what happens when an event is triggered by any machine or by the world. These actions need no machine.\n\nClick a world condition, an action or an event to see what it does.")));
+		return;
+	}
+	if (bCardLayout)
+	{
+		// The empty cards explain themselves; the info line says how to get more.
+		ShowInfo(FText::GetEmpty(), FText::FromString(TEXT("Point at a condition, an action or an event to see what it does here.")));
 		return;
 	}
 	ShowInfo(FText::FromString(TEXT("Events connect your machines")),
@@ -1163,12 +1430,17 @@ void UAMAutomationTab::RebuildRows()
 	mReactionRowsBox->ClearChildren();
 	mRows.Reset();
 
-	auto AddRowWidget = [](UVerticalBox* Box, UWidget* Widget)
+	// Card layout: rows as wide as the card (minus the scroll bar), a little apart.
+	auto AddRowWidget = [this](UVerticalBox* Box, UWidget* Widget)
 	{
+		if (!Widget)
+		{
+			return;
+		}
 		if (UVerticalBoxSlot* RowSlot = Box->AddChildToVerticalBox(Widget))
 		{
-			RowSlot->SetPadding(FMargin(0.f, 4.f, 0.f, 0.f));
-			RowSlot->SetHorizontalAlignment(HAlign_Left);
+			RowSlot->SetPadding(bCardLayout ? FMargin(0.f, Box->GetChildrenCount() > 1 ? 8.f : 0.f, 12.f, 0.f) : FMargin(0.f, 4.f, 0.f, 0.f));
+			RowSlot->SetHorizontalAlignment(bCardLayout ? HAlign_Fill : HAlign_Left);
 		}
 	};
 	const FSlateFontInfo HintFont = GetRowFont();
@@ -1190,7 +1462,15 @@ void UAMAutomationTab::RebuildRows()
 			AddRowWidget(mFireRowsBox, Row->GetRootWidget());
 		}
 	}
-	if (mFires.Num() == 0)
+	if (mFireEmptyText)
+	{
+		mFireEmptyText->SetVisibility(mFires.Num() == 0 ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+	}
+	if (mReactionEmptyText)
+	{
+		mReactionEmptyText->SetVisibility(mReactions.Num() == 0 ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+	}
+	if (mFires.Num() == 0 && !bCardLayout)
 	{
 		if (mFireRowsBox)
 		{
@@ -1262,7 +1542,7 @@ void UAMAutomationTab::RebuildRows()
 		{
 			if (UVerticalBoxSlot* HeaderSlot = Cast<UVerticalBoxSlot>(Header->GetRootWidget()->Slot))
 			{
-				HeaderSlot->SetPadding(FMargin(0.f, 14.f, 0.f, 0.f));
+				HeaderSlot->SetPadding(FMargin(0.f, bCardLayout ? 18.f : 14.f, bCardLayout ? 12.f : 0.f, 0.f));
 			}
 		}
 		for (int32 Index = 0; Index < mReactions.Num(); ++Index)
@@ -1278,7 +1558,7 @@ void UAMAutomationTab::RebuildRows()
 		}
 		AddRowWidget(mReactionRowsBox, Header->GetFooterWidget());
 	}
-	if (mReactions.Num() == 0)
+	if (mReactions.Num() == 0 && !bCardLayout)
 	{
 		AddRowWidget(mReactionRowsBox, AMUI::MakeText(WidgetTree, TEXT("No actions yet."), HintFont, AMUI::Grey));
 	}
@@ -1783,6 +2063,17 @@ void UAMAutomationTab::UpdateMachineName()
 		}
 		return;
 	}
+	if (bCardLayout)
+	{
+		// The card layout: just the machine's name, as a title.
+		const UObject* Machine = GetMachine();
+		const FTextProperty* NameProperty = Machine ? FindFProperty<FTextProperty>(Machine->GetClass(), AMAT_MachineNameProperty) : nullptr;
+		if (mMachineText && NameProperty)
+		{
+			mMachineText->SetText(NameProperty->GetPropertyValue_InContainer(Machine));
+		}
+		return;
+	}
 	if (bAlarmsOnlyMode && mMachineText)
 	{
 		mMachineText->SetText(FText::FromString(TEXT("The batteries of this power grid, all together, trigger these events. The list is the same on every Power Storage of the grid, and each event is triggered once for the grid.")));
@@ -1874,8 +2165,8 @@ void UAMAutomationTab::ApplyGameFonts()
 	// The info panel reads lighter, like the recipe tab's description.
 	if (mInfoTitle && mInfoBody)
 	{
-		mInfoTitle->SetFont(AMUI::RegularFont(mGameFont, 20));
-		mInfoBody->SetFont(AMUI::RegularFont(mGameFont, 14));
+		mInfoTitle->SetFont(AMUI::RegularFont(mGameFont, bCardLayout ? 15 : 20));
+		mInfoBody->SetFont(AMUI::RegularFont(mGameFont, bCardLayout ? 15 : 14));
 	}
 }
 

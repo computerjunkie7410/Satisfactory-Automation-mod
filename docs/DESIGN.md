@@ -12,6 +12,17 @@ The name starts with "Automated" on purpose: players who come back after months 
 - **Condition** (was machine / world event): what makes a machine trigger an event, e.g. Input full, Milestone completed. "Machine Condition", "World Condition".
 These docs and the code still say "alarm" / "ring" / "event" (`Event` field, `FireEvent`, `ClearAlarm`, ...) in their old sense in many places: in docs written before this date, read "alarm" as event and "machine / world event" as condition. Save data is unchanged (the names were always stored in `Event`).
 
+
+## Machine Automation tab: card layout (decided 18 Nov 2026, from a mockup)
+For machines (production, extractors, generators, storage, stations, switches, Power Storage...). The HUB, the MAM and the Events Overview keep the older layout for now.
+- **Top:** the machine's name, centred and large; **Copy** and **Paste** (the automation only) on the right.
+- **Two cards side by side:**
+  - **Conditions** with an orange **+ condition** button. One line per condition: `Condition name   [ 50 % ]  ->  [ EVENT ]  bin`. A percentage shows as a bar filled in orange to the value; an item count shows the number and a small square with the item's icon (click to pick the item). The event name is typed (orange), with the names in use suggested under it.
+  - **Actions** with an orange **+ event** button (listen to an event). Each event is a header `EVENT NAME ...  + action  bin`, its actions indented under it: `Action name   [value]  bin`, the value a switch (Running, Power...), a bar (clock speed), a dropdown (sound, recipe) or a text field (message).
+- **Empty card:** an explanation in its middle of what conditions / actions are and how to add one.
+- **Bottom:** the machine's option on the left (**Overflow** switch); on the right the **info line** "Title: what it does", for what was last pointed at or picked. The side info panel is gone.
+- Colours: the game's dark greys with the mod's orange (the mockup's light greys were taken as a wireframe).
+
 ## Words the player sees
 
 No programming words in the game. Decided 4 Nov 2026:

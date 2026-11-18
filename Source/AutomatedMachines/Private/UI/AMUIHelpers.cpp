@@ -2,6 +2,7 @@
 #include "Containers/Ticker.h"
 #include "Blueprint/WidgetTree.h"
 #include "Brushes/SlateColorBrush.h"
+#include "Brushes/SlateRoundedBoxBrush.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
 #include "Components/ButtonSlot.h"
@@ -27,6 +28,10 @@ const FLinearColor AMUI::PanelBody(FColor(67, 67, 68, 230));
 const FLinearColor AMUI::Field(FColor(87, 87, 87));
 const FLinearColor AMUI::Button(FColor(102, 102, 103));
 const FLinearColor AMUI::Option(FColor(110, 110, 111));
+const FLinearColor AMUI::Card(FColor(52, 52, 54, 235));
+const FLinearColor AMUI::CardRow(FColor(84, 84, 86));
+const FLinearColor AMUI::CardField(FColor(56, 56, 58));
+const FLinearColor AMUI::CardSubRow(FColor(98, 98, 100));
 
 const TCHAR* const AMUI::SwitchOffPath = TEXT("/AutomatedMachines/Icons/T_AM_SwitchOff.T_AM_SwitchOff");
 const TCHAR* const AMUI::SwitchOnPath = TEXT("/AutomatedMachines/Icons/T_AM_SwitchOn.T_AM_SwitchOn");
@@ -219,6 +224,41 @@ UButton* AMUI::MakeRemoveButton(UWidgetTree* Tree, const FSlateFontInfo& Font)
 	}
 	Widget->SetToolTipText(FText::FromString(TEXT("Remove")));
 	return Widget;
+}
+
+UBorder* AMUI::MakeRoundedBox(UWidgetTree* Tree, const FLinearColor& Color, const FMargin& Padding, float Radius)
+{
+	UBorder* Box = Tree->ConstructWidget<UBorder>(UBorder::StaticClass());
+	Box->SetBrush(FSlateRoundedBoxBrush(Color, Radius));
+	Box->SetPadding(Padding);
+	return Box;
+}
+
+void AMUI::SetButtonRounded(UButton* Target, const FLinearColor& Color, float Radius)
+{
+	if (!Target)
+	{
+		return;
+	}
+	FButtonStyle Style = Target->GetStyle();
+	Style.SetNormal(FSlateRoundedBoxBrush(Color, Radius));
+	Style.SetHovered(FSlateRoundedBoxBrush(AMUIH_Shade(Color, 1.25f), Radius));
+	Style.SetPressed(FSlateRoundedBoxBrush(AMUIH_Shade(Color, 0.75f), Radius));
+	Style.SetDisabled(FSlateRoundedBoxBrush(AMUIH_Shade(Color, 0.6f), Radius));
+	Target->SetStyle(Style);
+}
+
+void AMUI::SetButtonRoundedSeeThrough(UButton* Target, const FLinearColor& Color, float Radius)
+{
+	if (!Target)
+	{
+		return;
+	}
+	FButtonStyle Style = Target->GetStyle();
+	Style.SetNormal(FSlateNoResource());
+	Style.SetHovered(FSlateRoundedBoxBrush(AMUIH_Shade(Color, 1.3f), Radius));
+	Style.SetPressed(FSlateRoundedBoxBrush(AMUIH_Shade(Color, 0.75f), Radius));
+	Target->SetStyle(Style);
 }
 
 UBorder* AMUI::MakeBox(UWidgetTree* Tree, const FLinearColor& Color, const FMargin& Padding)

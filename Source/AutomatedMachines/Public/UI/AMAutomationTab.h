@@ -92,6 +92,16 @@ public:
 	UWidgetTree* GetTree() const { return WidgetTree; }
 
 	/**
+	 * The machine tab's card layout (18 Nov 2026): Conditions and Actions cards side by side, the
+	 * machine's name on top with Copy / Paste, the option and the info line at the bottom. Machines
+	 * only; the HUB, the MAM and the Events Overview keep the older layout.
+	 */
+	bool UsesCardLayout() const { return bCardLayout; }
+
+	/** Makes the rows again on the next tick (a row whose shape changed, e.g. another condition). */
+	void RebuildRowsLater();
+
+	/**
 	 * A list floating on the popup layer right under the anchor (e.g. alarm name suggestions under
 	 * the name field), without the click-catching background of the dropdown window: the field keeps
 	 * the focus and everything else stays clickable. Hide removes it again.
@@ -261,6 +271,16 @@ private:
 
 	/** Builds the page's fixed widgets (titles, sections, add buttons). */
 	void BuildLayout();
+
+	/** BuildLayout for machines (see UsesCardLayout). */
+	void BuildCardLayout(class UHorizontalBox* Page);
+	bool bCardLayout = false;
+
+	/** The explanations shown in the middle of an empty Conditions / Actions card. */
+	UPROPERTY()
+	TObjectPtr<UTextBlock> mFireEmptyText;
+	UPROPERTY()
+	TObjectPtr<UTextBlock> mReactionEmptyText;
 
 	/** Reads this machine's rules from the subsystem, once the machine is known. */
 	void LoadRules();

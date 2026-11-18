@@ -202,6 +202,17 @@ private:
 
 	/** A one-line action row (its action fixed: only its value changes). */
 	bool bCompact = false;
+
+	/**
+	 * The machine tab's card layout (18 Nov 2026). A condition row is one line:
+	 * [ Condition name   [value]  ->  [EVENT]  bin ]; action headers hold their "+ action".
+	 */
+	bool bCard = false;
+	void BuildConditionCard();
+	void UpdateConditionCard();
+	/** Behind a percentage: a bar filled to the value (Value / the value's maximum). */
+	UPROPERTY()
+	TObjectPtr<class UProgressBar> mValueBar;
 	void BuildCompact();
 	void UpdateCompact();
 

@@ -77,6 +77,21 @@ namespace AMUI
 	/** A flat coloured box with padding. */
 	UBorder* MakeBox(UWidgetTree* Tree, const FLinearColor& Color, const FMargin& Padding);
 
+	/** The same with rounded corners (the cards and rows of the machine tab, 18 Nov 2026). */
+	UBorder* MakeRoundedBox(UWidgetTree* Tree, const FLinearColor& Color, const FMargin& Padding, float Radius = 8.f);
+
+	/** A button with rounded corners in Color (lighter when pointed at, darker when pressed). */
+	void SetButtonRounded(UButton* Target, const FLinearColor& Color, float Radius = 8.f);
+
+	/** A rounded button that shows nothing until pointed at (then a rounded Color). */
+	void SetButtonRoundedSeeThrough(UButton* Target, const FLinearColor& Color, float Radius = 6.f);
+
+	/** Machine tab cards: the card, a row in it, a row's field, a grouped action row. */
+	extern const FLinearColor Card;
+	extern const FLinearColor CardRow;
+	extern const FLinearColor CardField;
+	extern const FLinearColor CardSubRow;
+
 	/**
 	 * The box around a text input: much darker while the player is typing in it (it has the
 	 * keyboard focus). UMG text fields tell nothing about focus, so a ticker checks the registered
