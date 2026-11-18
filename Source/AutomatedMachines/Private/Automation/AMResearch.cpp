@@ -306,7 +306,7 @@ namespace
 UAMSchematic_Automation::UAMSchematic_Automation()
 {
 	AMR_SCHEMATIC_BASICS(TEXT("Automated Machines"),
-		TEXT("Machines ring alarms when something happens to them (a belt backs up, a storage fills, the power goes), and other machines act when they hear them: pause, resume, change clock speed, switch power, show a message, and more.\n\nEvery machine gets an Automation tab in its window."),
+		TEXT("Machines trigger events when something happens to them (a belt backs up, a storage fills, the power goes), and other machines act when they hear them: pause, resume, change clock speed, switch power, show a message, and more.\n\nEvery machine gets an Automation tab in its window."),
 		1, 30.f, 1.f)
 }
 
@@ -315,13 +315,13 @@ void UAMSchematic_Automation::PrepareDefaults()
 	UAMSchematic_Automation* Cdo = GetMutableDefault<UAMSchematic_Automation>();
 	UTexture2D* Icon = AMR_Keep(LoadObject<UTexture2D>(nullptr, AMR_Icon));
 	AMR_SCHEMATIC_ASSETS(Cdo, AMR_AILimiter, 6, Icon, TEXT("Automation tab"),
-		TEXT("Alarms and actions in the windows of production machines, extractors, generators, storage, power switches, stations, signals, signs, lights and more."))
+		TEXT("Events and actions in the windows of production machines, extractors, generators, storage, power switches, stations, signals, signs, lights and more."))
 }
 
 UAMSchematic_Overflow::UAMSchematic_Overflow()
 {
 	AMR_SCHEMATIC_BASICS(TEXT("Output Overflow"),
-		TEXT("Machines can pass the items that would block their input belt on to their output belt (the Output overflow option in the Automation tab), and alarms can switch it on and off."),
+		TEXT("Machines can pass the items that would block their input belt on to their output belt (the Output overflow option in the Automation tab), and events can switch it on and off."),
 		1, 20.f, 2.f)
 }
 
@@ -364,8 +364,8 @@ UAMResearchTree::UAMResearchTree()
 {
 	mPreUnlockDisplayName = AMR_Text(TEXT("Automated Machines"));
 	mDisplayName = AMR_Text(TEXT("Automated Machines"));
-	mPreUnlockDescription = AMR_Text(TEXT("Machines that ring alarms and react to them."));
-	mPostUnlockDescription = AMR_Text(TEXT("Machines that ring alarms and react to them: research it to get an Automation tab in their windows."));
+	mPreUnlockDescription = AMR_Text(TEXT("Machines that trigger events and react to them."));
+	mPostUnlockDescription = AMR_Text(TEXT("Machines that trigger events and react to them: research it to get an Automation tab in their windows."));
 }
 
 bool UAMResearchTree::PrepareDefaults()

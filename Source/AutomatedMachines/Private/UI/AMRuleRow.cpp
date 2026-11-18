@@ -160,7 +160,7 @@ void UAMRuleRow::BuildGroupHeader(UAMAutomationTab* InTab, const FString& InEven
 		RemoveSlot->SetPadding(FMargin(AMRowLayout::Gap, 0.f, 0.f, 0.f));
 		RemoveSlot->SetVerticalAlignment(VAlign_Fill);
 	}
-	mAlarmLabel->SetText(FText::FromString(mGroupEvent.IsEmpty() ? TEXT("choose an alarm") : mGroupEvent));
+	mAlarmLabel->SetText(FText::FromString(mGroupEvent.IsEmpty() ? TEXT("choose an event") : mGroupEvent));
 	mAlarmLabel->SetColorAndOpacity(FSlateColor(mGroupEvent.IsEmpty() ? AMUI::Grey : AMUI::White));
 
 	// "+ action" under the group's actions (a small text button, indented like them).
@@ -395,8 +395,8 @@ void UAMRuleRow::OnStateClicked()
 	const bool bStandby = Rule->Action == EAMAction::Pause || Rule->Action == EAMAction::Resume;
 	const bool bOn = Rule->Action == EAMAction::Resume || Rule->Action == EAMAction::SwitchOn;
 	mTab->ShowInfo(FText::FromString(AMRR_CompactName(Rule->Action)), FText::FromString(bStandby
-		? (bOn ? TEXT("On: when the alarm rings, the machine runs (leaves standby).") : TEXT("Off: when the alarm rings, the machine goes on standby."))
-		: (bOn ? TEXT("On: when the alarm rings, the switch is turned on.") : TEXT("Off: when the alarm rings, the switch is turned off."))));
+		? (bOn ? TEXT("On: when the event is triggered, the machine runs (leaves standby).") : TEXT("Off: when the event is triggered, the machine goes on standby."))
+		: (bOn ? TEXT("On: when the event is triggered, the switch is turned on.") : TEXT("Off: when the event is triggered, the switch is turned off."))));
 }
 
 void UAMRuleRow::OnGroupBinPressed()
@@ -476,7 +476,7 @@ void UAMRuleRow::Build(UAMAutomationTab* InTab, bool bInIsAlarm, int32 InIndex, 
 		Field->SetVerticalAlignment(VAlign_Center);
 		mAlarmNameText = Tree->ConstructWidget<UAMUppercaseText>(UAMUppercaseText::StaticClass());
 		mAlarmNameText->SetFont(Font);
-		mAlarmNameText->SetHintText(FText::FromString(TEXT("ALARM NAME")));
+		mAlarmNameText->SetHintText(FText::FromString(TEXT("EVENT NAME")));
 		mAlarmNameText->OnTextChanged.AddDynamic(this, &UAMRuleRow::OnAlarmNameChanged);
 		mAlarmNameText->OnTextCommitted.AddDynamic(this, &UAMRuleRow::OnAlarmNameCommitted);
 		Field->AddChild(mAlarmNameText);
@@ -681,7 +681,7 @@ void UAMRuleRow::UpdateLabels()
 		}
 		if (mAlarmLabel)
 		{
-			mAlarmLabel->SetText(FText::FromString(Rule->Event.IsEmpty() ? TEXT("choose an alarm") : Rule->Event));
+			mAlarmLabel->SetText(FText::FromString(Rule->Event.IsEmpty() ? TEXT("choose an event") : Rule->Event));
 			mAlarmLabel->SetColorAndOpacity(FSlateColor(Rule->Event.IsEmpty() ? AMUI::Grey : AMUI::White));
 		}
 	}
@@ -1204,7 +1204,7 @@ void UAMRuleRow::Explain(const UAMChoice& Choice)
 		{
 			const TSubclassOf<UFGRecipe> Recipe(Choice.RecipeClass.Get());
 			mTab->ShowInfo(UFGRecipe::GetRecipeName(Recipe), FText::FromString(FString::Printf(
-				TEXT("%s\n\nWhen the alarm rings, this machine's input and output slots are emptied (the items are destroyed) and it switches to this recipe."),
+				TEXT("%s\n\nWhen the event is triggered, this machine's input and output slots are emptied (the items are destroyed) and it switches to this recipe."),
 				*AMRules::DescribeRecipe(mTab, Recipe).ToString())));
 		}
 		break;
@@ -1279,7 +1279,7 @@ void UAMRuleRow::OpenPicker(EAMChoiceKind Kind, UWidget* Anchor)
 					Add(AMRR_CompactName(Action), Value, false);
 				}
 			}
-			EmptyMessage = TEXT("Every action is already used for this alarm.");
+			EmptyMessage = TEXT("Every action is already used for this event.");
 			break;
 		}
 		const FAMReactionRule* Rule = mTab->GetReactionRule(mIndex);
@@ -1313,7 +1313,7 @@ void UAMRuleRow::OpenPicker(EAMChoiceKind Kind, UWidget* Anchor)
 			}
 			Add(Alarm, 0, Alarm == Current)->Alarm = Alarm;
 		}
-		EmptyMessage = TEXT("No alarms yet: give a machine an alarm first.");
+		EmptyMessage = TEXT("No events yet: give a machine an event first.");
 		MinWidth = 260.f;
 		break;
 	}
@@ -1431,7 +1431,7 @@ void UAMRuleRow::OnMessageCommitted(const FText& Text, ETextCommit::Type CommitM
 		mTab->OnRulesEdited();
 	}
 	mTab->ShowInfo(AMRules::GetActionText(Rule->Action), FText::FromString(FString::Printf(
-		TEXT("Every player will see:\n\n%s\n%s"), *Rule->Event, Rule->Message.IsEmpty() ? TEXT("Rung by <machine>") : *Rule->Message)));
+		TEXT("Every player will see:\n\n%s\n%s"), *Rule->Event, Rule->Message.IsEmpty() ? TEXT("Triggered by <machine>") : *Rule->Message)));
 }
 
 void UAMRuleRow::OnRemoveClicked()

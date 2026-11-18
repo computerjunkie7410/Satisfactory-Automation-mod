@@ -940,7 +940,7 @@ void UAMSignTabs::Setup()
 		bSetUp = true;
 		AMST_Open = this;
 		RebuildTabs();
-		UE_LOG(LogAutomatedMachines, Log, TEXT("Belt settings for %s: %d alarm settings, tab %d selected"), *Target->GetName(), mBelts.Num(), mSelected);
+		UE_LOG(LogAutomatedMachines, Log, TEXT("Belt settings for %s: %d event settings, tab %d selected"), *Target->GetName(), mBelts.Num(), mSelected);
 		return;
 	}
 	if (bLightMode)
@@ -964,7 +964,7 @@ void UAMSignTabs::Setup()
 		bSetUp = true;
 		AMST_Open = this;
 		RebuildTabs();
-		UE_LOG(LogAutomatedMachines, Log, TEXT("Light settings for %s: %d alarm settings, tab %d selected"), *Target->GetName(), mLights.Num(), mSelected);
+		UE_LOG(LogAutomatedMachines, Log, TEXT("Light settings for %s: %d event settings, tab %d selected"), *Target->GetName(), mLights.Num(), mSelected);
 		return;
 	}
 	AFGBuildableWidgetSign* Sign = Cast<AFGBuildableWidgetSign>(Target);
@@ -991,7 +991,7 @@ void UAMSignTabs::Setup()
 	bSetUp = true;
 	AMST_Open = this;
 	RebuildTabs();
-	UE_LOG(LogAutomatedMachines, Log, TEXT("Sign designs for %s: %d alarm designs, tab %d selected"), *Sign->GetName(), mDesigns.Num(), mSelected);
+	UE_LOG(LogAutomatedMachines, Log, TEXT("Sign designs for %s: %d event designs, tab %d selected"), *Sign->GetName(), mDesigns.Num(), mSelected);
 }
 
 void UAMSignTabs::RebuildTabs()
@@ -1371,7 +1371,7 @@ void UAMSignTabs::OpenPicker()
 	SearchSize->AddChild(SearchField);
 	mPickerSearch = WidgetTree->ConstructWidget<UEditableText>(UEditableText::StaticClass());
 	mPickerSearch->SetFont(Font);
-	mPickerSearch->SetHintText(FText::FromString((bLightMode || bBeltMode) ? TEXT("settings for which alarm?") : TEXT("design for which alarm?")));
+	mPickerSearch->SetHintText(FText::FromString((bLightMode || bBeltMode) ? TEXT("settings for which event?") : TEXT("design for which event?")));
 	mPickerSearch->OnTextChanged.AddDynamic(this, &UAMSignTabs::OnPickerSearchChanged);
 	mPickerSearch->OnTextCommitted.AddDynamic(this, &UAMSignTabs::OnPickerSearchCommitted);
 	SearchField->AddChild(mPickerSearch);
@@ -1464,7 +1464,7 @@ void UAMSignTabs::FillPicker(const FString& Filter)
 	{
 		UBorder* Message = AMUI::MakeBox(WidgetTree, AMUI::Option, FMargin(12.f, 7.f));
 		Message->AddChild(AMUI::MakeText(WidgetTree, Typed.IsEmpty()
-			? FString(TEXT("No alarms yet: type a name and press Enter."))
+			? FString(TEXT("No events yet: type a name and press Enter."))
 			: FString::Printf(TEXT("Enter: new %s for %s"), (bLightMode || bBeltMode) ? TEXT("settings") : TEXT("design"), *Typed), Font, AMUI::Grey));
 		mPickerList->AddChildToVerticalBox(Message);
 	}

@@ -191,157 +191,157 @@ FText AMRules::GetConditionDescription(EAMCondition Condition)
 	switch (Condition)
 	{
 	case EAMCondition::OutputFull:
-		return AMTY_Text(TEXT("Rings when the output slot fills up: there is no room for the next batch, so the machine is about to stop.\n\nUse it to pause the machines that feed this one, so they stop wasting power and resources."));
+		return AMTY_Text(TEXT("Triggers when the output slot fills up: there is no room for the next batch, so the machine is about to stop.\n\nUse it to pause the machines that feed this one, so they stop wasting power and resources."));
 	case EAMCondition::OutputNotFull:
-		return AMTY_Text(TEXT("Rings when the output slot has room again, for example after a belt or a player took items out.\n\nPair it with Output full to resume the machines you paused."));
+		return AMTY_Text(TEXT("Triggers when the output slot has room again, for example after a belt or a player took items out.\n\nPair it with Output full to resume the machines you paused."));
 	case EAMCondition::StartsProducing:
-		return AMTY_Text(TEXT("Rings when the machine starts making items: after it was paused, had no power, no input or a full output."));
+		return AMTY_Text(TEXT("Triggers when the machine starts making items: after it was paused, had no power, no input or a full output."));
 	case EAMCondition::StopsProducing:
-		return AMTY_Text(TEXT("Rings when the machine stops making items, for any reason: no input, full output, no power, or paused."));
+		return AMTY_Text(TEXT("Triggers when the machine stops making items, for any reason: no input, full output, no power, or paused."));
 	case EAMCondition::LosesPower:
-		return AMTY_Text(TEXT("Rings when the machine has no power any more: its power circuit is down (a fuse blew, the generators stopped) or it was disconnected."));
+		return AMTY_Text(TEXT("Triggers when the machine has no power any more: its power circuit is down (a fuse blew, the generators stopped) or it was disconnected."));
 	case EAMCondition::GetsPower:
-		return AMTY_Text(TEXT("Rings when the machine has power again, e.g. after you reset a blown fuse or connected it."));
+		return AMTY_Text(TEXT("Triggers when the machine has power again, e.g. after you reset a blown fuse or connected it."));
 	case EAMCondition::InputMissing:
-		return AMTY_Text(TEXT("Rings when the input slots do not have enough of an ingredient for the next batch, so the machine has to wait.\n\nUse it to start the machines that supply this one."));
+		return AMTY_Text(TEXT("Triggers when the input slots do not have enough of an ingredient for the next batch, so the machine has to wait.\n\nUse it to start the machines that supply this one."));
 	case EAMCondition::InputAvailable:
-		return AMTY_Text(TEXT("Rings when the input slots have every ingredient for the next batch again."));
+		return AMTY_Text(TEXT("Triggers when the input slots have every ingredient for the next batch again."));
 	case EAMCondition::Paused:
-		return AMTY_Text(TEXT("Rings when the machine is put on standby: with its standby button, or by an action of an alarm."));
+		return AMTY_Text(TEXT("Triggers when the machine is put on standby: with its standby button, or by an action of an event."));
 	case EAMCondition::Resumed:
-		return AMTY_Text(TEXT("Rings when the machine is taken off standby: with its standby button, or by an action of an alarm."));
+		return AMTY_Text(TEXT("Triggers when the machine is taken off standby: with its standby button, or by an action of an event."));
 	case EAMCondition::ProductivityBelow:
-		return AMTY_Text(TEXT("Rings when the productivity shown in the machine's window drops below the percentage you set: the machine spent too much time waiting for input, for room in the output, or for power."));
+		return AMTY_Text(TEXT("Triggers when the productivity shown in the machine's window drops below the percentage you set: the machine spent too much time waiting for input, for room in the output, or for power."));
 	case EAMCondition::ProductivityAbove:
-		return AMTY_Text(TEXT("Rings when the productivity shown in the machine's window rises above the percentage you set."));
+		return AMTY_Text(TEXT("Triggers when the productivity shown in the machine's window rises above the percentage you set."));
 	case EAMCondition::RecipeChanged:
-		return AMTY_Text(TEXT("Rings when someone picks another recipe for this machine (also when an action changes it)."));
+		return AMTY_Text(TEXT("Triggers when someone picks another recipe for this machine (also when an action changes it)."));
 	case EAMCondition::InputFull:
-		return AMTY_Text(TEXT("Rings when an input slot is full and cannot take more of its ingredient: more arrives than the machine uses, so the belt or pipe feeding it backs up.\n\nUse it to slow down or pause the machines that supply this one."));
+		return AMTY_Text(TEXT("Triggers when an input slot is full and cannot take more of its ingredient: more arrives than the machine uses, so the belt or pipe feeding it backs up.\n\nUse it to slow down or pause the machines that supply this one."));
 	case EAMCondition::InputNotFull:
-		return AMTY_Text(TEXT("Rings when every input slot has room again for more of its ingredient."));
+		return AMTY_Text(TEXT("Triggers when every input slot has room again for more of its ingredient."));
 	case EAMCondition::WrongInput:
-		return AMTY_Text(TEXT("Rings when a belt or pipe brings something that is not an ingredient of the recipe. The machine refuses it, so the belt stops behind it.\n\nUse it to get a message, or switch on \"Pass wrong items through\" in Options."));
+		return AMTY_Text(TEXT("Triggers when a belt or pipe brings something that is not an ingredient of the recipe. The machine refuses it, so the belt stops behind it.\n\nUse it to get a message, or switch on \"Pass wrong items through\" in Options."));
 	case EAMCondition::InputCorrect:
-		return AMTY_Text(TEXT("Rings when no belt or pipe brings a wrong item any more."));
+		return AMTY_Text(TEXT("Triggers when no belt or pipe brings a wrong item any more."));
 	case EAMCondition::StorageFull:
-		return AMTY_Text(TEXT("Rings when the container cannot take what a belt brings, so the belt stops: every slot holds a full stack, or the item's stacks are full and no slot is empty for it (in a container with several kinds of items).\n\nUse it to pause the machines that fill it."));
+		return AMTY_Text(TEXT("Triggers when the container cannot take what a belt brings, so the belt stops: every slot holds a full stack, or the item's stacks are full and no slot is empty for it (in a container with several kinds of items).\n\nUse it to pause the machines that fill it."));
 	case EAMCondition::StorageNotFull:
-		return AMTY_Text(TEXT("Rings when the container can take what its belts bring again."));
+		return AMTY_Text(TEXT("Triggers when the container can take what its belts bring again."));
 	case EAMCondition::StorageEmpty:
-		return AMTY_Text(TEXT("Rings when the last item has left the container.\n\nUse it to start the machines that fill it."));
+		return AMTY_Text(TEXT("Triggers when the last item has left the container.\n\nUse it to start the machines that fill it."));
 	case EAMCondition::StorageNotEmpty:
-		return AMTY_Text(TEXT("Rings when the first item arrives in an empty container."));
+		return AMTY_Text(TEXT("Triggers when the first item arrives in an empty container."));
 	case EAMCondition::FillAbove:
-		return AMTY_Text(TEXT("Rings when the container is filled above the percentage you set. 100% is every slot holding a full stack; a slot with half a stack counts as half a slot.\n\nUse it to slow down or pause the machines that fill it before it is completely full."));
+		return AMTY_Text(TEXT("Triggers when the container is filled above the percentage you set. 100% is every slot holding a full stack; a slot with half a stack counts as half a slot.\n\nUse it to slow down or pause the machines that fill it before it is completely full."));
 	case EAMCondition::FillBelow:
-		return AMTY_Text(TEXT("Rings when the container is filled below the percentage you set (counted like Filled above).\n\nUse it to start the machines that fill it again before it runs empty."));
+		return AMTY_Text(TEXT("Triggers when the container is filled below the percentage you set (counted like Filled above).\n\nUse it to start the machines that fill it again before it runs empty."));
 	case EAMCondition::ItemCountAbove:
-		return AMTY_Text(TEXT("Rings when the container holds more of one item than the number you set. Pick the item under the alarm.\n\nMade for containers with several kinds of items: e.g. pause the Constructor making Iron Plates when there are more than 500."));
+		return AMTY_Text(TEXT("Triggers when the container holds more of one item than the number you set. Pick the item under the event.\n\nMade for containers with several kinds of items: e.g. pause the Constructor making Iron Plates when there are more than 500."));
 	case EAMCondition::ItemCountBelow:
-		return AMTY_Text(TEXT("Rings when the container holds less of one item than the number you set. Pick the item under the alarm.\n\nE.g. resume the Constructor making Iron Plates when there are fewer than 200."));
+		return AMTY_Text(TEXT("Triggers when the container holds less of one item than the number you set. Pick the item under the event.\n\nE.g. resume the Constructor making Iron Plates when there are fewer than 200."));
 	case EAMCondition::FuelEmpty:
-		return AMTY_Text(TEXT("Generator: rings when it has burned its last fuel: no fuel in its slot and nothing burning, so it stops making power.\n\nTruck station: rings when its fuel slot is empty, so it cannot refuel the vehicles that dock.\n\nUse it to get a message, or to start a backup."));
+		return AMTY_Text(TEXT("Generator: triggers when it has burned its last fuel: no fuel in its slot and nothing burning, so it stops making power.\n\nTruck station: triggers when its fuel slot is empty, so it cannot refuel the vehicles that dock.\n\nUse it to get a message, or to start a backup."));
 	case EAMCondition::FuelAvailable:
-		return AMTY_Text(TEXT("Rings when there is fuel again."));
+		return AMTY_Text(TEXT("Triggers when there is fuel again."));
 	case EAMCondition::FuelBelow:
-		return AMTY_Text(TEXT("Rings when the fuel slot holds fewer items than the number you set: it is running low.\n\nUse it to start the machines that bring its fuel, or to get a warning before it runs out."));
+		return AMTY_Text(TEXT("Triggers when the fuel slot holds fewer items than the number you set: it is running low.\n\nUse it to start the machines that bring its fuel, or to get a warning before it runs out."));
 	case EAMCondition::LoadAbove:
-		return AMTY_Text(TEXT("Rings when the generator's load rises above the percentage you set: how much of what it can make the power grid is using.\n\nUse it to start more generators before the grid runs out of power and the fuse blows."));
+		return AMTY_Text(TEXT("Triggers when the generator's load rises above the percentage you set: how much of what it can make the power grid is using.\n\nUse it to start more generators before the grid runs out of power and the fuse blows."));
 	case EAMCondition::LoadBelow:
-		return AMTY_Text(TEXT("Rings when the generator's load drops below the percentage you set: the grid needs less power.\n\nUse it to pause extra generators and save fuel."));
+		return AMTY_Text(TEXT("Triggers when the generator's load drops below the percentage you set: the grid needs less power.\n\nUse it to pause extra generators and save fuel."));
 	case EAMCondition::FuseBlown:
-		return AMTY_Text(TEXT("Rings when the fuse of the generator's power grid blows: the machines used more power than the generators make, so the whole grid is off until someone resets the fuse."));
+		return AMTY_Text(TEXT("Triggers when the fuse of the generator's power grid blows: the machines used more power than the generators make, so the whole grid is off until someone resets the fuse."));
 	case EAMCondition::FuseReset:
-		return AMTY_Text(TEXT("Rings when the fuse of the generator's power grid is reset and the grid is on again."));
+		return AMTY_Text(TEXT("Triggers when the fuse of the generator's power grid is reset and the grid is on again."));
 	case EAMCondition::MilestoneCompleted:
-		return AMTY_Text(TEXT("Rings when a milestone is completed in the HUB (any milestone, by any player).\n\nUse it to show a message, play a sound, or start machines waiting for the next tier."));
+		return AMTY_Text(TEXT("Triggers when a milestone is completed in the HUB (any milestone, by any player).\n\nUse it to show a message, play a sound, or start machines waiting for the next tier."));
 	case EAMCondition::ResearchCompleted:
-		return AMTY_Text(TEXT("Rings when a MAM research is completed (any research, also hard drives): its results can be claimed.\n\nUse it to get a message or a sound while you are away from the MAM."));
+		return AMTY_Text(TEXT("Triggers when a MAM research is completed (any research, also hard drives): its results can be claimed.\n\nUse it to get a message or a sound while you are away from the MAM."));
 	case EAMCondition::SwitchedOn:
-		return AMTY_Text(TEXT("Rings when the switch is turned on: by a player, or by an action of an alarm. The two power grids it joins are one again."));
+		return AMTY_Text(TEXT("Triggers when the switch is turned on: by a player, or by an action of an event. The two power grids it joins are one again."));
 	case EAMCondition::SwitchedOff:
-		return AMTY_Text(TEXT("Rings when the switch is turned off: by a player, by an action of an alarm, or (a priority switch) by the game during a power shortage.\n\nUse it to get a message when a priority switch cuts off part of the factory."));
+		return AMTY_Text(TEXT("Triggers when the switch is turned off: by a player, by an action of an event, or (a priority switch) by the game during a power shortage.\n\nUse it to get a message when a priority switch cuts off part of the factory."));
 	case EAMCondition::GridAUsesMore:
-		return AMTY_Text(TEXT("Rings when the machines of Power Grid A (the left graph in the switch's window) use more power than those of Power Grid B.\n\nPair it with \"A usage < B usage\", which rings when it turns the other way."));
+		return AMTY_Text(TEXT("Triggers when the machines of Power Grid A (the left graph in the switch's window) use more power than those of Power Grid B.\n\nPair it with \"A usage < B usage\", which triggers when it turns the other way."));
 	case EAMCondition::GridBUsesMore:
-		return AMTY_Text(TEXT("Rings when the machines of Power Grid A use less power than those of Power Grid B (the right graph in the switch's window)."));
+		return AMTY_Text(TEXT("Triggers when the machines of Power Grid A use less power than those of Power Grid B (the right graph in the switch's window)."));
 	case EAMCondition::GridAMakesMore:
-		return AMTY_Text(TEXT("Rings when the generators of Power Grid A can make more power than those of Power Grid B: their capacity (the top line of the graph), which counts only generators that have fuel.\n\nPair it with \"A power < B power\", which rings when it turns the other way."));
+		return AMTY_Text(TEXT("Triggers when the generators of Power Grid A can make more power than those of Power Grid B: their capacity (the top line of the graph), which counts only generators that have fuel.\n\nPair it with \"A power < B power\", which triggers when it turns the other way."));
 	case EAMCondition::GridBMakesMore:
-		return AMTY_Text(TEXT("Rings when the generators of Power Grid A can make less power than those of Power Grid B (their capacity, generators with fuel only)."));
+		return AMTY_Text(TEXT("Triggers when the generators of Power Grid A can make less power than those of Power Grid B (their capacity, generators with fuel only)."));
 	case EAMCondition::TrainArrives:
-		return AMTY_Text(TEXT("Rings when a train docks at the station."));
+		return AMTY_Text(TEXT("Triggers when a train docks at the station."));
 	case EAMCondition::TrainLeaves:
-		return AMTY_Text(TEXT("Rings when the docked train leaves the station."));
+		return AMTY_Text(TEXT("Triggers when the docked train leaves the station."));
 	case EAMCondition::TransferDone:
-		return AMTY_Text(TEXT("Rings when the docked train has finished its docking: the freight platforms next to the station have finished loading / unloading it."));
+		return AMTY_Text(TEXT("Triggers when the docked train has finished its docking: the freight platforms next to the station have finished loading / unloading it."));
 	case EAMCondition::PlatformBusy:
-		return AMTY_Text(TEXT("Rings when the platform or truck station starts loading or unloading a docked train or vehicle."));
+		return AMTY_Text(TEXT("Triggers when the platform or truck station starts loading or unloading a docked train or vehicle."));
 	case EAMCondition::PlatformIdle:
-		return AMTY_Text(TEXT("Rings when the platform or truck station has nothing to do: nothing docked, or its loading / unloading is finished."));
+		return AMTY_Text(TEXT("Triggers when the platform or truck station has nothing to do: nothing docked, or its loading / unloading is finished."));
 	case EAMCondition::VehicleArrives:
-		return AMTY_Text(TEXT("Rings when a vehicle (truck, tractor, explorer) docks at the truck station."));
+		return AMTY_Text(TEXT("Triggers when a vehicle (truck, tractor, explorer) docks at the truck station."));
 	case EAMCondition::VehicleLeaves:
-		return AMTY_Text(TEXT("Rings when the docked vehicle leaves the truck station."));
+		return AMTY_Text(TEXT("Triggers when the docked vehicle leaves the truck station."));
 	case EAMCondition::TransferAbove:
-		return AMTY_Text(TEXT("Rings when the station's transfer rate (items per minute, as in its window: what the vehicles docking here move on average) rises above the number you set."));
+		return AMTY_Text(TEXT("Triggers when the station's transfer rate (items per minute, as in its window: what the vehicles docking here move on average) rises above the number you set."));
 	case EAMCondition::TransferBelow:
-		return AMTY_Text(TEXT("Rings when the station's transfer rate (items per minute) drops below the number you set.\n\nUse it to hear about a route that slows down or stops."));
+		return AMTY_Text(TEXT("Triggers when the station's transfer rate (items per minute) drops below the number you set.\n\nUse it to hear about a route that slows down or stops."));
 	case EAMCondition::MaxTransferAbove:
-		return AMTY_Text(TEXT("Rings when the station's maximum transfer rate (stacks per minute, as in its window: the most the vehicles docking here could move) rises above the number you set."));
+		return AMTY_Text(TEXT("Triggers when the station's maximum transfer rate (stacks per minute, as in its window: the most the vehicles docking here could move) rises above the number you set."));
 	case EAMCondition::MaxTransferBelow:
-		return AMTY_Text(TEXT("Rings when the station's maximum transfer rate (stacks per minute) drops below the number you set."));
+		return AMTY_Text(TEXT("Triggers when the station's maximum transfer rate (stacks per minute) drops below the number you set."));
 	case EAMCondition::BatteryAbove:
-		return AMTY_Text(TEXT("Rings when the batteries of this power grid, all together, hold more than this percent of their capacity.\n\nThe alarm list of a Power Storage is the same for every Power Storage on the grid, and each alarm rings once for the whole grid."));
+		return AMTY_Text(TEXT("Triggers when the batteries of this power grid, all together, hold more than this percent of their capacity.\n\nThe event list of a Power Storage is the same for every Power Storage on the grid, and each event is triggered once for the whole grid."));
 	case EAMCondition::BatteryBelow:
-		return AMTY_Text(TEXT("Rings when the batteries of this power grid, all together, hold less than this percent of their capacity.\n\nUse it to start backup generators before the batteries run out."));
+		return AMTY_Text(TEXT("Triggers when the batteries of this power grid, all together, hold less than this percent of their capacity.\n\nUse it to start backup generators before the batteries run out."));
 	case EAMCondition::BatteryFull:
-		return AMTY_Text(TEXT("Rings when every battery of the grid is full."));
+		return AMTY_Text(TEXT("Triggers when every battery of the grid is full."));
 	case EAMCondition::BatteryEmpty:
-		return AMTY_Text(TEXT("Rings when every battery of the grid is empty."));
+		return AMTY_Text(TEXT("Triggers when every battery of the grid is empty."));
 	case EAMCondition::BatteryCharging:
-		return AMTY_Text(TEXT("Rings when the batteries of the grid are charging: the grid makes more power than it uses and the extra goes into them."));
+		return AMTY_Text(TEXT("Triggers when the batteries of the grid are charging: the grid makes more power than it uses and the extra goes into them."));
 	case EAMCondition::BatteryDischarging:
-		return AMTY_Text(TEXT("Rings when the batteries of the grid are discharging: the grid uses more power than it makes and they cover the rest."));
+		return AMTY_Text(TEXT("Triggers when the batteries of the grid are discharging: the grid uses more power than it makes and they cover the rest."));
 	case EAMCondition::BatteryEmptiesWithin:
-		return AMTY_Text(TEXT("Rings when the batteries are discharging and, at this rate, will be empty in less than this many minutes (the time the game's own battery display shows).\n\nUse it for a warning that still leaves time to act."));
+		return AMTY_Text(TEXT("Triggers when the batteries are discharging and, at this rate, will be empty in less than this many minutes (the time the game's own battery display shows).\n\nUse it for a warning that still leaves time to act."));
 	case EAMCondition::OutgoingCountAbove:
-		return AMTY_Text(TEXT("Rings when the outgoing buffer (the items waiting for a drone to carry them away) holds more of one item than the number you set. Pick the item under the alarm."));
+		return AMTY_Text(TEXT("Triggers when the outgoing buffer (the items waiting for a drone to carry them away) holds more of one item than the number you set. Pick the item under the event."));
 	case EAMCondition::OutgoingCountBelow:
-		return AMTY_Text(TEXT("Rings when the outgoing buffer holds less of one item than the number you set. Pick the item under the alarm."));
+		return AMTY_Text(TEXT("Triggers when the outgoing buffer holds less of one item than the number you set. Pick the item under the event."));
 	case EAMCondition::IncomingCountAbove:
-		return AMTY_Text(TEXT("Rings when the incoming buffer (the items the drones brought) holds more of one item than the number you set. Pick the item under the alarm."));
+		return AMTY_Text(TEXT("Triggers when the incoming buffer (the items the drones brought) holds more of one item than the number you set. Pick the item under the event."));
 	case EAMCondition::IncomingCountBelow:
-		return AMTY_Text(TEXT("Rings when the incoming buffer holds less of one item than the number you set. Pick the item under the alarm."));
+		return AMTY_Text(TEXT("Triggers when the incoming buffer holds less of one item than the number you set. Pick the item under the event."));
 	case EAMCondition::OutgoingRateAbove:
-		return AMTY_Text(TEXT("Rings when the items this port sends away per minute (average of the drones' trips, as the game's own statistics show) are above the number you set."));
+		return AMTY_Text(TEXT("Triggers when the items this port sends away per minute (average of the drones' trips, as the game's own statistics show) are above the number you set."));
 	case EAMCondition::OutgoingRateBelow:
-		return AMTY_Text(TEXT("Rings when the items this port sends away per minute are below the number you set."));
+		return AMTY_Text(TEXT("Triggers when the items this port sends away per minute are below the number you set."));
 	case EAMCondition::IncomingRateAbove:
-		return AMTY_Text(TEXT("Rings when the items this port receives per minute (average of the drones' trips) are above the number you set."));
+		return AMTY_Text(TEXT("Triggers when the items this port receives per minute (average of the drones' trips) are above the number you set."));
 	case EAMCondition::IncomingRateBelow:
-		return AMTY_Text(TEXT("Rings when the items this port receives per minute are below the number you set."));
+		return AMTY_Text(TEXT("Triggers when the items this port receives per minute are below the number you set."));
 	case EAMCondition::DepotCountAbove:
-		return AMTY_Text(TEXT("Rings when the Dimensional Depot (the storage every uplink fills, shared by the whole factory) holds more of one item than the number you set. Pick the item under the alarm."));
+		return AMTY_Text(TEXT("Triggers when the Dimensional Depot (the storage every uplink fills, shared by the whole factory) holds more of one item than the number you set. Pick the item under the event."));
 	case EAMCondition::DepotCountBelow:
-		return AMTY_Text(TEXT("Rings when the Dimensional Depot holds less of one item than the number you set. Pick the item under the alarm.\n\nUse it to start the production that feeds the uplinks again."));
+		return AMTY_Text(TEXT("Triggers when the Dimensional Depot holds less of one item than the number you set. Pick the item under the event.\n\nUse it to start the production that feeds the uplinks again."));
 	case EAMCondition::SignalRed:
-		return AMTY_Text(TEXT("Rings when the signal turns red: trains must stop at it (its block is taken, or it is blocked)."));
+		return AMTY_Text(TEXT("Triggers when the signal turns red: trains must stop at it (its block is taken, or it is blocked)."));
 	case EAMCondition::SignalGreen:
-		return AMTY_Text(TEXT("Rings when the signal turns green: trains may pass."));
+		return AMTY_Text(TEXT("Triggers when the signal turns green: trains may pass."));
 	case EAMCondition::TrainInBlock:
-		return AMTY_Text(TEXT("Rings when a train enters the track this signal guards (after it, up to the next signals)."));
+		return AMTY_Text(TEXT("Triggers when a train enters the track this signal guards (after it, up to the next signals)."));
 	case EAMCondition::BlockEmpty:
-		return AMTY_Text(TEXT("Rings when the last train leaves the track this signal guards."));
+		return AMTY_Text(TEXT("Triggers when the last train leaves the track this signal guards."));
 	case EAMCondition::CouponsAbove:
-		return AMTY_Text(TEXT("Rings when there are more coupons than this to print (the coupons the AWESOME Sinks have earned and nobody has printed yet; the same number at every sink).\n\nUse it to get a message when it is time to go shopping."));
+		return AMTY_Text(TEXT("Triggers when there are more coupons than this to print (the coupons the AWESOME Sinks have earned and nobody has printed yet; the same number at every sink).\n\nUse it to get a message when it is time to go shopping."));
 	case EAMCondition::CouponsBelow:
-		return AMTY_Text(TEXT("Rings when there are fewer coupons than this to print (for example after printing them)."));
+		return AMTY_Text(TEXT("Triggers when there are fewer coupons than this to print (for example after printing them)."));
 	case EAMCondition::FlowAbove:
-		return AMTY_Text(TEXT("Rings when more fluid than this flows through it (m3 per minute, like its window's flow)."));
+		return AMTY_Text(TEXT("Triggers when more fluid than this flows through it (m3 per minute, like its window's flow)."));
 	case EAMCondition::FlowBelow:
-		return AMTY_Text(TEXT("Rings when less fluid than this flows through it (m3 per minute). 0: rings when nothing flows any more."));
+		return AMTY_Text(TEXT("Triggers when less fluid than this flows through it (m3 per minute). 0: triggers when nothing flows any more."));
 	default:
 		return FText::GetEmpty();
 	}
@@ -356,7 +356,7 @@ FText AMRules::GetActionDescription(EAMAction Action)
 	case EAMAction::Resume:
 		return AMTY_Text(TEXT("Takes the machine off standby, so it works again. Does nothing if it is already running."));
 	case EAMAction::TogglePause:
-		return AMTY_Text(TEXT("Switches standby: a running machine is paused, a paused machine is resumed. Handy for one alarm that turns something on and off."));
+		return AMTY_Text(TEXT("Switches standby: a running machine is paused, a paused machine is resumed. Handy for one event that turns something on and off."));
 	case EAMAction::SetClockSpeed:
 		return AMTY_Text(TEXT("Sets the machine's clock speed to the percentage you choose, like the clock speed slider in its window. Above 100% needs Power Shards in the machine; the speed is limited to what its shards allow."));
 	case EAMAction::DeleteOutput:
@@ -364,7 +364,7 @@ FText AMRules::GetActionDescription(EAMAction Action)
 	case EAMAction::DeleteInput:
 		return AMTY_Text(TEXT("Destroys everything in the machine's input slots, including fluids. The items are gone for good: no points, no refund.\n\nHandy to clear out leftovers, e.g. after the recipe was changed."));
 	case EAMAction::ShowMessage:
-		return AMTY_Text(TEXT("Shows a message on the screen of every player, in the game's notifications.\n\nIt shows the alarm's name with your text under it; leave the text empty to show which machine rang it, e.g. \"PLATES BACKED UP - Rung by Constructor\"."));
+		return AMTY_Text(TEXT("Shows a message on the screen of every player, in the game's notifications.\n\nIt shows the event's name with your text under it; leave the text empty to show which machine rang it, e.g. \"PLATES BACKED UP - Triggered by Constructor\"."));
 	case EAMAction::PlaySound:
 		return AMTY_Text(TEXT("Plays a short sound for every player, wherever they are. Choose one of a few sounds of the game; picking one in the list plays it once so you can hear it."));
 	case EAMAction::DeleteOutgoing:
@@ -380,19 +380,19 @@ FText AMRules::GetActionDescription(EAMAction Action)
 	case EAMAction::SwitchOff:
 		return AMTY_Text(TEXT("Turns the switch off, like its own button: the power grid behind it is cut off. Does nothing if it is already off."));
 	case EAMAction::ToggleSwitch:
-		return AMTY_Text(TEXT("Turns the switch off if it is on, on if it is off. Handy for one alarm that switches something on and off."));
+		return AMTY_Text(TEXT("Turns the switch off if it is on, on if it is off. Handy for one event that switches something on and off."));
 	case EAMAction::SetFlowLimit:
 		return AMTY_Text(TEXT("Sets the flow limit, like the slider in its window (m3 per minute). 0 closes it: nothing flows through."));
 	case EAMAction::FlushNetwork:
 		return AMTY_Text(TEXT("Empties the pipe network, like the Flush button of a pipe: all the fluid in it is destroyed and the network forgets its fluid.\n\nValves and buffers do not split a network: this empties every pipe, pump, valve and buffer connected to it."));
 	case EAMAction::ReplaceFuelOn:
-		return AMTY_Text(TEXT("On: the truck station's \"Replace Differing Fuel\" switch is turned on when the alarm rings: a docked vehicle burning another fuel gets it swapped for the station's fuel."));
+		return AMTY_Text(TEXT("On: the truck station's \"Replace Differing Fuel\" switch is turned on when the event is triggered: a docked vehicle burning another fuel gets it swapped for the station's fuel."));
 	case EAMAction::ReplaceFuelOff:
-		return AMTY_Text(TEXT("Off: the truck station's \"Replace Differing Fuel\" switch is turned off when the alarm rings: vehicles keep their own fuel."));
+		return AMTY_Text(TEXT("Off: the truck station's \"Replace Differing Fuel\" switch is turned off when the event is triggered: vehicles keep their own fuel."));
 	case EAMAction::OverflowOn:
-		return AMTY_Text(TEXT("On: the machine's Output overflow option is switched on when the alarm rings: everything that would block an input belt goes onto the output belt."));
+		return AMTY_Text(TEXT("On: the machine's Output overflow option is switched on when the event is triggered: everything that would block an input belt goes onto the output belt."));
 	case EAMAction::OverflowOff:
-		return AMTY_Text(TEXT("Off: the machine's Output overflow option is switched off when the alarm rings: blocking items stay on the input belt."));
+		return AMTY_Text(TEXT("Off: the machine's Output overflow option is switched off when the event is triggered: blocking items stay on the input belt."));
 	case EAMAction::LoadMode:
 		return AMTY_Text(TEXT("On: the platform loads its contents into docked trains. Off: it unloads them into the platform (like the Load / Unload switch in its window)."));
 	case EAMAction::UnloadMode:
@@ -402,9 +402,9 @@ FText AMRules::GetActionDescription(EAMAction Action)
 	case EAMAction::StationName:
 		return AMTY_Text(TEXT("The station shows its own name again."));
 	case EAMAction::BlockSignal:
-		return AMTY_Text(TEXT("On: the signal stays red when the alarm rings: trains arriving at it wait, until an alarm unblocks it (off). A train already past the signal is not stopped."));
+		return AMTY_Text(TEXT("On: the signal stays red when the event is triggered: trains arriving at it wait, until an event unblocks it (off). A train already past the signal is not stopped."));
 	case EAMAction::UnblockSignal:
-		return AMTY_Text(TEXT("Off: the signal works normally again when the alarm rings."));
+		return AMTY_Text(TEXT("Off: the signal works normally again when the event is triggered."));
 	case EAMAction::FlushBuffer:
 		return AMTY_Text(TEXT("Empties this fluid buffer only, like its own Flush button: its fluid is destroyed. The pipes around it keep theirs."));
 	case EAMAction::SetPriority:
@@ -668,7 +668,7 @@ const TArray<AMRules::FSound>& AMRules::GetSounds()
 		{ TEXT("Warning"), TEXT("/Game/WwiseAudio/Events/Character/Player/TakeDamage/Play_P_Suit_Damage_Warning.Play_P_Suit_Damage_Warning"),
 			TEXT("The warning of your suit when you take damage: for things that need you now.") },
 		{ TEXT("Alert"), TEXT("/Game/WwiseAudio/Events/Buildable/Factory/Fracker/Play_FrackerSmasher_Alarm.Play_FrackerSmasher_Alarm"),
-			TEXT("The alarm of the Resource Well Pressurizer: loud, made to be heard over running machines.") },
+			TEXT("The warning siren of the Resource Well Pressurizer: loud, made to be heard over running machines.") },
 		{ TEXT("Success"), TEXT("/Game/WwiseAudio/Events/Buildable/Factory/MAM/Play_MAM_Scanner_Complete_Fanfare.Play_MAM_Scanner_Complete_Fanfare"),
 			TEXT("The fanfare of a finished MAM research: for good news.") },
 	};

@@ -5,7 +5,7 @@
 	"SemVersion": "0.1.0",
 	"GameVersion": ">=513885",
 	"FriendlyName": "Automated Machines",
-	"Description": "Automate your existing machines: they fire events when their status changes, and other machines react to them. No programming.",
+	"Description": "Automate your existing machines: they trigger events when their status changes, and other machines react to them. No programming.",
 	"Category": "Modding",
 	"CreatedBy": "jollyeye",
 	"CreatedByURL": "https://github.com/jollyeye",

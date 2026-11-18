@@ -367,7 +367,7 @@ void UAMAutomationTab::BuildLayout()
 	mNoticeText = MakeText(TEXT(""), 14, AMUI::Orange);
 	mNoticeText->SetVisibility(ESlateVisibility::Collapsed);
 	AddTo(mContentBox, mNoticeText, 6.f);
-	mGridWarningText = MakeText(TEXT("Power Grid A and B are joined by a cable somewhere else: they are one grid. This switch separates nothing, and the A / B usage and power alarms cannot ring until the cable is removed."), 14, AMUI::Orange);
+	mGridWarningText = MakeText(TEXT("Power Grid A and B are joined by a cable somewhere else: they are one grid. This switch separates nothing, and the A / B usage and power events cannot be triggered until the cable is removed."), 14, AMUI::Orange);
 	mGridWarningText->SetVisibility(ESlateVisibility::Collapsed);
 	AddTo(mContentBox, mGridWarningText, 6.f);
 	// A wrapping text still asks for its whole one-line width, which widens the window: these two
@@ -426,7 +426,7 @@ void UAMAutomationTab::BuildLayout()
 		if (AddLabel.IsEmpty())
 		{
 			// No add button: a note instead (the HUB's alarms, until there are world events).
-			UTextBlock* Note = MakeText(TEXT("World events come here later, e.g. night falls or a power fuse blows. Until then, alarms are rung by machines."), 13, AMUI::Grey);
+			UTextBlock* Note = MakeText(TEXT("World conditions come here later, e.g. night falls or a power fuse blows. Until then, events are triggered by machines."), 13, AMUI::Grey);
 			if (UVerticalBoxSlot* NoteSlot = Inside->AddChildToVerticalBox(Note))
 			{
 				NoteSlot->SetPadding(FMargin(2.f, 8.f, 2.f, 4.f));
@@ -476,7 +476,7 @@ void UAMAutomationTab::BuildLayout()
 			Body->AddChild(Inside);
 			return Inside;
 		};
-		UVerticalBox* Inside = MakeRegion(TEXT("Alarms"), AlarmsColumnWidth, 0.f);
+		UVerticalBox* Inside = MakeRegion(TEXT("Events"), AlarmsColumnWidth, 0.f);
 		UHorizontalBox* Header = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass());
 		// The name takes all the room the two counts leave (Width 0 = fill).
 		auto AddHeader = [this, Header](const FString& Name, float Width, float RightGap)
@@ -497,7 +497,7 @@ void UAMAutomationTab::BuildLayout()
 			}
 		};
 		AddHeader(TEXT("Name"), 0.f, AMRowLayout::Gap - 2.f);
-		AddHeader(TEXT("Rung by"), CountWidth - 2.f, AMRowLayout::Gap);
+		AddHeader(TEXT("Triggered by"), CountWidth - 2.f, AMRowLayout::Gap);
 		AddHeader(TEXT("Listening"), CountWidth - 2.f, 0.f);
 		// Full width (not full height), so the name header stretches like the rows' names and the others line up.
 		if (UVerticalBoxSlot* HeaderSlot = Inside->AddChildToVerticalBox(Header))
@@ -515,18 +515,18 @@ void UAMAutomationTab::BuildLayout()
 	else if (bWorldMode)
 	{
 		// The HUB rings alarms on world events (e.g. a milestone completed).
-		MakePanel(TEXT("Alarms"), TEXT("Alarm Name"), AMRowLayout::AlarmName, TEXT("World Event"), AMRowLayout::MachineEvent,
-			TEXT("+ Add alarm"), mFireRowsBox, 0.f, AMAT_AlarmsWidth)->OnClicked.AddDynamic(this, &UAMAutomationTab::OnAddFireClicked);
+		MakePanel(TEXT("Events"), TEXT("Event Name"), AMRowLayout::AlarmName, TEXT("World Condition"), AMRowLayout::MachineEvent,
+			TEXT("+ Add event"), mFireRowsBox, 0.f, AMAT_AlarmsWidth)->OnClicked.AddDynamic(this, &UAMAutomationTab::OnAddFireClicked);
 	}
 	else
 	{
-		MakePanel(TEXT("Alarms"), TEXT("Alarm Name"), AMRowLayout::AlarmName, TEXT("Machine Event"), AMRowLayout::MachineEvent,
-			TEXT("+ Add alarm"), mFireRowsBox, 0.f, AMAT_AlarmsWidth)->OnClicked.AddDynamic(this, &UAMAutomationTab::OnAddFireClicked);
+		MakePanel(TEXT("Events"), TEXT("Event Name"), AMRowLayout::AlarmName, TEXT("Machine Condition"), AMRowLayout::MachineEvent,
+			TEXT("+ Add event"), mFireRowsBox, 0.f, AMAT_AlarmsWidth)->OnClicked.AddDynamic(this, &UAMAutomationTab::OnAddFireClicked);
 	}
 	if (!bOverviewMode && !bMamMode && !bAlarmsOnlyMode)
 	{
-		MakePanel(TEXT("Actions"), TEXT("On Alarm / Do"), AMRowLayout::Do + AMRowLayout::Gap + AMRowLayout::OnAlarm, TEXT(""), AMRowLayout::Remove,
-			TEXT("+ Listen to an alarm"), mReactionRowsBox, AMAT_PanelGap, AMAT_ActionsWidth)->OnClicked.AddDynamic(this, &UAMAutomationTab::OnAddReactionClicked);
+		MakePanel(TEXT("Actions"), TEXT("On Event / Do"), AMRowLayout::Do + AMRowLayout::Gap + AMRowLayout::OnAlarm, TEXT(""), AMRowLayout::Remove,
+			TEXT("+ Listen to an event"), mReactionRowsBox, AMAT_PanelGap, AMAT_ActionsWidth)->OnClicked.AddDynamic(this, &UAMAutomationTab::OnAddReactionClicked);
 	}
 	else if (bMamMode || bAlarmsOnlyMode)
 	{
@@ -664,32 +664,32 @@ void UAMAutomationTab::ShowDefaultInfo()
 {
 	if (bOverviewMode)
 	{
-		ShowInfo(FText::FromString(TEXT("Every alarm in the world")),
-			FText::FromString(TEXT("Rung by: how many machines ring the alarm. Listening: how many machines, signs and the HUB do something when it rings.\n\nAn alarm nobody rings never makes its listeners act; one nobody listens to does nothing.\n\nThe bins remove the alarm from all of them at once: hold one down for 2.5 seconds.")));
+		ShowInfo(FText::FromString(TEXT("Every event in the world")),
+			FText::FromString(TEXT("Triggered by: how many machines trigger the event. Listening: how many machines, signs and the HUB do something when it is triggered.\n\nAn event nobody triggers never makes its listeners act; one nobody listens to does nothing.\n\nThe bins remove the event from all of them at once: hold one down for 2.5 seconds.")));
 		return;
 	}
 	if (bMamMode)
 	{
-		ShowInfo(FText::FromString(TEXT("Alarms of the MAM")),
-			FText::FromString(TEXT("The MAM rings these alarms on its events, such as a research completed.\n\nWhat happens when they ring is set where it happens: on a machine, a sign, or in the HUB's Automation tab (Show message, Play sound).")));
+		ShowInfo(FText::FromString(TEXT("Events of the MAM")),
+			FText::FromString(TEXT("The MAM triggers these events when its conditions are met, such as a research completed.\n\nWhat happens when they are triggered is set where it happens: on a machine, a sign, or in the HUB's Automation tab (Show message, Play sound).")));
 		return;
 	}
 	if (bWorldMode)
 	{
-		ShowInfo(FText::FromString(TEXT("Alarms and actions of the whole world")),
-			FText::FromString(TEXT("On the left: alarms the world rings, on world events such as a milestone completed.\n\nOn the right: what happens when an alarm rings, rung by any machine or by the world. These actions need no machine.\n\nClick a world event, an action or an alarm to see what it does.")));
+		ShowInfo(FText::FromString(TEXT("Events and actions of the whole world")),
+			FText::FromString(TEXT("On the left: events the world triggers when world conditions are met, such as a milestone completed.\n\nOn the right: what happens when an event is triggered by any machine or by the world. These actions need no machine.\n\nClick a world condition, an action or an event to see what it does.")));
 		return;
 	}
-	ShowInfo(FText::FromString(TEXT("Alarms connect your machines")),
-		FText::FromString(TEXT("On the left: when this machine rings an alarm.\n\nOn the right: what this machine does when an alarm rings, rung by this machine or any other.\n\nClick a machine event, an action or an alarm to see what it does.")));
+	ShowInfo(FText::FromString(TEXT("Events connect your machines")),
+		FText::FromString(TEXT("On the left: when this machine triggers an event.\n\nOn the right: what this machine does when an event is triggered by this machine or any other.\n\nClick a machine condition, an action or an event to see what it does.")));
 }
 
 void UAMAutomationTab::ShowAlarmInfo(const FString& Alarm)
 {
 	if (Alarm.IsEmpty())
 	{
-		ShowInfo(FText::FromString(TEXT("Alarm name")),
-			FText::FromString(TEXT("Any name you like, e.g. PLATES BACKED UP. Names are always in capitals.\n\nEvery machine with an action for the same name reacts when this machine rings it.")));
+		ShowInfo(FText::FromString(TEXT("Event name")),
+			FText::FromString(TEXT("Any name you like, e.g. PLATES BACKED UP. Names are always in capitals.\n\nEvery machine with an action for the same name reacts when this machine triggers it.")));
 		return;
 	}
 	int32 Ringers = 0;
@@ -699,7 +699,7 @@ void UAMAutomationTab::ShowAlarmInfo(const FString& Alarm)
 		Subsystem->CountEventUses(Alarm, Ringers, Actors);
 	}
 	ShowInfo(FText::FromString(Alarm), FText::FromString(FString::Printf(
-		TEXT("Rung by %d machine%s, acted on by %d machine%s.\n\nEvery machine with an action for this alarm reacts when any of them rings it."),
+		TEXT("Triggered by %d machine%s, acted on by %d machine%s.\n\nEvery machine with an action for this event reacts when any of them triggers it."),
 		Ringers, Ringers == 1 ? TEXT("") : TEXT("s"), Actors, Actors == 1 ? TEXT("") : TEXT("s"))));
 }
 
@@ -1135,7 +1135,7 @@ void UAMAutomationTab::UpdatePageHeight()
 	if (bOverviewMode && Widest > 600.f && !FMath::IsNearlyEqual(Root->GetWidthOverride(), Widest, 1.f))
 	{
 		Root->SetWidthOverride(Widest);
-		UE_LOG(LogAutomatedMachines, Log, TEXT("Alarms Overview: page width %.0f (the game's widest page)"), Widest);
+		UE_LOG(LogAutomatedMachines, Log, TEXT("Events Overview: page width %.0f (the game's widest page)"), Widest);
 	}
 	if (Tallest > 100.f && !FMath::IsNearlyEqual(Root->GetHeightOverride(), Tallest, 1.f))
 	{
@@ -1194,7 +1194,7 @@ void UAMAutomationTab::RebuildRows()
 	{
 		if (mFireRowsBox)
 		{
-			AddRowWidget(mFireRowsBox, AMUI::MakeText(WidgetTree, TEXT("No alarms yet."), HintFont, AMUI::Grey));
+			AddRowWidget(mFireRowsBox, AMUI::MakeText(WidgetTree, TEXT("No events yet."), HintFont, AMUI::Grey));
 		}
 	}
 
@@ -1329,7 +1329,7 @@ void UAMAutomationTab::OnCopyAutomationClicked()
 	AMClipboard::Copy(Player, Machine);
 	const AMClipboard::FClip* Clip = AMClipboard::Find(Player, Machine);
 	ShowInfo(FText::FromString(TEXT("Copy automation settings")), FText::FromString(Clip
-		? FString::Printf(TEXT("Copied %d alarms and %d actions. Paste them on another machine of this kind with its Paste automation settings button, or with Ctrl+V while looking at it."), Clip->Fires.Num(), Clip->Reactions.Num())
+		? FString::Printf(TEXT("Copied %d events and %d actions. Paste them on another machine of this kind with its Paste automation settings button, or with Ctrl+V while looking at it."), Clip->Fires.Num(), Clip->Reactions.Num())
 		: FString(TEXT("This machine has no automation to copy."))));
 }
 
@@ -1351,13 +1351,13 @@ void UAMAutomationTab::OnPasteAutomationClicked()
 	RebuildRows();
 	RefreshOptions();
 	ShowInfo(FText::FromString(TEXT("Paste automation settings")), FText::FromString(FString::Printf(
-		TEXT("Pasted %d alarms and %d actions: they replace this machine's."), Clip->Fires.Num(), Clip->Reactions.Num())));
+		TEXT("Pasted %d events and %d actions: they replace this machine's."), Clip->Fires.Num(), Clip->Reactions.Num())));
 }
 
 void UAMAutomationTab::OnCopyPasteHovered()
 {
 	ShowInfo(FText::FromString(TEXT("Copy and paste")), FText::FromString(
-		TEXT("Copy automation settings: remembers only this machine's alarms, actions and options.\n\nPaste automation settings: gives them to this machine, replacing its own. Works between the same machines.\n\nCtrl+C / Ctrl+V while looking at a machine copy everything (its settings and its automation), and so does building after a middle click. The window's Copy Settings / Paste Settings buttons copy only the machine's own settings.")));
+		TEXT("Copy automation settings: remembers only this machine's events, actions and options.\n\nPaste automation settings: gives them to this machine, replacing its own. Works between the same machines.\n\nCtrl+C / Ctrl+V while looking at a machine copy everything (its settings and its automation), and so does building after a middle click. The window's Copy Settings / Paste Settings buttons copy only the machine's own settings.")));
 }
 
 void UAMAutomationTab::OnWorldRulesChanged()
@@ -1428,7 +1428,7 @@ void UAMAutomationTab::ShowPassWrongInfo()
 	ShowInfo(FText::FromString(TEXT("Output overflow")), FText::FromString(
 		TEXT("Everything that would block an input belt goes straight onto the output belt, so the input belt keeps moving: an item that is not an ingredient of the recipe, and an ingredient whose input slot is full.\n\n")
 		TEXT("Use it to chain machines on one belt: what one machine cannot take goes on to the next.\n\n")
-		TEXT("The machine's own products go first: an overflow item goes out when the output has nothing to give. The machine needs an output belt. Only for belts: a pipe with the wrong fluid stays stuck (the alarm \"Wrong input\" tells you).")));
+		TEXT("The machine's own products go first: an overflow item goes out when the output has nothing to give. The machine needs an output belt. Only for belts: a pipe with the wrong fluid stays stuck (the event \"Wrong input\" tells you).")));
 }
 
 void UAMAutomationTab::OnPassWrongClicked()
@@ -1467,7 +1467,7 @@ void UAMAutomationTab::RemoveRule(bool bFire, int32 Index, const FString& Expect
 	}
 	else if (bFire && mFires.IsValidIndex(Index) && mFires[Index].Event != ExpectedEvent)
 	{
-		UE_LOG(LogAutomatedMachines, Warning, TEXT("Automation tab: remove: alarm row index %d is %s, expected %s"),
+		UE_LOG(LogAutomatedMachines, Warning, TEXT("Automation tab: remove: event row index %d is %s, expected %s"),
 			Index, *mFires[Index].Event, *ExpectedEvent);
 	}
 	if (!bFire && mReactions.IsValidIndex(Index))
@@ -1556,7 +1556,7 @@ void UAMAutomationTab::AddActionToGroup(const FString& Event, EAMAction Chosen)
 		return;
 	}
 	ShowInfo(FText::FromString(Event.IsEmpty() ? TEXT("Actions") : Event),
-		FText::FromString(TEXT("Every action of this machine is already used for this alarm (actions of one kind, like Pause and Resume, cannot go together).")));
+		FText::FromString(TEXT("Every action of this machine is already used for this event (actions of one kind, like Pause and Resume, cannot go together).")));
 }
 
 void UAMAutomationTab::RenameActionGroup(const FString& OldEvent, const FString& NewEvent)
@@ -1614,7 +1614,7 @@ void UAMAutomationTab::StartGroupHold(const FString& Event, int32 Count)
 	bHoldGroup = true;
 	if (mHoldBin)
 	{
-		mHoldBin->SetLabel(FString::Printf(TEXT("Hold to remove the %d actions of %s"), Count, Event.IsEmpty() ? TEXT("this alarm") : *Event));
+		mHoldBin->SetLabel(FString::Printf(TEXT("Hold to remove the %d actions of %s"), Count, Event.IsEmpty() ? TEXT("this event") : *Event));
 	}
 }
 
@@ -1666,7 +1666,7 @@ void UAMAutomationTab::OnAddReactionClicked()
 	if (HasActionGroup(FString()))
 	{
 		ScrollToEndLater(mReactionRowsBox);
-		ShowInfo(FText::FromString(TEXT("Choose an alarm")), FText::FromString(TEXT("Choose the alarm of the actions without one first (click \"choose an alarm\").")));
+		ShowInfo(FText::FromString(TEXT("Choose an event")), FText::FromString(TEXT("Choose the event of the actions without one first (click \"choose an event\").")));
 		return;
 	}
 	FAMReactionRule& NewRule = mReactions.AddDefaulted_GetRef();
@@ -1777,15 +1777,15 @@ void UAMAutomationTab::UpdateMachineName()
 		if (mMachineText)
 		{
 			mMachineText->SetText(FText::FromString(bOverviewMode
-				? TEXT("Every alarm in the world: who rings it and who listens to it.")
-				: bMamMode ? TEXT("The MAM rings these alarms on its events.")
-				: TEXT("The HUB rings alarms on world events, hears every alarm in the world, and does these actions when one rings.")));
+				? TEXT("Every event in the world: who triggers it and who listens to it.")
+				: bMamMode ? TEXT("The MAM triggers these events when its conditions are met.")
+				: TEXT("The HUB triggers events when world conditions are met, hears every event in the world, and does these actions when one is triggered.")));
 		}
 		return;
 	}
 	if (bAlarmsOnlyMode && mMachineText)
 	{
-		mMachineText->SetText(FText::FromString(TEXT("The batteries of this power grid, all together, ring these alarms. The list is the same on every Power Storage of the grid, and each alarm rings once for the grid.")));
+		mMachineText->SetText(FText::FromString(TEXT("The batteries of this power grid, all together, trigger these events. The list is the same on every Power Storage of the grid, and each event is triggered once for the grid.")));
 		return;
 	}
 	const UObject* Machine = GetMachine();
@@ -1794,7 +1794,7 @@ void UAMAutomationTab::UpdateMachineName()
 	{
 		const FString Name = NameProperty->GetPropertyValue_InContainer(Machine).ToString();
 		mMachineText->SetText(FText::FromString(FString::Printf(
-			TEXT("This %s rings alarms when its status changes, and does actions when alarms ring."), *Name)));
+			TEXT("This %s triggers events when its status changes, and does actions when events are triggered."), *Name)));
 	}
 }
 
@@ -2396,7 +2396,7 @@ void UAMAutomationTab::ShowThisTab()
 
 const TCHAR* UAMAutomationTab::GetTabTitle() const
 {
-	return bOverviewMode ? TEXT("Alarms Overview") : AMAT_TabTitle;
+	return bOverviewMode ? TEXT("Events Overview") : AMAT_TabTitle;
 }
 
 void UAMAutomationTab::RefreshTabIndex()
@@ -2445,7 +2445,7 @@ void UAMAutomationTab::RebuildOverview()
 	Alarms.RemoveAll([](const FString& Alarm) { return Alarm.IsEmpty(); });
 	if (Alarms.Num() == 0)
 	{
-		mOverviewRows->AddChildToVerticalBox(AMUI::MakeText(WidgetTree, TEXT("No alarms in the world yet."), Font, AMUI::Grey));
+		mOverviewRows->AddChildToVerticalBox(AMUI::MakeText(WidgetTree, TEXT("No events in the world yet."), Font, AMUI::Grey));
 		mExpandedEvent.Reset();
 		RebuildMachinesRegion();
 		return;
@@ -2592,8 +2592,8 @@ void UAMAutomationTab::OnOverviewCountClicked(const FString& Event, bool bRinger
 void UAMAutomationTab::ExplainOverviewCount(const FString& Event, bool bRingers)
 {
 	ShowInfo(FText::FromString(Event), FText::FromString(bRingers
-		? TEXT("Click to list the machines that ring this alarm, nearest first; click again to close the list.\n\nEach machine has a locate button and a bin that removes the alarm from that machine only.")
-		: TEXT("Click to list the machines, signs and the HUB that act when this alarm rings, nearest first; click again to close the list.\n\nEach has a locate button and a bin that removes its actions on this alarm only.")));
+		? TEXT("Click to list the machines that trigger this event, nearest first; click again to close the list.\n\nEach machine has a locate button and a bin that removes the event from that machine only.")
+		: TEXT("Click to list the machines, signs and the HUB that act when this event is triggered, nearest first; click again to close the list.\n\nEach has a locate button and a bin that removes its actions on this event only.")));
 }
 
 void UAMAutomationTab::OnOverviewLocate(AFGBuildable* Machine, bool bHub, const FString& TargetName)
@@ -2662,7 +2662,7 @@ void UAMAutomationTab::RebuildMachinesRegion()
 		return;
 	}
 	UTextBlock* Hint = AMUI::MakeText(WidgetTree,
-		TEXT("Click a number under Rung by or Listening to list its machines here, nearest first.\n\nEach one can be located, or have the alarm removed from it only."),
+		TEXT("Click a number under Triggered by or Listening to list its machines here, nearest first.\n\nEach one can be located, or have the event removed from it only."),
 		GetRowFont(), AMUI::Grey);
 	Hint->SetAutoWrapText(true);
 	if (UVerticalBoxSlot* HintSlot = mMachinesBox->AddChildToVerticalBox(Hint))
@@ -2724,11 +2724,11 @@ void UAMAutomationTab::AddExpandedList()
 		const TArray<FAMFireRule>& WorldFires = Subsystem->GetWorldFires();
 		if (WorldFires.ContainsByPredicate([&Event](const FAMFireRule& Rule) { return Rule.Event == Event && AMRules::IsMamCondition(Rule.Condition); }))
 		{
-			AddWorldEntry(TEXT("The MAM (world events)"), true);
+			AddWorldEntry(TEXT("The MAM (world conditions)"), true);
 		}
 		if (WorldFires.ContainsByPredicate([&Event](const FAMFireRule& Rule) { return Rule.Event == Event && !AMRules::IsMamCondition(Rule.Condition); }))
 		{
-			AddWorldEntry(TEXT("The HUB (world events)"), false);
+			AddWorldEntry(TEXT("The HUB (world conditions)"), false);
 		}
 	}
 	else if (Subsystem->GetWorldActions().ContainsByPredicate([&Event](const FAMReactionRule& Rule) { return Rule.Event == Event; }))
@@ -2740,7 +2740,7 @@ void UAMAutomationTab::AddExpandedList()
 	const FSlateFontInfo Font = GetRowFont();
 	UVerticalBox* Box = mMachinesBox;
 	const int32 Total = mExpandedEntries.Num();
-	const FString Title = FString::Printf(TEXT("%s %s: %d, nearest first"), bExpandedRingers ? TEXT("Rung by") : TEXT("Listening to"),
+	const FString Title = FString::Printf(TEXT("%s %s: %d, nearest first"), bExpandedRingers ? TEXT("Triggered by") : TEXT("Listening to"),
 		*Event, Total);
 	if (UVerticalBoxSlot* TitleSlot = Box->AddChildToVerticalBox(AMUI::MakeText(WidgetTree, Title, AMUI::SizedFont(Font, 13), AMUI::Grey)))
 	{
@@ -2943,8 +2943,8 @@ void UAMAutomationTab::ExplainOverviewBin(const FString& Event, bool bRingers, b
 	if (bOne)
 	{
 		ShowInfo(FText::FromString(FString::Printf(TEXT("Remove from %s"), *TargetName)), FText::FromString(bRingers
-			? FString::Printf(TEXT("Removes the alarm %s from %s only: its alarm rows with this name are deleted, at once."), *Event, *TargetName)
-			: FString::Printf(TEXT("Removes the actions of %s on the alarm %s (a sign: its design for it), at once."), *TargetName, *Event)));
+			? FString::Printf(TEXT("Removes the event %s from %s only: its event rows with this name are deleted, at once."), *Event, *TargetName)
+			: FString::Printf(TEXT("Removes the actions of %s on the event %s (a sign: its design for it), at once."), *TargetName, *Event)));
 		return;
 	}
 	int32 Ringers = 0;
@@ -2953,10 +2953,10 @@ void UAMAutomationTab::ExplainOverviewBin(const FString& Event, bool bRingers, b
 	{
 		Subsystem->CountEventUses(Event, Ringers, Listeners);
 	}
-	ShowInfo(FText::FromString(bRingers ? TEXT("Remove from the machines ringing it") : TEXT("Remove from the listeners")),
+	ShowInfo(FText::FromString(bRingers ? TEXT("Remove from the machines triggering it") : TEXT("Remove from the listeners")),
 		FText::FromString(bRingers
-			? FString::Printf(TEXT("Removes the alarm %s from the %d machine%s that ring it: their alarm rows with this name are deleted.\n\nHold the bin down for 2.5 seconds to do it."), *Event, Ringers, Ringers == 1 ? TEXT("") : TEXT("s"))
-			: FString::Printf(TEXT("Removes every action on the alarm %s from the %d listener%s (machines, the HUB), and the signs' designs for it.\n\nHold the bin down for 2.5 seconds to do it."), *Event, Listeners, Listeners == 1 ? TEXT("") : TEXT("s"))));
+			? FString::Printf(TEXT("Removes the event %s from the %d machine%s that trigger it: their event rows with this name are deleted.\n\nHold the bin down for 2.5 seconds to do it."), *Event, Ringers, Ringers == 1 ? TEXT("") : TEXT("s"))
+			: FString::Printf(TEXT("Removes every action on the event %s from the %d listener%s (machines, the HUB), and the signs' designs for it.\n\nHold the bin down for 2.5 seconds to do it."), *Event, Listeners, Listeners == 1 ? TEXT("") : TEXT("s"))));
 }
 
 namespace
@@ -2987,7 +2987,7 @@ void UAMAutomationTab::StartOverviewHold(const FString& Event, bool bRingers, AF
 	if (mHoldBin)
 	{
 		mHoldBin->SetLabel(bOne ? FString::Printf(TEXT("Hold to remove %s from %s"), *Event, *TargetName)
-			: FString::Printf(TEXT("Hold to remove %s from %s"), *Event, bRingers ? TEXT("the machines ringing it") : TEXT("its listeners")));
+			: FString::Printf(TEXT("Hold to remove %s from %s"), *Event, bRingers ? TEXT("the machines triggering it") : TEXT("its listeners")));
 		mHoldBin->SetProgress(0.f);
 		if (!mHoldBin->IsInViewport())
 		{
@@ -3047,7 +3047,7 @@ void UAMAutomationTab::StopOverviewHold(bool bDone)
 		}
 		else
 		{
-			ShowInfo(FText::FromString(TEXT("Not removed")), FText::FromString(TEXT("Hold the bin down until the big bin is full (2.5 seconds) to remove all the actions of this alarm.")));
+			ShowInfo(FText::FromString(TEXT("Not removed")), FText::FromString(TEXT("Hold the bin down until the big bin is full (2.5 seconds) to remove all the actions of this event.")));
 		}
 		return;
 	}

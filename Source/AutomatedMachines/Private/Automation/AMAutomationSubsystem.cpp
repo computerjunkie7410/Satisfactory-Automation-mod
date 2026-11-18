@@ -601,7 +601,7 @@ void AAMAutomationSubsystem::ClearAlarm(const FString& Event, bool bRingers, con
 		ShowCurrentBeltSetting(Belt);
 	}
 	RemoveInvalidEntries();
-	UE_LOG(LogAutomatedMachines, Log, TEXT("Alarm %s cleared (%s): %d rows removed"), *Event, bRingers ? TEXT("ringers") : TEXT("listeners"), Removed);
+	UE_LOG(LogAutomatedMachines, Log, TEXT("Event %s cleared (%s): %d rows removed"), *Event, bRingers ? TEXT("triggerers") : TEXT("listeners"), Removed);
 	ForceNetUpdate();
 	OnRulesChanged.Broadcast();
 }
@@ -863,7 +863,7 @@ void AAMAutomationSubsystem::MergeBatteryGrids()
 			{
 				StoreBatteryAlarms(Battery, Union);
 				bChanged = true;
-				UE_LOG(LogAutomatedMachines, Log, TEXT("%s: grid alarms merged (%d alarm(s))"), *AMAS_Describe(Battery), Union.Num());
+				UE_LOG(LogAutomatedMachines, Log, TEXT("%s: grid events merged (%d event(s))"), *AMAS_Describe(Battery), Union.Num());
 			}
 		}
 	}
@@ -926,7 +926,7 @@ void AAMAutomationSubsystem::SetWorldRules(const TArray<FAMFireRule>& Fires, con
 	if (bMam)
 	{
 		// The MAM's tab has no actions: the world actions stay as they are.
-		UE_LOG(LogAutomatedMachines, Log, TEXT("World alarms: %d (MAM tab)"), mWorldFires.Num());
+		UE_LOG(LogAutomatedMachines, Log, TEXT("World events: %d (MAM tab)"), mWorldFires.Num());
 		ForceNetUpdate();
 		OnRulesChanged.Broadcast();
 		return;
@@ -940,7 +940,7 @@ void AAMAutomationSubsystem::SetWorldRules(const TArray<FAMFireRule>& Fires, con
 			mWorldActions.Add(Clean);
 		}
 	}
-	UE_LOG(LogAutomatedMachines, Log, TEXT("World alarms: %d, world actions: %d"), mWorldFires.Num(), mWorldActions.Num());
+	UE_LOG(LogAutomatedMachines, Log, TEXT("World events: %d, world actions: %d"), mWorldFires.Num(), mWorldActions.Num());
 	ForceNetUpdate();
 	OnRulesChanged.Broadcast();
 }
@@ -1411,7 +1411,7 @@ void AAMAutomationSubsystem::FireEvent(const FString& Event, const AActor* Ringe
 			}
 		}
 	}
-	UE_LOG(LogAutomatedMachines, Log, TEXT("Alarm %s rings: %d machine action(s)%s"), *Event, Listeners, *ListenerText);
+	UE_LOG(LogAutomatedMachines, Log, TEXT("Event %s triggered: %d machine action(s)%s"), *Event, Listeners, *ListenerText);
 	for (const FAMReactionRule& Rule : mWorldActions)
 	{
 		if (Rule.Event == Event)
@@ -2553,8 +2553,8 @@ void AAMAutomationSubsystem::ApplyWorldAction(const FAMReactionRule& Rule, const
 		FString Body = Rule.Message;
 		if (Body.IsEmpty())
 		{
-			Body = !RungBy.IsEmpty() ? FString::Printf(TEXT("Rung by %s"), *RungBy)
-				: Ringer ? FString::Printf(TEXT("Rung by %s"), *GetMachineName(Ringer)) : FString(TEXT("Rang"));
+			Body = !RungBy.IsEmpty() ? FString::Printf(TEXT("Triggered by %s"), *RungBy)
+				: Ringer ? FString::Printf(TEXT("Triggered by %s"), *GetMachineName(Ringer)) : FString(TEXT("Rang"));
 		}
 		MulticastShowMessage(Rule.Event, Body);
 		break;
@@ -2640,7 +2640,7 @@ void AAMAutomationSubsystem::BindWorldEvents()
 		{
 			Schematics->PurchasedSchematicDelegate.AddUniqueDynamic(this, &AAMAutomationSubsystem::OnSchematicPurchased);
 			bMilestonesBound = true;
-			UE_LOG(LogAutomatedMachines, Log, TEXT("World events: listening for milestones"));
+			UE_LOG(LogAutomatedMachines, Log, TEXT("World conditions: listening for milestones"));
 		}
 	}
 	if (!bResearchBound)
@@ -2649,7 +2649,7 @@ void AAMAutomationSubsystem::BindWorldEvents()
 		{
 			Research->ResearchCompletedDelegate.AddUniqueDynamic(this, &AAMAutomationSubsystem::OnResearchCompleted);
 			bResearchBound = true;
-			UE_LOG(LogAutomatedMachines, Log, TEXT("World events: listening for MAM research"));
+			UE_LOG(LogAutomatedMachines, Log, TEXT("World conditions: listening for MAM research"));
 		}
 	}
 	if (!bMilestonesBound || !bResearchBound)
@@ -2706,7 +2706,7 @@ void AAMAutomationSubsystem::FireWorldEvent(EAMCondition Condition, const FStrin
 	}
 	for (const FString& Event : Events)
 	{
-		UE_LOG(LogAutomatedMachines, Log, TEXT("World event %s (%s): rings %s"), *AMRules::GetConditionText(Condition).ToString(), *Detail, *Event);
+		UE_LOG(LogAutomatedMachines, Log, TEXT("World condition %s (%s): triggers %s"), *AMRules::GetConditionText(Condition).ToString(), *Detail, *Event);
 		FireEvent(Event, nullptr, RungBy);
 	}
 }

@@ -70,17 +70,17 @@ namespace
 	{
 		if (Clip.BeltSettings.Num() > 0)
 		{
-			return FString::Printf(TEXT("%d alarm setting%s"), Clip.BeltSettings.Num(), Clip.BeltSettings.Num() == 1 ? TEXT("") : TEXT("s"));
+			return FString::Printf(TEXT("%d event setting%s"), Clip.BeltSettings.Num(), Clip.BeltSettings.Num() == 1 ? TEXT("") : TEXT("s"));
 		}
 		if (Clip.LightSettings.Num() > 0)
 		{
-			return FString::Printf(TEXT("%d alarm setting%s"), Clip.LightSettings.Num(), Clip.LightSettings.Num() == 1 ? TEXT("") : TEXT("s"));
+			return FString::Printf(TEXT("%d event setting%s"), Clip.LightSettings.Num(), Clip.LightSettings.Num() == 1 ? TEXT("") : TEXT("s"));
 		}
 		if (Clip.SignDesigns.Num() > 0)
 		{
-			return FString::Printf(TEXT("%d alarm design%s"), Clip.SignDesigns.Num(), Clip.SignDesigns.Num() == 1 ? TEXT("") : TEXT("s"));
+			return FString::Printf(TEXT("%d event design%s"), Clip.SignDesigns.Num(), Clip.SignDesigns.Num() == 1 ? TEXT("") : TEXT("s"));
 		}
-		return FString::Printf(TEXT("%d alarm%s, %d action%s"),
+		return FString::Printf(TEXT("%d event%s, %d action%s"),
 			Clip.Fires.Num(), Clip.Fires.Num() == 1 ? TEXT("") : TEXT("s"),
 			Clip.Reactions.Num(), Clip.Reactions.Num() == 1 ? TEXT("") : TEXT("s"));
 	}

@@ -4,6 +4,14 @@ A Satisfactory mod that lets the player automate the machines they already have.
 
 The name starts with "Automated" on purpose: players who come back after months away should recognise the mod in their mod list at once. It automates existing machines; it does not add new "automatic machines".
 
+
+## Words in the game (decided 18 Nov 2026, after player feedback)
+"Alarm" is gone from everything players see:
+- **Event** (was Alarm): a name machines trigger and others listen to. "Event Name", "+ Add event", "On Event / Do", "+ Listen to an event", "Events Overview", "Triggered by".
+- **Trigger / triggers / triggered** (was ring / rings / rung): "triggers when the output fills", "when the event is triggered".
+- **Condition** (was machine / world event): what makes a machine trigger an event, e.g. Input full, Milestone completed. "Machine Condition", "World Condition".
+These docs and the code still say "alarm" / "ring" / "event" (`Event` field, `FireEvent`, `ClearAlarm`, ...) in their old sense in many places: in docs written before this date, read "alarm" as event and "machine / world event" as condition. Save data is unchanged (the names were always stored in `Event`).
+
 ## Words the player sees
 
 No programming words in the game. Decided 4 Nov 2026:
