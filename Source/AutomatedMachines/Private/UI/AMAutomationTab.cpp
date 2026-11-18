@@ -105,7 +105,7 @@ namespace
 	constexpr float AMAT_InfoLineWidth = 660.f;
 	/** ... and is 3 lines high at most. */
 	constexpr int32 AMAT_InfoLines = 3;
-	constexpr float AMAT_InfoLineHeight = 66.f;
+	constexpr float AMAT_InfoLineHeight = 80.f;
 
 	const TCHAR* const AMAT_TabTitle = TEXT("Automation");
 
