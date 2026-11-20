@@ -4,7 +4,7 @@ Done and tested so far: see the table in `DEV-NOTES.md` ("What works").
 
 ## Next: 1.1.0 (in progress)
 
-- **Somersloop amplification** action (GitHub issue #1), code in 20 Nov 2026, to test: levels per machine, limited to the Somersloops placed, change from the next item; then the uninstall test (remove the mod with a machine at 1x, load, take a Somersloop out and put it back: must amplify again).
+- **Somersloop amplification** action (GitHub issue #1): done and tested 21 Nov 2026 (levels per machine from the Somersloop slot size, limited to the Somersloops placed; uninstall keeps the level, a Somersloop out and back in restores it).
 
 ## Release 1.0.1 (20 Nov 2026)
 

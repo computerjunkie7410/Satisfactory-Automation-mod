@@ -341,7 +341,7 @@ Alarms and two actions, delete outgoing items and delete incoming items (outgoin
 
 A game update can change the game's code under the mod. When it does, the mod **pauses instead of crashing**: no tabs, no events, no actions, and the automation of every machine stays saved as it was. Players see one message after loading: "Automated Machines paused: this game update changed the game's code. The mod is paused (your automation is kept) until it is updated for this game version." A mod update built for the new game version brings everything back.
 
-## Somersloop amplification (decided 20 Nov 2026, from GitHub issue #1; to test)
+## Somersloop amplification (decided 20 Nov 2026, from GitHub issue #1; done and tested 21 Nov 2026)
 - An action **Somersloop amplification** on production machines that have Somersloop slots. Its value is a level picked in a dropdown: the machine's own levels, 1 + filled slots / slots (one slot: 1x, 2x; two: 1x, 1.5x, 2x; four: 1x, 1.25x, 1.5x, 1.75x, 2x). A new action starts at 2x.
 - It uses only the Somersloops the player placed in the machine: the level is limited to what they allow (2x asked with 2 of 4 slots filled: 1.5x). 1x leaves them in their slots and gives normal output and power. The game applies the change from the next item made, like clock speed.
 - Not "no cheats" broken: it can only give less than the Somersloops placed (the player could take them out); nothing is created or moved. A pool of Somersloops moved between machines by the mod was rejected.

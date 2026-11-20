@@ -446,7 +446,7 @@ Actions card always present (18 Nov 2026): MAM and Power Storage get the card wi
 - What PR #433 lists as changed in CL520140: `AFGBuildablePipelinePump` fields (valves are pumps), a new first virtual in `IFGUseableInterface` (crashed Road Maker; not caught by a size check, we do not implement it), `AFGGameState` fields, `AFGPlayerController` RPCs, conveyor chains, railroad subsystem, train replication data.
 - ficsit.app rule: the `.uplugin` "Version" must equal the SemVersion's major number (1.0.1 → Version 1; 2.x → 2). 1.0.1 was refused with Version 2.
 
-## Somersloop amplification (20 Nov 2026, to test)
+## Somersloop amplification (20 Nov 2026, tested 21 Nov 2026)
 - `EAMAction::SetAmplification` (new, at the end). Value = the multiplier (1..2), cleaned to that range.
 - Slots: `AFGBuildableFactory::GetSlotsForPowerShardType(PST_ProductionBoost)` is protected; reached through a derived accessor struct in `AMTypes.cpp` (`FAMFactorySlotAccess`). Only `AFGBuildableManufacturer` with `CanChangeProductionBoost()`.
 - Execution: nearest step of the machine's slots, clamped to [`GetMinProductionBoost`, `GetCurrentMaxProductionBoost`] (the game's maximum for the Somersloops placed), then `SetPendingProductionBoost` (the game moves it to current at the next cycle). Log line "<machine> amplification 1.5x (asked 2x, 4 slots, Somersloops allow 1.5x, now 2x)".
