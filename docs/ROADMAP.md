@@ -2,6 +2,12 @@
 
 Done and tested so far: see the table in `DEV-NOTES.md` ("What works").
 
+## Release 1.0.1 (20 Nov 2026)
+
+- Fixes the crash on load after the game update 1.2.6 (build 520140): rebuilt on the community headers for CL520140 (SML PR #433, unofficial; SML had none yet). Tested: the save that crashed loads and runs (24 machines, 29 events), the game update check says the 62 classes match.
+- New: game update guard (pauses the mod with a message instead of crashing when a game update changes the classes it reads).
+- To do when SML publishes official CL520140 headers: rebuild on them, check the log says "match", release again if anything differs.
+
 ## Release 1.0.0 (released 18 Nov 2026)
 
 Ready: every feature tested in game. Done for the release:
