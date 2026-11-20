@@ -27,6 +27,9 @@
 #include "FGFactoryConnectionComponent.h"
 #include "GameFramework/Actor.h"
 #include "Resources/FGPowerShardDescriptor.h"
+#include "FGInventoryComponent.h"
+#include "UObject/UObjectIterator.h"
+#include "AutomatedMachinesModule.h"
 
 namespace
 {
@@ -708,23 +711,61 @@ namespace
 	/** Reaches the game's protected slot lookup (an exported member of the factory class). */
 	struct FAMFactorySlotAccess : public AFGBuildableFactory
 	{
-		static int32 CountSlots(const AFGBuildableFactory* Factory, EPowerShardType Type)
+		static void GetSlots(const AFGBuildableFactory* Factory, EPowerShardType Type, TArray<int32>& OutSlots)
 		{
-			TArray<int32> Slots;
-			static_cast<const FAMFactorySlotAccess*>(Factory)->GetSlotsForPowerShardType(Type, Slots);
-			return Slots.Num();
+			static_cast<const FAMFactorySlotAccess*>(Factory)->GetSlotsForPowerShardType(Type, OutSlots);
 		}
 	};
+
+	/** The Somersloop item (its stack size bounds the slot sizes read below). */
+	TSubclassOf<UFGItemDescriptor> AMTY_SomersloopClass()
+	{
+		static TWeakObjectPtr<UClass> Cached;
+		if (!Cached.IsValid())
+		{
+			// Any loaded production boost shard (the Somersloop); its asset path as a fallback.
+			for (TObjectIterator<UClass> It; It; ++It)
+			{
+				if (It->IsChildOf(UFGPowerShardDescriptor::StaticClass()) && !It->HasAnyClassFlags(CLASS_Abstract)
+					&& UFGPowerShardDescriptor::GetPowerShardType(TSubclassOf<UFGPowerShardDescriptor>(*It)) == EPowerShardType::PST_ProductionBoost)
+				{
+					Cached = *It;
+					break;
+				}
+			}
+			if (!Cached.IsValid())
+			{
+				Cached = LoadClass<UFGItemDescriptor>(nullptr, TEXT("/Game/FactoryGame/Prototype/WAT/Desc_WAT1.Desc_WAT1_C"));
+			}
+			UE_LOG(LogAutomatedMachines, Log, TEXT("Somersloop item: %s"), Cached.IsValid() ? *Cached->GetName() : TEXT("not found"));
+		}
+		return Cached.Get();
+	}
 }
 
 int32 AMRules::GetAmplificationSlots(const UObject* Machine)
 {
+	// The game's Somersloop slot is one inventory slot holding 1, 2 or 4 of them (its slot size):
+	// the machine's levels are its steps (Constructor 1: 1x 2x; Assembler 2: 1x 1.5x 2x; ...).
 	const AFGBuildableManufacturer* Factory = Cast<AFGBuildableManufacturer>(Machine);
-	if (!Factory || !Factory->CanChangeProductionBoost())
+	const UFGInventoryComponent* Inventory = Factory ? Factory->GetPotentialInventory() : nullptr;
+	if (!Inventory || !Factory->CanChangeProductionBoost())
 	{
 		return 0;
 	}
-	return FAMFactorySlotAccess::CountSlots(Factory, EPowerShardType::PST_ProductionBoost);
+	TArray<int32> Slots;
+	FAMFactorySlotAccess::GetSlots(Factory, EPowerShardType::PST_ProductionBoost, Slots);
+	const TSubclassOf<UFGItemDescriptor> Somersloop = AMTY_SomersloopClass();
+	int32 Total = 0;
+	for (const int32 Slot : Slots)
+	{
+		if (Inventory->IsValidIndex(Slot))
+		{
+			Total += FMath::Max(1, Inventory->GetSlotSize(Slot, Somersloop));
+		}
+	}
+	// The game's machines hold 1, 2 or 4; more means the slot size could not be read.
+	return FMath::Clamp(Total, 0, 4);
 }
 
 float AMRules::GetAmplificationLevel(int32 Step, int32 Slots)
