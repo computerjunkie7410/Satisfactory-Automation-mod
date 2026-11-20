@@ -3,7 +3,7 @@
 	"Version": 2,
 	"VersionName": "1.0.1",
 	"SemVersion": "1.0.1",
-	"GameVersion": ">=513885",
+	"GameVersion": ">=520140",
 	"FriendlyName": "Automated Machines",
 	"Description": "Automate your existing machines: they trigger events when their status changes, and other machines react to them. No programming.",
 	"Category": "Modding",
