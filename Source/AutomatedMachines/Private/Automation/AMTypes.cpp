@@ -26,6 +26,7 @@
 #include "FGPowerConnectionComponent.h"
 #include "FGFactoryConnectionComponent.h"
 #include "GameFramework/Actor.h"
+#include "Resources/FGPowerShardDescriptor.h"
 
 namespace
 {
@@ -214,6 +215,7 @@ FText AMRules::GetActionText(EAMAction Action)
 	case EAMAction::ReplaceFuelOff: return AMTY_Text(TEXT("Replace differing fuel off"));
 	case EAMAction::DeleteOutgoing: return AMTY_Text(TEXT("Delete outgoing items"));
 	case EAMAction::DeleteIncoming: return AMTY_Text(TEXT("Delete incoming items"));
+	case EAMAction::SetAmplification: return AMTY_Text(TEXT("Somersloop amplification"));
 	default:                       return FText::GetEmpty();
 	}
 }
@@ -389,6 +391,8 @@ FText AMRules::GetActionDescription(EAMAction Action)
 		return AMTY_Text(TEXT("Takes the machine off standby, so it works again. Does nothing if it is already running."));
 	case EAMAction::TogglePause:
 		return AMTY_Text(TEXT("Switches standby: a running machine is paused, a paused machine is resumed. Handy for one event that turns something on and off."));
+	case EAMAction::SetAmplification:
+		return AMTY_Text(TEXT("Sets how much the Somersloops in the machine amplify its production: 1x is none (normal output and power), 2x is double output from the same input, for much more power. The levels follow its Somersloop slots (one slot: 1x or 2x; four: 1x, 1.25x, 1.5x, 1.75x, 2x).\n\nOnly the Somersloops you placed in the machine count: with fewer than a level needs, it amplifies as far as they allow. Like the game, the change applies from the next item it makes."));
 	case EAMAction::SetClockSpeed:
 		return AMTY_Text(TEXT("Sets the machine's clock speed to the percentage you choose, like the clock speed slider in its window. Above 100% needs Power Shards in the machine; the speed is limited to what its shards allow."));
 	case EAMAction::DeleteOutput:
@@ -569,6 +573,11 @@ AMRules::FValueInfo AMRules::GetActionValueInfo(EAMAction Action)
 		Info.Max = 250.f;
 		Info.Default = 100.f;
 	}
+	else if (Action == EAMAction::SetAmplification)
+	{
+		// Picked in a dropdown (not a number field); a new action starts at full amplification.
+		Info.Default = 2.f;
+	}
 	else if (Action == EAMAction::SetFlowLimit)
 	{
 		Info.bNeeded = true;
@@ -687,6 +696,60 @@ bool AMRules::IsSwitchAction(EAMAction Action)
 bool AMRules::ActionNeedsSound(EAMAction Action)
 {
 	return Action == EAMAction::PlaySound;
+}
+
+bool AMRules::ActionNeedsAmplification(EAMAction Action)
+{
+	return Action == EAMAction::SetAmplification;
+}
+
+namespace
+{
+	/** Reaches the game's protected slot lookup (an exported member of the factory class). */
+	struct FAMFactorySlotAccess : public AFGBuildableFactory
+	{
+		static int32 CountSlots(const AFGBuildableFactory* Factory, EPowerShardType Type)
+		{
+			TArray<int32> Slots;
+			static_cast<const FAMFactorySlotAccess*>(Factory)->GetSlotsForPowerShardType(Type, Slots);
+			return Slots.Num();
+		}
+	};
+}
+
+int32 AMRules::GetAmplificationSlots(const UObject* Machine)
+{
+	const AFGBuildableManufacturer* Factory = Cast<AFGBuildableManufacturer>(Machine);
+	if (!Factory || !Factory->CanChangeProductionBoost())
+	{
+		return 0;
+	}
+	return FAMFactorySlotAccess::CountSlots(Factory, EPowerShardType::PST_ProductionBoost);
+}
+
+float AMRules::GetAmplificationLevel(int32 Step, int32 Slots)
+{
+	return Slots > 0 ? 1.f + static_cast<float>(FMath::Clamp(Step, 0, Slots)) / Slots : 1.f;
+}
+
+int32 AMRules::GetAmplificationStep(float Multiplier, int32 Slots)
+{
+	return Slots > 0 ? FMath::Clamp(FMath::RoundToInt((Multiplier - 1.f) * Slots), 0, Slots) : 0;
+}
+
+FString AMRules::GetAmplificationLabel(float Multiplier)
+{
+	// 1x, 1.25x, 1.5x, 2x
+	FString Number = FString::Printf(TEXT("%.2f"), FMath::Max(1.f, Multiplier));
+	while (Number.EndsWith(TEXT("0")))
+	{
+		Number.LeftChopInline(1);
+	}
+	if (Number.EndsWith(TEXT(".")))
+	{
+		Number.LeftChopInline(1);
+	}
+	return Number + TEXT("x");
 }
 
 const TArray<AMRules::FSound>& AMRules::GetSounds()
@@ -1115,7 +1178,9 @@ bool AMRules::IsActionAvailable(EAMAction Action, const UObject* Machine)
 	}
 	if (Machine->IsA<AFGBuildableManufacturer>())
 	{
-		return Action != EAMAction::DeleteContents && !IsSwitchAction(Action);
+		// Somersloop amplification: machines with Somersloop slots only.
+		return Action != EAMAction::DeleteContents && !IsSwitchAction(Action)
+			&& (Action != EAMAction::SetAmplification || GetAmplificationSlots(Machine) > 0);
 	}
 	if (Machine->IsA<AFGCentralStorageContainer>())
 	{

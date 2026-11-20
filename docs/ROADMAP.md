@@ -2,6 +2,10 @@
 
 Done and tested so far: see the table in `DEV-NOTES.md` ("What works").
 
+## Next: 1.1.0 (in progress)
+
+- **Somersloop amplification** action (GitHub issue #1), code in 20 Nov 2026, to test: levels per machine, limited to the Somersloops placed, change from the next item; then the uninstall test (remove the mod with a machine at 1x, load, take a Somersloop out and put it back: must amplify again).
+
 ## Release 1.0.1 (20 Nov 2026)
 
 - Fixes the crash on load after the game update 1.2.6 (build 520140): rebuilt on the community headers for CL520140 (SML PR #433, unofficial; SML had none yet). Tested: the save that crashed loads and runs (24 machines, 29 events), the game update check says the 62 classes match.

@@ -937,6 +937,8 @@ FAMReactionRule AAMAutomationSubsystem::CleanReaction(const FAMReactionRule& Rul
 	Clean.Event = AMRules::NormalizeEventName(Rule.Event);
 	Clean.Value = AMRules::ActionNeedsSound(Rule.Action)
 		? static_cast<float>(AMRules::GetSoundIndex(Rule.Value))
+		: AMRules::ActionNeedsAmplification(Rule.Action)
+		? FMath::Clamp(Rule.Value, 1.f, 2.f)
 		: AMRules::CleanValue(AMRules::GetActionValueInfo(Rule.Action), Rule.Value);
 	if (!AMRules::ActionNeedsRecipe(Rule.Action))
 	{
@@ -2347,6 +2349,22 @@ void AAMAutomationSubsystem::ApplyAction(AFGBuildableFactory* Factory, const FAM
 			{
 				Factory->SetPendingPotential(Target);
 				UE_LOG(LogAutomatedMachines, Log, TEXT("%s clock speed %.1f%%"), *AMAS_Describe(Factory), Target * 100.f);
+			}
+		}
+		break;
+	case EAMAction::SetAmplification:
+		if (const int32 Slots = AMRules::GetAmplificationSlots(Factory); Slots > 0)
+		{
+			// The machine's level nearest the value, never above what its Somersloops allow (the game's
+			// own maximum for the Somersloops placed). Applied by the game at the next item made.
+			const float Level = AMRules::GetAmplificationLevel(AMRules::GetAmplificationStep(Rule.Value, Slots), Slots);
+			const float Target = FMath::Clamp(Level, Factory->GetMinProductionBoost(), FMath::Max(Factory->GetMinProductionBoost(), Factory->GetCurrentMaxProductionBoost()));
+			if (!FMath::IsNearlyEqual(Factory->GetPendingProductionBoost(), Target, 0.0001f))
+			{
+				Factory->SetPendingProductionBoost(Target);
+				UE_LOG(LogAutomatedMachines, Log, TEXT("%s amplification %s (asked %s, %d slots, Somersloops allow %s, now %s)"), *AMAS_Describe(Factory),
+					*AMRules::GetAmplificationLabel(Target), *AMRules::GetAmplificationLabel(Level), Slots,
+					*AMRules::GetAmplificationLabel(Factory->GetCurrentMaxProductionBoost()), *AMRules::GetAmplificationLabel(Factory->GetCurrentProductionBoost()));
 			}
 		}
 		break;

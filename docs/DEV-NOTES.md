@@ -445,3 +445,10 @@ Actions card always present (18 Nov 2026): MAM and Power Storage get the card wi
 - 20 Nov 2026: starter project on SML PR #433 (`pr-433` branch, head 6105e35, community-reconstructed CL520140 headers; Road Maker 1.4.1 uses it too). Built and tested: "the 62 game classes the mod reads match this game version (CL520140)", no crash on the save that crashed. This also proves `GetPropertiesSize()` equals the game's `sizeof` (no false differences). 1.0.1 released from it.
 - What PR #433 lists as changed in CL520140: `AFGBuildablePipelinePump` fields (valves are pumps), a new first virtual in `IFGUseableInterface` (crashed Road Maker; not caught by a size check, we do not implement it), `AFGGameState` fields, `AFGPlayerController` RPCs, conveyor chains, railroad subsystem, train replication data.
 - ficsit.app rule: the `.uplugin` "Version" must equal the SemVersion's major number (1.0.1 → Version 1; 2.x → 2). 1.0.1 was refused with Version 2.
+
+## Somersloop amplification (20 Nov 2026, to test)
+- `EAMAction::SetAmplification` (new, at the end). Value = the multiplier (1..2), cleaned to that range.
+- Slots: `AFGBuildableFactory::GetSlotsForPowerShardType(PST_ProductionBoost)` is protected; reached through a derived accessor struct in `AMTypes.cpp` (`FAMFactorySlotAccess`). Only `AFGBuildableManufacturer` with `CanChangeProductionBoost()`.
+- Execution: nearest step of the machine's slots, clamped to [`GetMinProductionBoost`, `GetCurrentMaxProductionBoost`] (the game's maximum for the Somersloops placed), then `SetPendingProductionBoost` (the game moves it to current at the next cycle). Log line "<machine> amplification 1.5x (asked 2x, 4 slots, Somersloops allow 1.5x, now 2x)".
+- UI: reuses the Play sound dropdown (`mSoundButton` / `EAMChoiceKind::Sound`), branching on the rule's action: label, both choice lists, choose, hover info.
+- Assumed: full slots = 2x (levels 1 + k/slots). The log's "Somersloops allow" with full slots checks it.

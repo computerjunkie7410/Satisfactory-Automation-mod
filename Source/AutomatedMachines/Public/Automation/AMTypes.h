@@ -155,6 +155,9 @@ enum class EAMAction : uint8
 	// Drone ports: empty one of the two buffers.
 	DeleteOutgoing UMETA(DisplayName = "Delete outgoing items"),
 	DeleteIncoming UMETA(DisplayName = "Delete incoming items"),
+	// Production machines with Somersloop slots: the amplification level (Value: the multiplier,
+	// 1 = none, up to 2), limited to what the Somersloops placed in the machine allow.
+	SetAmplification UMETA(DisplayName = "Somersloop amplification"),
 	Count          UMETA(Hidden)
 };
 
@@ -542,6 +545,17 @@ namespace AMRules
 
 	/** Actions that play one of the sounds below (Play sound); the sound's number is the rule's Value. */
 	AUTOMATEDMACHINES_API bool ActionNeedsSound(EAMAction Action);
+
+	/** Somersloop amplification: its value is picked from the machine's levels (a dropdown). */
+	AUTOMATEDMACHINES_API bool ActionNeedsAmplification(EAMAction Action);
+	/** How many Somersloop slots the machine has (0: none, or not a production machine). */
+	AUTOMATEDMACHINES_API int32 GetAmplificationSlots(const UObject* Machine);
+	/** The multiplier of level Step of Slots (1 + Step / Slots: 1x, 1.25x ... 2x). */
+	AUTOMATEDMACHINES_API float GetAmplificationLevel(int32 Step, int32 Slots);
+	/** The nearest step (0..Slots) to a multiplier. */
+	AUTOMATEDMACHINES_API int32 GetAmplificationStep(float Multiplier, int32 Slots);
+	/** "1.5x" */
+	AUTOMATEDMACHINES_API FString GetAmplificationLabel(float Multiplier);
 
 	/** A few short sounds of the game for Play sound (Wwise events). */
 	struct FSound

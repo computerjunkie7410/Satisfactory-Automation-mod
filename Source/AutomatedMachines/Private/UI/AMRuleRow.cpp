@@ -574,7 +574,7 @@ void UAMRuleRow::BuildCompact()
 		mValueUnit = AMUI::MakeText(Tree, Info.Unit, Font, AMUI::Grey);
 		AddValue(AMRR_Cell(Tree, FMath::Max(16.f, 9.f * FCString::Strlen(Info.Unit)), mValueUnit), 6.f);
 	}
-	else if (AMRules::ActionNeedsRecipe(Action) || AMRules::ActionNeedsSound(Action))
+	else if (AMRules::ActionNeedsRecipe(Action) || AMRules::ActionNeedsSound(Action) || AMRules::ActionNeedsAmplification(Action))
 	{
 		UTextBlock* ValueLabel = nullptr;
 		UButton* ValueButton = AMUI::MakeDropdown(Tree, Font, ValueLabel);
@@ -677,7 +677,10 @@ void UAMRuleRow::UpdateCompact()
 	}
 	if (mSoundLabel)
 	{
-		AMUI::SetFittedText(mSoundLabel, AMRules::GetSounds()[AMRules::GetSoundIndex(Rule->Value)].Label, AMRR_CompactDropdownText);
+		// The same dropdown shows a sound, or Somersloop amplification's level.
+		AMUI::SetFittedText(mSoundLabel, AMRules::ActionNeedsAmplification(Rule->Action)
+			? AMRules::GetAmplificationLabel(AMRules::GetAmplificationLevel(AMRules::GetAmplificationStep(Rule->Value, AMRules::GetAmplificationSlots(mTab->GetMachineObject())), AMRules::GetAmplificationSlots(mTab->GetMachineObject())))
+			: FString(AMRules::GetSounds()[AMRules::GetSoundIndex(Rule->Value)].Label), AMRR_CompactDropdownText);
 	}
 	if (mMessageText)
 	{
@@ -1454,6 +1457,17 @@ void UAMRuleRow::ShowChoices(EAMChoiceKind Kind, const TArray<FString>& Alarms, 
 			AddChoice(AMRules::GetActionText(Action).ToString(), FString(), Value, Rule && Rule->Action == Action);
 		}
 	}
+	else if (Kind == EAMChoiceKind::Sound && mTab->GetReactionRule(mIndex) && AMRules::ActionNeedsAmplification(mTab->GetReactionRule(mIndex)->Action))
+	{
+		// Somersloop amplification: this machine's levels.
+		const FAMReactionRule* Rule = mTab->GetReactionRule(mIndex);
+		const int32 Slots = AMRules::GetAmplificationSlots(mTab->GetMachineObject());
+		const int32 Current = AMRules::GetAmplificationStep(Rule->Value, Slots);
+		for (int32 Step = 0; Step <= Slots; ++Step)
+		{
+			AddChoice(AMRules::GetAmplificationLabel(AMRules::GetAmplificationLevel(Step, Slots)), FString(), static_cast<uint8>(Step), Step == Current);
+		}
+	}
 	else if (Kind == EAMChoiceKind::Sound)
 	{
 		const FAMReactionRule* Rule = mTab->GetReactionRule(mIndex);
@@ -1708,7 +1722,17 @@ void UAMRuleRow::Choose(const UAMChoice& Choice)
 		}
 		break;
 	case EAMChoiceKind::Sound:
-		if (FAMReactionRule* Rule = mTab->GetReactionRule(mIndex))
+		if (FAMReactionRule* AmplifyRule = mTab->GetReactionRule(mIndex); AmplifyRule && AMRules::ActionNeedsAmplification(AmplifyRule->Action))
+		{
+			// Somersloop amplification: the level picked (its step of this machine's slots).
+			const float Level = AMRules::GetAmplificationLevel(Choice.Value, AMRules::GetAmplificationSlots(mTab->GetMachineObject()));
+			if (!FMath::IsNearlyEqual(AmplifyRule->Value, Level))
+			{
+				AmplifyRule->Value = Level;
+				mTab->OnRulesEdited();
+			}
+		}
+		else if (FAMReactionRule* Rule = mTab->GetReactionRule(mIndex))
 		{
 			if (AMRules::GetSoundIndex(Rule->Value) != Choice.Value)
 			{
@@ -1756,7 +1780,7 @@ void UAMRuleRow::Choose(const UAMChoice& Choice)
 				Rule->Action = Action;
 				mBuiltAction = Action;
 				const AMRules::FValueInfo Info = AMRules::GetActionValueInfo(Action);
-				Rule->Value = Info.bNeeded ? Info.Default : 0.f;
+				Rule->Value = Info.Default;
 				Rule->Recipe = nullptr;
 				Rule->Message.Reset();
 				mTab->OnRulesEdited();
@@ -1790,7 +1814,15 @@ void UAMRuleRow::Explain(const UAMChoice& Choice)
 		break;
 	}
 	case EAMChoiceKind::Sound:
-		if (AMRules::GetSounds().IsValidIndex(Choice.Value))
+		if (const FAMReactionRule* AmplifyRule = mTab->GetReactionRule(mIndex); AmplifyRule && AMRules::ActionNeedsAmplification(AmplifyRule->Action))
+		{
+			const int32 Slots = AMRules::GetAmplificationSlots(mTab->GetMachineObject());
+			mTab->ShowInfo(FText::FromString(AMRules::GetAmplificationLabel(AMRules::GetAmplificationLevel(Choice.Value, Slots))),
+				FText::FromString(Choice.Value == 0
+					? FString(TEXT("No amplification: normal output and power. The Somersloops stay in the machine."))
+					: FString::Printf(TEXT("Needs %d of its %d Somersloop slots filled. With fewer Somersloops placed it amplifies as far as they allow."), static_cast<int32>(Choice.Value), Slots)));
+		}
+		else if (AMRules::GetSounds().IsValidIndex(Choice.Value))
 		{
 			const AMRules::FSound& Sound = AMRules::GetSounds()[Choice.Value];
 			mTab->ShowInfo(FText::FromString(Sound.Label), FText::FromString(FString::Printf(
@@ -1949,6 +1981,17 @@ void UAMRuleRow::OpenPicker(EAMChoiceKind Kind, UWidget* Anchor)
 	case EAMChoiceKind::Sound:
 	{
 		const FAMReactionRule* Rule = mTab->GetReactionRule(mIndex);
+		if (Rule && AMRules::ActionNeedsAmplification(Rule->Action))
+		{
+			// Somersloop amplification: this machine's levels.
+			const int32 Slots = AMRules::GetAmplificationSlots(mTab->GetMachineObject());
+			const int32 CurrentStep = AMRules::GetAmplificationStep(Rule->Value, Slots);
+			for (int32 Step = 0; Step <= Slots; ++Step)
+			{
+				Add(AMRules::GetAmplificationLabel(AMRules::GetAmplificationLevel(Step, Slots)), static_cast<uint8>(Step), Step == CurrentStep);
+			}
+			break;
+		}
 		const int32 Current = Rule ? AMRules::GetSoundIndex(Rule->Value) : INDEX_NONE;
 		const TArray<AMRules::FSound>& Sounds = AMRules::GetSounds();
 		for (int32 Index = 0; Index < Sounds.Num(); ++Index)
