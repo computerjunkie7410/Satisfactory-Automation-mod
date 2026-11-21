@@ -2,7 +2,9 @@
 
 Done and tested so far: see the table in `DEV-NOTES.md` ("What works").
 
-## Next: 1.1.0 (in progress)
+## Release 1.1.0 (21 Nov 2026)
+
+- Built on official SML 3.12.1 (headers CL520140) with the engine 5.6.1-css-87 (SML needs it: the game update changed the engine's UNetConnection, SML issue #432). Requires SML ^3.12.1, game >=520140.
 
 - **Somersloop amplification** action (GitHub issue #1): done and tested 21 Nov 2026 (levels per machine from the Somersloop slot size, limited to the Somersloops placed; uninstall keeps the level, a Somersloop out and back in restores it).
 

@@ -453,3 +453,7 @@ Actions card always present (18 Nov 2026): MAM and Power Storage get the card wi
 - UI: reuses the Play sound dropdown (`mSoundButton` / `EAMChoiceKind::Sound`), branching on the rule's action: label, both choice lists, choose, hover info.
 - Assumed: full slots = 2x (levels 1 + k/slots). The log's "Somersloops allow" with full slots checks it.
 - Tested 20 Nov 2026: the action works; uninstall keeps the machine at its last level, and taking a Somersloop out and putting it back restores full amplification (the game recalculates). Bug found: a 2-Somersloop machine offered only 1x / 2x. The game's Somersloop "slot" is ONE inventory slot holding 1, 2 or 4 (an arbitrary slot size), not 2 or 4 slots: steps are now the sum of the boost slots' sizes (`GetSlotSize` with the Somersloop class, found among the loaded `UFGPowerShardDescriptor` classes of type `PST_ProductionBoost`; log "Somersloop item: ..."), at most 4.
+
+## 1.1.0 build setup (21 Nov 2026)
+- SML 3.12.1 (official headers CL520140) needs the engine 5.6.1-css-87 or newer: on the older engine UHT fails with "Unable to find ... FClientInitialLoadStatusData" (FGPlayerController.h), a type the new engine defines in UNetConnection. Engine updated, starter project back on `master`, built OK.
+- `.uplugin`: 1.1.0 (Version 1), SML ^3.12.1, GameVersion >=520140.
