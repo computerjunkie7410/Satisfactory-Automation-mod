@@ -129,6 +129,43 @@ UMaterialInterface* UAMLocateRepresentation::GetRepresentationCompassMaterial() 
 	return Material ? Material : Super::GetRepresentationCompassMaterial();
 }
 
+void UAMLocateRepresentation::UpdateRepresentationCompassMaterial(UMaterialInstanceDynamic* CompassMaterialInstance, APlayerController* OwnerPlayerController) const
+{
+	Super::UpdateRepresentationCompassMaterial(CompassMaterialInstance, OwnerPlayerController);
+	// A point icon: the compass shows the plain symbol (it takes only the outline: the circle was a
+	// white disc there, 24 Nov 2026). Whichever texture parameter got the icon gets the symbol.
+	UTexture2D* Icon = GetRepresentationTexture();
+	UTexture2D* Symbol = AAMLocator::GetPointIconSymbol(Icon);
+	if (!CompassMaterialInstance || !Symbol)
+	{
+		return;
+	}
+	TArray<FName> Names;
+	for (const FTextureParameterValue& Parameter : CompassMaterialInstance->TextureParameterValues)
+	{
+		if (Parameter.ParameterValue == Icon)
+		{
+			Names.Add(Parameter.ParameterInfo.Name);
+		}
+	}
+	for (const FName& Name : Names)
+	{
+		CompassMaterialInstance->SetTextureParameterValue(Name, Symbol);
+	}
+	static bool bLogged = false;
+	if (!bLogged)
+	{
+		// Once: which parameter took it (or which there are, if none had the icon yet).
+		bLogged = true;
+		TArray<FString> All;
+		for (const FTextureParameterValue& Parameter : CompassMaterialInstance->TextureParameterValues)
+		{
+			All.Add(FString::Printf(TEXT("%s=%s"), *Parameter.ParameterInfo.Name.ToString(), *GetNameSafe(Parameter.ParameterValue)));
+		}
+		UE_LOG(LogAutomatedMachines, Log, TEXT("Point icons: compass symbol set on %d parameter(s); texture parameters: %s"), Names.Num(), *FString::Join(All, TEXT(", ")));
+	}
+}
+
 float UAMLocateRepresentation::GetCompassHeightAlignment() const
 {
 	// The ores' row.
@@ -453,6 +490,9 @@ namespace
 		return Names;
 	}
 
+	/** Point icon (circle + symbol) -> its plain symbol, for the compass. Both are rooted. */
+	TMap<TWeakObjectPtr<const UTexture>, TWeakObjectPtr<UTexture2D>> AMLC_Symbols;
+
 	/** The point icons' size, in pixels (the picture made from the circle and the symbol). */
 	constexpr int32 AMLC_IconSize = 128;
 
@@ -579,6 +619,12 @@ namespace
 	}
 }
 
+UTexture2D* AAMLocator::GetPointIconSymbol(const UTexture* Texture)
+{
+	const TWeakObjectPtr<UTexture2D>* Symbol = Texture ? AMLC_Symbols.Find(Texture) : nullptr;
+	return Symbol ? Symbol->Get() : nullptr;
+}
+
 UTexture2D* AAMLocator::GetPointIcon(UWorld* World, uint8 Icon)
 {
 	// Each icon searched once per game; the picture made (circle + symbol) is kept loaded (rooted: a mark
@@ -631,6 +677,8 @@ UTexture2D* AAMLocator::GetPointIcon(UWorld* World, uint8 Icon)
 		const FString SymbolPath = Texture->GetPathName();
 		if (UTexture2D* Composed = AMLC_Compose(World, Texture))
 		{
+			Texture->AddToRoot();
+			AMLC_Symbols.Add(Composed, Texture);
 			Texture = Composed;
 		}
 		else

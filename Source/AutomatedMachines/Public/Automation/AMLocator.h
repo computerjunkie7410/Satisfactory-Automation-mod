@@ -32,6 +32,8 @@ class AUTOMATEDMACHINES_API UAMLocateRepresentation : public UFGActorRepresentat
 
 public:
 	virtual UMaterialInterface* GetRepresentationCompassMaterial() const override;
+	/** The compass draws a picture's outline only: a point icon (circle + symbol) shows its plain symbol there. */
+	virtual void UpdateRepresentationCompassMaterial(UMaterialInstanceDynamic* CompassMaterialInstance, APlayerController* OwnerPlayerController) const override;
 	virtual float GetCompassHeightAlignment() const override;
 	virtual bool IsImportantCompassRepresentation() const override { return true; }
 	virtual bool NeedsDynamicCompassRepresentationText() const override { return true; }
@@ -115,6 +117,9 @@ public:
 	 * icons first, then map stamps), found once and kept loaded. Null if none: the machine's icon is used.
 	 */
 	static UTexture2D* GetPointIcon(UWorld* World, uint8 Icon);
+
+	/** The plain symbol a point icon was made from (for the compass); null if Texture is not a point icon. */
+	static UTexture2D* GetPointIconSymbol(const UTexture* Texture);
 
 	bool IsLocating(const AActor* Target) const;
 
