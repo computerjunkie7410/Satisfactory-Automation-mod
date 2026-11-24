@@ -158,6 +158,10 @@ enum class EAMAction : uint8
 	// Production machines with Somersloop slots: the amplification level (Value: the multiplier,
 	// 1 = none, up to 2), limited to what the Somersloops placed in the machine allow.
 	SetAmplification UMETA(DisplayName = "Somersloop amplification"),
+	// World action (HUB): every player gets the machine that triggered the event on the compass and map.
+	PointToTrigger UMETA(DisplayName = "Point to the machine"),
+	// Machine action: every player gets this machine on the compass and map.
+	PointToThis    UMETA(DisplayName = "Point to this machine"),
 	Count          UMETA(Hidden)
 };
 

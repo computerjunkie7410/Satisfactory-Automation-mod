@@ -268,6 +268,26 @@ bool AAMLocator::Toggle(AActor* Target, UTexture2D* Icon, const FString& Name)
 		Stop(Existing, TEXT("asked again"));
 		return false;
 	}
+	return Start(Target, Icon, Name);
+}
+
+bool AAMLocator::Start(AActor* Target, UTexture2D* Icon, const FString& Name)
+{
+	UWorld* World = GetWorld();
+	if (!Target || !World)
+	{
+		return false;
+	}
+	// Already shown: it starts counting again (the 15 minutes), with a ping.
+	if (FLocated* Shown = mLocated.FindByPredicate([Target](const FLocated& Entry) { return Entry.Target.Get() == Target; }))
+	{
+		Shown->Start = FPlatformTime::Seconds();
+		if (APlayerController* Player = World->GetFirstPlayerController())
+		{
+			AMSound::PlayForPlayer(Player, AMLC_PingSound);
+		}
+		return true;
+	}
 	FVector Origin;
 	FVector Extent;
 	Target->GetActorBounds(true, Origin, Extent);

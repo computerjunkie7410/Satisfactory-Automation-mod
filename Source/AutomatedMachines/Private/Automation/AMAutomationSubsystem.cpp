@@ -1,5 +1,8 @@
 #include "Automation/AMAutomationSubsystem.h"
 #include "Automation/AMLayoutCheck.h"
+#include "Automation/AMLocator.h"
+#include "Buildables/FGBuildableMAM.h"
+#include "Buildables/FGBuildableTradingPost.h"
 #include "TimerManager.h"
 #include "Automation/AMResearch.h"
 #include "Automation/AMMarkers.h"
@@ -1595,6 +1598,15 @@ void AAMAutomationSubsystem::FireEvent(const FString& Event, const AActor* Ringe
 			}
 			continue;
 		}
+		// Point to this machine: any machine with actions.
+		for (const FAMReactionRule& Rule : Entry.Reactions)
+		{
+			if (Rule.Action == EAMAction::PointToThis && Hears(Rule, Event))
+			{
+				MulticastPointTo(Entry.Machine);
+				break;
+			}
+		}
 		// Railway signals: Block / Unblock (kept in the entry, saved).
 		if (AFGBuildableRailroadSignal* Signal = Cast<AFGBuildableRailroadSignal>(Entry.Machine))
 		{
@@ -2725,6 +2737,15 @@ void AAMAutomationSubsystem::ApplyWorldAction(const FAMReactionRule& Rule, const
 	case EAMAction::PlaySound:
 		MulticastPlaySound(static_cast<uint8>(AMRules::GetSoundIndex(Rule.Value)));
 		break;
+	case EAMAction::PointToTrigger:
+		// The machine that triggered it (with AND: the one whose event completed it). World events
+		// (the HUB, the MAM) point nowhere.
+		if (AFGBuildable* Machine = Cast<AFGBuildable>(const_cast<AActor*>(Ringer));
+			Machine && !Machine->IsA<AFGBuildableTradingPost>() && !Machine->IsA<AFGBuildableMAM>())
+		{
+			MulticastPointTo(Machine);
+		}
+		break;
 	default:
 		break;
 	}
@@ -2748,6 +2769,21 @@ FString AAMAutomationSubsystem::GetMachineName(const AActor* Machine)
 		}
 	}
 	return Name;
+}
+
+void AAMAutomationSubsystem::MulticastPointTo_Implementation(AActor* Machine)
+{
+	const AFGBuildable* Buildable = Cast<AFGBuildable>(Machine);
+	if (IsRunningDedicatedServer() || !Buildable || !GetWorld())
+	{
+		return;
+	}
+	if (AAMLocator* Locator = AAMLocator::Get(GetWorld()))
+	{
+		// Started again if it is already shown (Locate's button toggles; this never hides it).
+		Locator->Start(Machine, UFGItemDescriptor::GetSmallIcon(Buildable->GetBuiltWithDescriptor()), GetMachineName(Machine));
+		UE_LOG(LogAutomatedMachines, Log, TEXT("Pointing to %s"), *AMAS_Describe(Machine));
+	}
 }
 
 void AAMAutomationSubsystem::MulticastPlaySound_Implementation(uint8 SoundIndex)

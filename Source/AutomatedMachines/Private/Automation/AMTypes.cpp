@@ -27,6 +27,8 @@
 #include "FGFactoryConnectionComponent.h"
 #include "GameFramework/Actor.h"
 #include "Resources/FGPowerShardDescriptor.h"
+#include "Buildables/FGBuildableMAM.h"
+#include "Buildables/FGBuildableTradingPost.h"
 #include "FGInventoryComponent.h"
 #include "UObject/UObjectIterator.h"
 #include "AutomatedMachinesModule.h"
@@ -219,6 +221,8 @@ FText AMRules::GetActionText(EAMAction Action)
 	case EAMAction::DeleteOutgoing: return AMTY_Text(TEXT("Delete outgoing items"));
 	case EAMAction::DeleteIncoming: return AMTY_Text(TEXT("Delete incoming items"));
 	case EAMAction::SetAmplification: return AMTY_Text(TEXT("Somersloop amplification"));
+	case EAMAction::PointToTrigger: return AMTY_Text(TEXT("Point to the machine"));
+	case EAMAction::PointToThis:    return AMTY_Text(TEXT("Point to this machine"));
 	default:                       return FText::GetEmpty();
 	}
 }
@@ -394,6 +398,10 @@ FText AMRules::GetActionDescription(EAMAction Action)
 		return AMTY_Text(TEXT("Takes the machine off standby, so it works again. Does nothing if it is already running."));
 	case EAMAction::TogglePause:
 		return AMTY_Text(TEXT("Switches standby: a running machine is paused, a paused machine is resumed. Handy for one event that turns something on and off."));
+	case EAMAction::PointToTrigger:
+		return AMTY_Text(TEXT("Shows every player the machine that triggered the event, on the compass and the map, with a ring pulsing on it, like Locate in the Events Overview. It goes when the player gets close, or after 15 minutes.\n\nWith \"and\": the machine whose event just completed it. Events the world triggers (milestone, research) point nowhere."));
+	case EAMAction::PointToThis:
+		return AMTY_Text(TEXT("Shows every player this machine on the compass and the map, with a ring pulsing on it, like Locate in the Events Overview. It goes when the player gets close, or after 15 minutes."));
 	case EAMAction::SetAmplification:
 		return AMTY_Text(TEXT("Sets how much the Somersloops in the machine amplify its production: 1x is none (normal output and power), 2x is double output from the same input, for much more power. The levels follow its Somersloop slots (one slot: 1x or 2x; four: 1x, 1.25x, 1.5x, 1.75x, 2x).\n\nOnly the Somersloops you placed in the machine count: with fewer than a level needs, it amplifies as far as they allow. Like the game, the change applies from the next item it makes."));
 	case EAMAction::SetClockSpeed:
@@ -615,7 +623,7 @@ bool AMRules::ActionNeedsMessage(EAMAction Action)
 
 bool AMRules::IsWorldAction(EAMAction Action)
 {
-	return Action == EAMAction::ShowMessage || Action == EAMAction::PlaySound;
+	return Action == EAMAction::ShowMessage || Action == EAMAction::PlaySound || Action == EAMAction::PointToTrigger;
 }
 
 bool AMRules::IsWorldCondition(EAMCondition Condition)
@@ -1135,6 +1143,23 @@ bool AMRules::IsActionAvailable(EAMAction Action, const UObject* Machine)
 	if (!Machine || IsWorldAction(Action))
 	{
 		return true;
+	}
+	if (Action == EAMAction::PointToThis)
+	{
+		// Every machine that has actions of its own (not the HUB, the MAM, batteries, signs, lights, belts).
+		if (Machine->IsA<AFGBuildableTradingPost>() || Machine->IsA<AFGBuildableMAM>() || Machine->IsA<AFGBuildablePowerStorage>())
+		{
+			return false;
+		}
+		for (uint8 Other = 0; Other < static_cast<uint8>(EAMAction::Count); ++Other)
+		{
+			const EAMAction OtherAction = static_cast<EAMAction>(Other);
+			if (OtherAction != EAMAction::PointToThis && !IsWorldAction(OtherAction) && IsActionAvailable(OtherAction, Machine))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 	if (Machine->IsA<AFGBuildablePowerStorage>())
 	{

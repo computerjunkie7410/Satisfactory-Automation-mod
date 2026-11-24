@@ -351,3 +351,9 @@ A game update can change the game's code under the mod. When it does, the mod **
 - The arrow of a condition row (`Condition [value] -> [EVENT]`) turns **green** while the condition is met, white otherwise; it follows the game twice a second. A moment condition (train arrives, recipe changed) flashes green for about a second. Instead of a separate dot: the arrow already means "this triggers that".
 - From the server's last check: in multiplayer a client sees white arrows (the checks run on the server; not replicated for now). The HUB's and MAM's world conditions stay white (they are moments).
 - The empty Conditions card says so ("The arrow of a condition turns green while it is met").
+
+## Point to a machine (decided 24 Nov 2026)
+Two actions that show a machine to every player on the compass and the map, with a ring pulsing on it: the same as the Events Overview's Locate (until the player gets within 8 m of it, or 15 minutes). Triggered again while shown: it counts again from then, with a ping (never hidden by it).
+- **Point to the machine** (HUB, a world action next to Show message): the machine that triggered the event. With AND (`A and B`): the machine whose event just completed it (decided: not also the machines keeping the other events active, which could be many). Events the world triggers (milestone, research) point nowhere.
+- **Point to this machine** (machine action): the listening machine itself. On every machine that has actions of its own; not the HUB, the MAM, Power Storage, signs, lights, splitters, mergers.
+- Added with "+ action" on the event's header, AND headers too; no new button.

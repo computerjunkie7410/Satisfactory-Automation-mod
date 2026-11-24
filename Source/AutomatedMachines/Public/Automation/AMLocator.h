@@ -100,6 +100,9 @@ public:
 	/** Starts locating Target for the local player, or stops if it is being located. Returns true if it started. */
 	bool Toggle(AActor* Target, UTexture2D* Icon, const FString& Name);
 
+	/** Starts locating Target for the local player; already located: counts again from now. Point-to actions. */
+	bool Start(AActor* Target, UTexture2D* Icon, const FString& Name);
+
 	bool IsLocating(const AActor* Target) const;
 
 protected:

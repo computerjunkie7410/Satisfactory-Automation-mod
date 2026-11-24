@@ -222,6 +222,10 @@ private:
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastPlaySound(uint8 SoundIndex);
 
+	/** Point to the machine / Point to this machine: every player gets Machine on the compass and map. */
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPointTo(AActor* Machine);
+
 	/** The machine's name, e.g. "Constructor". */
 	static FString GetMachineName(const AActor* Machine);
 
