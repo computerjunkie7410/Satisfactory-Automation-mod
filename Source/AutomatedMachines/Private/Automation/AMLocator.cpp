@@ -285,11 +285,13 @@ bool AAMLocator::Start(AActor* Target, UTexture2D* Icon, const FString& Name, co
 	if (FLocated* Shown = mLocated.FindByPredicate([Target](const FLocated& Entry) { return Entry.Target.Get() == Target; }))
 	{
 		Shown->Start = FPlatformTime::Seconds();
-		// Its icon may change (another event's action with another icon).
+		// Its icon may change (another event's action with another icon): made again, as its kind on
+		// the map (ore / beacon) may change with it.
 		if (AAMLocateMarker* Marker = Shown->Marker.Get())
 		{
+			Marker->RemoveAsRepresentation();
 			Marker->Setup(Icon, FText::FromString(Name), Colour);
-			Marker->UpdateRepresentation();
+			Marker->AddAsRepresentation();
 		}
 		if (APlayerController* Player = World->GetFirstPlayerController())
 		{

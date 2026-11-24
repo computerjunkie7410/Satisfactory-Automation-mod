@@ -67,7 +67,14 @@ public:
 	UFUNCTION() virtual void SetActorRepresentationText(const FText& NewText) override { mName = NewText; }
 	UFUNCTION() virtual FLinearColor GetActorRepresentationColor() override;
 	UFUNCTION() virtual void SetActorRepresentationColor(FLinearColor NewColor) override {}
-	UFUNCTION() virtual ERepresentationType GetActorRepresentationType() override { return ERepresentationType::RT_Resource; }
+	/**
+	 * Like an ore (white icon on the map), or, for a coloured warning, like a beacon: the map draws
+	 * beacons in their colour, ores always white (tested 24 Nov 2026).
+	 */
+	UFUNCTION() virtual ERepresentationType GetActorRepresentationType() override
+	{
+		return mColour.Equals(FLinearColor::White) ? ERepresentationType::RT_Resource : ERepresentationType::RT_Beacon;
+	}
 	UFUNCTION() virtual bool GetActorShouldShowInCompass() override { return true; }
 	UFUNCTION() virtual bool GetActorShouldShowOnMap() override { return true; }
 	UFUNCTION() virtual EFogOfWarRevealType GetActorFogOfWarRevealType() override { return EFogOfWarRevealType::FOWRT_None; }
