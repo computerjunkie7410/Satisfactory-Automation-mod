@@ -457,3 +457,7 @@ Actions card always present (18 Nov 2026): MAM and Power Storage get the card wi
 ## 1.1.0 build setup (21 Nov 2026)
 - SML 3.12.1 (official headers CL520140) needs the engine 5.6.1-css-87 or newer: on the older engine UHT fails with "Unable to find ... FClientInitialLoadStatusData" (FGPlayerController.h), a type the new engine defines in UNetConnection. Engine updated, starter project back on `master`, built OK.
 - `.uplugin`: 1.1.0 (Version 1), SML ^3.12.1, GameVersion >=520140.
+
+## Live state arrows (24 Nov 2026, to test)
+- `AAMAutomationSubsystem::GetConditionState(Machine, Index)`: 1 / 0 / -1 from `mLastConditionValues` (the per-machine values `EvaluateFireRules` keeps for edge detection). Power Storage: the grid's checking battery's values.
+- `UAMRuleRow::UpdateLiveState` colours `mArrow` (`AMUI::LiveGreen`, 92 214 110) only while the tab's row matches the saved rule (same count, condition and event at that index), else white. `UAMAutomationTab::mLiveStateTimer`, 0.5 s, started by `BuildCardLayout`, cleared in `NativeDestruct` (the overview's `mTimeCellsTimer` too now).

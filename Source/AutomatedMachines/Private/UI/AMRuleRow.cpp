@@ -1129,6 +1129,8 @@ void UAMRuleRow::BuildConditionCard()
 	// The arrow: "when this is met, trigger".
 	UTextBlock* Arrow = AMUI::MakeText(Tree, TEXT("\u2192"), AMUI::SizedFont(Font, Font.Size + 4), AMUI::White);
 	Add(Arrow, 10.f);
+	mArrow = Arrow;
+	mShownLiveState = -2;
 
 	// The event's name (orange), typed; the names in use are suggested under it.
 	UBorder* Field = AMUI::MakeRoundedBox(Tree, AMUI::CardField, FMargin(10.f, 0.f), 6.f);
@@ -1162,6 +1164,31 @@ void UAMRuleRow::BuildConditionCard()
 	UBorder* ChoicesBox = AMUI::MakeBox(Tree, AMUI::SidePanel, FMargin(2.f));
 	ChoicesBox->AddChild(mChoices);
 	mChoicesFloat->AddChild(ChoicesBox);
+}
+
+void UAMRuleRow::UpdateLiveState()
+{
+	if (!mArrow || !mTab)
+	{
+		return;
+	}
+	int8 State = -1;
+	if (const AAMAutomationSubsystem* Subsystem = AAMAutomationSubsystem::Get(this))
+	{
+		// Only while the tab's list is the one the subsystem checks (same number of conditions).
+		const FAMMachineRules* Saved = Subsystem->FindRules(Cast<AFGBuildable>(mTab->GetMachineObject()));
+		const FAMFireRule* Shown = mTab->GetFireRule(mIndex);
+		if (Shown && Saved && Saved->Fires.Num() == mTab->GetFires().Num() && Saved->Fires.IsValidIndex(mIndex)
+			&& Saved->Fires[mIndex].Condition == Shown->Condition && Saved->Fires[mIndex].Event == Shown->Event)
+		{
+			State = Subsystem->GetConditionState(Cast<AActor>(mTab->GetMachineObject()), mIndex);
+		}
+	}
+	if (State != mShownLiveState)
+	{
+		mShownLiveState = State;
+		mArrow->SetColorAndOpacity(FSlateColor(State == 1 ? AMUI::LiveGreen : AMUI::White));
+	}
 }
 
 void UAMRuleRow::UpdateConditionCard()

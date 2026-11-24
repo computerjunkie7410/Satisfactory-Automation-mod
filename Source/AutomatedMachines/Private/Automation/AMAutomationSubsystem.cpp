@@ -1489,6 +1489,33 @@ void AAMAutomationSubsystem::EvaluateFireRules()
 	}
 }
 
+int8 AAMAutomationSubsystem::GetConditionState(const AActor* Machine, int32 Index) const
+{
+	AFGBuildable* Buildable = Cast<AFGBuildable>(const_cast<AActor*>(Machine));
+	if (!Buildable)
+	{
+		return -1;
+	}
+	const TArray<int8>* Values = mLastConditionValues.Find(TWeakObjectPtr<AFGBuildable>(Buildable));
+	if (!Values && Buildable->IsA<AFGBuildablePowerStorage>())
+	{
+		// Only one battery per grid checks (the others hold the same conditions).
+		if (const UFGPowerCircuit* Circuit = AMAS_BatteryCircuit(Buildable))
+		{
+			for (const TPair<TWeakObjectPtr<AFGBuildable>, TArray<int8>>& Pair : mLastConditionValues)
+			{
+				const AFGBuildable* Other = Pair.Key.Get();
+				if (Other && Other->IsA<AFGBuildablePowerStorage>() && AMAS_BatteryCircuit(Other) == Circuit)
+				{
+					Values = &Pair.Value;
+					break;
+				}
+			}
+		}
+	}
+	return Values && Values->IsValidIndex(Index) ? (*Values)[Index] : static_cast<int8>(-1);
+}
+
 int64 AAMAutomationSubsystem::GetLastTriggered(const FString& Event) const
 {
 	const FAMEventStamp* Stamp = mEventStamps.FindByPredicate([&Event](const FAMEventStamp& S) { return S.Event == Event; });

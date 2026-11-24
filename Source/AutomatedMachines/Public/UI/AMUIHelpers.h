@@ -18,6 +18,8 @@ namespace AMUI
 {
 	// Colours sampled from the game's windows.
 	extern const FLinearColor Orange;
+	/** A condition that is true right now (its arrow). */
+	extern const FLinearColor LiveGreen;
 	extern const FLinearColor White;
 	extern const FLinearColor Grey;
 	/** Page background, like the recipe tab's list area (dark, a little see-through). */

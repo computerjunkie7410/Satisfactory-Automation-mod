@@ -346,3 +346,8 @@ A game update can change the game's code under the mod. When it does, the mod **
 - It uses only the Somersloops the player placed in the machine: the level is limited to what they allow (2x asked with 2 of 4 slots filled: 1.5x). 1x leaves them in their slots and gives normal output and power. The game applies the change from the next item made, like clock speed.
 - Not "no cheats" broken: it can only give less than the Somersloops placed (the player could take them out); nothing is created or moved. A pool of Somersloops moved between machines by the mod was rejected.
 - Uninstall (tested 20 Nov 2026): the level is the machine's own saved value, so the machine keeps the last level; taking a Somersloop out and putting it back gives full amplification again. To say on the mod page.
+
+## Live state of conditions (decided 24 Nov 2026)
+- The arrow of a condition row (`Condition [value] -> [EVENT]`) turns **green** while the condition is met, white otherwise; it follows the game twice a second. A moment condition (train arrives, recipe changed) flashes green for about a second. Instead of a separate dot: the arrow already means "this triggers that".
+- From the server's last check: in multiplayer a client sees white arrows (the checks run on the server; not replicated for now). The HUB's and MAM's world conditions stay white (they are moments).
+- The empty Conditions card says so ("The arrow of a condition turns green while it is met").

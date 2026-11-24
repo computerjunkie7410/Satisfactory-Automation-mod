@@ -20,6 +20,7 @@
 
 // FColor values are the game's sRGB greys; FLinearColor(FColor) converts them.
 const FLinearColor AMUI::Orange(FColor(250, 149, 73));
+const FLinearColor AMUI::LiveGreen(FColor(92, 214, 110));
 const FLinearColor AMUI::White(FColor(255, 255, 255));
 const FLinearColor AMUI::Grey(FColor(170, 170, 170));
 const FLinearColor AMUI::PageBackground(FColor(15, 15, 15, 240));

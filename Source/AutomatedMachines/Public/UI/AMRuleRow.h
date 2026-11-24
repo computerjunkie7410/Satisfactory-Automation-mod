@@ -230,6 +230,14 @@ private:
 	bool bCard = false;
 	void BuildConditionCard();
 	void UpdateConditionCard();
+public:
+	/** A condition row: colours its arrow green while the condition is true (live, from the last check). */
+	void UpdateLiveState();
+private:
+	/** The condition row's arrow (green while its condition is true). */
+	UPROPERTY()
+	TObjectPtr<UTextBlock> mArrow;
+	int8 mShownLiveState = -2;
 	/** Behind a percentage: a bar filled to the value (Value / the value's maximum). */
 	UPROPERTY()
 	TObjectPtr<class UProgressBar> mValueBar;

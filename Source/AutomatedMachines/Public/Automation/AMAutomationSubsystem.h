@@ -55,6 +55,13 @@ public:
 	/** When Event was last triggered (FDateTime UTC ticks), 0 if never (since the stamps were kept). */
 	int64 GetLastTriggered(const FString& Event) const;
 
+	/**
+	 * Live state of a machine's condition (its row Index) at the last check: 1 true, 0 false, -1 unknown
+	 * (not checked yet, a world condition, or a client in multiplayer: the checks run on the server).
+	 * Power Storage: the grid's battery that checks for all of them.
+	 */
+	int8 GetConditionState(const AActor* Machine, int32 Index) const;
+
 	/** Every machine with rules. */
 	const TArray<FAMMachineRules>& GetAllMachines() const { return mMachines; }
 

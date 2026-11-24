@@ -135,6 +135,8 @@ public:
 	/** The font of the window's tab buttons ("Select Recipe"...): used for the rows, so they match. */
 	FSlateFontInfo GetRowFont() const;
 	FAMFireRule* GetFireRule(int32 Index) { return mFires.IsValidIndex(Index) ? &mFires[Index] : nullptr; }
+	/** The conditions shown (live state: only while they are the ones the subsystem checks). */
+	const TArray<FAMFireRule>& GetFires() const { return mFires; }
 	FAMReactionRule* GetReactionRule(int32 Index) { return mReactions.IsValidIndex(Index) ? &mReactions[Index] : nullptr; }
 
 	/** Every event name: those in the world plus those typed here and not saved yet. */
@@ -529,6 +531,9 @@ private:
 	/** The Last triggered cells, updated every second. */
 	TArray<TPair<TWeakObjectPtr<UTextBlock>, FString>> mTimeCells;
 	FTimerHandle mTimeCellsTimer;
+	/** Machine tabs: the condition arrows follow the live state (twice a second). */
+	FTimerHandle mLiveStateTimer;
+	void UpdateLiveStates();
 	void UpdateTimeCells();
 	/** The overview's layout (cards, search, sortable headers, info line). */
 	void BuildOverviewLayout(class UHorizontalBox* Page);

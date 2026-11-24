@@ -686,6 +686,11 @@ void UAMAutomationTab::BuildCardLayout(UHorizontalBox* Page)
 	// [   rows / an explanation when empty ] [   groups / an explanation ]
 	// [ (o) Overflow                     Title: what it does ...     ]
 	bInfoLine = true;
+	// The condition arrows turn green while their condition is true (from the subsystem's last check).
+	if (UWorld* World = GetWorld(); World && !World->GetTimerManager().IsTimerActive(mLiveStateTimer))
+	{
+		World->GetTimerManager().SetTimer(mLiveStateTimer, this, &UAMAutomationTab::UpdateLiveStates, 0.5f, true);
+	}
 	mContentBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("AMContent"));
 	UBorder* PageBorder = AMUI::MakeBox(WidgetTree, AMUI::PageBackground, FMargin(AMAT_PagePadding, 14.f));
 	PageBorder->AddChild(mContentBox);
@@ -847,7 +852,7 @@ void UAMAutomationTab::BuildCardLayout(UHorizontalBox* Page)
 		? FString(TEXT("No conditions yet.\n\nThe HUB's conditions are what happens in the whole world, like a milestone completed: when one is met, the HUB triggers the event you name next to it.\n\nEvery machine listening to that event then acts on it.\n\nClick + condition to add one."))
 		: bAlarmsOnlyMode
 		? FString(TEXT("No conditions yet.\n\nA condition watches the batteries of this power grid: when it is met (for example they are almost empty), it triggers the event you name next to it. Machines listening to that event then act: start backup generators, show a message, play a sound...\n\nThe list is the same on every Power Storage of the grid, and each event is triggered once for the grid.\n\nClick + condition to add one."))
-		: FString(TEXT("No conditions yet.\n\nA condition watches this machine: when it is met (for example its output fills up, or its power goes), the machine triggers the event you name next to it.\n\nEvery machine listening to that event then acts on it: pause, change clock speed, show a message, play a sound...\n\nClick + condition to add one."));
+		: FString(TEXT("No conditions yet.\n\nA condition watches this machine: when it is met (for example its output fills up, or its power goes), the machine triggers the event you name next to it.\n\nEvery machine listening to that event then acts on it: pause, change clock speed, show a message, play a sound...\n\nThe arrow of a condition turns green while it is met.\n\nClick + condition to add one."));
 	mAddFireButton = MakeCard(TEXT("Conditions"), TEXT("+ condition"), mConditionsEmptyText, mFireRowsBox, mFireEmptyText, 0.f);
 	mAddFireButton->OnClicked.AddDynamic(this, &UAMAutomationTab::OnAddFireClicked);
 	mAddFireButton->OnHovered.AddDynamic(this, &UAMAutomationTab::OnAddFireHovered);
@@ -1190,6 +1195,21 @@ namespace
 			return FString::Printf(TEXT("%lldh ago"), Seconds / 3600);
 		}
 		return FString::Printf(TEXT("%lldd ago"), Seconds / 86400);
+	}
+}
+
+void UAMAutomationTab::UpdateLiveStates()
+{
+	if (!IsVisible())
+	{
+		return;
+	}
+	for (UAMRuleRow* Row : mRows)
+	{
+		if (Row)
+		{
+			Row->UpdateLiveState();
+		}
 	}
 }
 
@@ -2730,6 +2750,8 @@ void UAMAutomationTab::NativeDestruct()
 	if (UWorld* World = GetWorld())
 	{
 		World->GetTimerManager().ClearTimer(mGridCheckTimer);
+		World->GetTimerManager().ClearTimer(mLiveStateTimer);
+		World->GetTimerManager().ClearTimer(mTimeCellsTimer);
 	}
 	if (AAMAutomationSubsystem* Subsystem = AAMAutomationSubsystem::Get(this))
 	{

@@ -2,7 +2,9 @@
 
 Done and tested so far: see the table in `DEV-NOTES.md` ("What works").
 
-## Release 1.1.0 (21 Nov 2026)
+## Release 1.1.0 (not released yet: more features first)
+
+- **Live state of conditions** (24 Nov 2026, to test): a condition row's arrow turns green while its condition is met.
 
 - Built on official SML 3.12.1 (headers CL520140) with the engine 5.6.1-css-87 (SML needs it: the game update changed the engine's UNetConnection, SML issue #432). Requires SML ^3.12.1, game >=520140.
 
