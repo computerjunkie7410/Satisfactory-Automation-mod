@@ -1176,12 +1176,37 @@ void UAMRuleRow::UpdateLiveState()
 	if (const AAMAutomationSubsystem* Subsystem = AAMAutomationSubsystem::Get(this))
 	{
 		// Only while the tab's list is the one the subsystem checks (same number of conditions).
+		// The saved list leaves out conditions without an event name (they are not checked), so this
+		// row's place in it is the number of named rows above it. White while the lists differ.
 		const FAMMachineRules* Saved = Subsystem->FindRules(Cast<AFGBuildable>(mTab->GetMachineObject()));
-		const FAMFireRule* Shown = mTab->GetFireRule(mIndex);
-		if (Shown && Saved && Saved->Fires.Num() == mTab->GetFires().Num() && Saved->Fires.IsValidIndex(mIndex)
-			&& Saved->Fires[mIndex].Condition == Shown->Condition && Saved->Fires[mIndex].Event == Shown->Event)
+		const TArray<FAMFireRule>& Shown = mTab->GetFires();
+		if (Saved && Shown.IsValidIndex(mIndex) && !AMRules::NormalizeEventName(Shown[mIndex].Event).IsEmpty())
 		{
-			State = Subsystem->GetConditionState(Cast<AActor>(mTab->GetMachineObject()), mIndex);
+			int32 SavedIndex = INDEX_NONE;
+			int32 Named = 0;
+			bool bSame = true;
+			for (int32 Index = 0; Index < Shown.Num(); ++Index)
+			{
+				const FString Event = AMRules::NormalizeEventName(Shown[Index].Event);
+				if (Event.IsEmpty())
+				{
+					continue;
+				}
+				if (!Saved->Fires.IsValidIndex(Named) || Saved->Fires[Named].Condition != Shown[Index].Condition || Saved->Fires[Named].Event != Event)
+				{
+					bSame = false;
+					break;
+				}
+				if (Index == mIndex)
+				{
+					SavedIndex = Named;
+				}
+				++Named;
+			}
+			if (bSame && Named == Saved->Fires.Num() && SavedIndex != INDEX_NONE)
+			{
+				State = Subsystem->GetConditionState(Cast<AActor>(mTab->GetMachineObject()), SavedIndex);
+			}
 		}
 	}
 	if (State != mShownLiveState)

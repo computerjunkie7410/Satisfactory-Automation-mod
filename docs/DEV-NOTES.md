@@ -459,5 +459,5 @@ Actions card always present (18 Nov 2026): MAM and Power Storage get the card wi
 - `.uplugin`: 1.1.0 (Version 1), SML ^3.12.1, GameVersion >=520140.
 
 ## Live state arrows (24 Nov 2026, to test)
-- `AAMAutomationSubsystem::GetConditionState(Machine, Index)`: 1 / 0 / -1 from `mLastConditionValues` (the per-machine values `EvaluateFireRules` keeps for edge detection). Power Storage: the grid's checking battery's values.
+- `AAMAutomationSubsystem::GetConditionState(Machine, Index)`: 1 / 0 / -1 from `mLastConditionValues` (the per-machine values `EvaluateFireRules` keeps for edge detection, indexed by the SAVED list, which leaves out conditions without an event name: the row maps to it by counting named rows above it; an unnamed row stays white). Power Storage: the grid's checking battery's values.
 - `UAMRuleRow::UpdateLiveState` colours `mArrow` (`AMUI::LiveGreen`, 92 214 110) only while the tab's row matches the saved rule (same count, condition and event at that index), else white. `UAMAutomationTab::mLiveStateTimer`, 0.5 s, started by `BuildCardLayout`, cleared in `NativeDestruct` (the overview's `mTimeCellsTimer` too now).
