@@ -1,4 +1,4 @@
-# ficsit.app page — Automated Machines 1.0.0
+# ficsit.app page — Automated Machines 1.1.0
 
 Copy each part into the matching field on ficsit.app.
 
@@ -28,6 +28,9 @@ No logic gates, no wiring, no programming: name an event on one machine, then pi
 - **Conditions** (left card): what this machine watches. Examples: *output full*, *productivity below 50%*, *fuel below 20*, *input full*, *loses power*, *train arrives*, *battery below 30%*. Each condition triggers the event you name next to it.
 - **Actions** (right card): what this machine does when an event is triggered by any machine, this one included. Examples: *standby on/off*, *set clock speed*, *change recipe*, *turn a power switch on/off*, *show a message to every player*, *play a sound*, *show a text on a sign or station*, *delete the items blocking a buffer*.
 - **AND:** an action can wait for several events: `CONTAINER FULL and POWER LOW`. It runs when one of them is triggered while the others are still active.
+- **Somersloop amplification**: an action sets a production machine's amplification (1x to 2x, in its own steps), using only the Somersloops you placed in it.
+- **Point to the machine**: every player gets a machine on the compass and the map, with its own icon or one of the game's sign icons (warning, power, droplet, trash...). In the HUB it points to the machine that triggered the event.
+- **Live state**: a condition's arrow turns green while the condition is met.
 - **Percentages** are bars you can drag. Item counts let you pick the item.
 - Pointing at anything explains it at the bottom of the window.
 
@@ -52,7 +55,7 @@ Signs, lights and light control panels, Smart and Programmable Splitters and the
 - **You can see which machines are automated:** they get a soft cyan circuit-board glow on the floor under them.
 - **No cheats:** the mod only does what you could do by hand. It creates no items. Delete actions only remove what you could throw in the trash yourself.
 - **Copy & paste:** the game's own copy and paste (Ctrl+C / Ctrl+V, middle click) copies the automation too. The tab also has its own Copy / Paste buttons.
-- **Safe to uninstall:** the mod stores its rules only in its own save data. Remove it and your machines simply keep the last state the automation gave them (clock speed, standby, switches).
+- **Safe to uninstall:** the mod stores its rules only in its own save data. Remove it and your machines simply keep the last state the automation gave them (clock speed, standby, switches). If a machine's Somersloop amplification was lowered, take a Somersloop out and put it back to restore it.
 
 ### Supported buildings
 

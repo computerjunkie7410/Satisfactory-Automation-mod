@@ -458,14 +458,14 @@ Actions card always present (18 Nov 2026): MAM and Power Storage get the card wi
 - SML 3.12.1 (official headers CL520140) needs the engine 5.6.1-css-87 or newer: on the older engine UHT fails with "Unable to find ... FClientInitialLoadStatusData" (FGPlayerController.h), a type the new engine defines in UNetConnection. Engine updated, starter project back on `master`, built OK.
 - `.uplugin`: 1.1.0 (Version 1), SML ^3.12.1, GameVersion >=520140.
 
-## Live state arrows (24 Nov 2026, to test)
+## Live state arrows (24 Nov 2026, tested)
 - `AAMAutomationSubsystem::GetConditionState(Machine, Index)`: 1 / 0 / -1 from `mLastConditionValues` (the per-machine values `EvaluateFireRules` keeps for edge detection, indexed by the SAVED list, which leaves out conditions without an event name: the row maps to it by counting named rows above it; an unnamed row stays white). Power Storage: the grid's checking battery's values.
 - `UAMRuleRow::UpdateLiveState` colours `mArrow` (`AMUI::LiveGreen`, 92 214 110) only while the tab's row matches the saved rule (same count, condition and event at that index), else white. `UAMAutomationTab::mLiveStateTimer`, 0.5 s, started by `BuildCardLayout`, cleared in `NativeDestruct` (the overview's `mTimeCellsTimer` too now).
 
-## Point-to actions (24 Nov 2026, to test)
+## Point-to actions (24 Nov 2026, tested)
 - `EAMAction::PointToTrigger` (world action: `IsWorldAction`) and `PointToThis` (machine; `IsActionAvailable` true when any other non-world action is available, never for the HUB / MAM / Power Storage).
 - Server: `ApplyWorldAction` (PointToTrigger, with the Ringer) and `FireEvent`'s machine loop (PointToThis, any machine type, before the signal / switch / factory branches) call `MulticastPointTo(Machine)`; each game (not a dedicated server) calls `AAMLocator::Start` (new: like Toggle, but never hides; already shown = its 15 minutes start again, ping). Log "Pointing to <machine>".
-- Point icon (24 Nov 2026, to test): Value = `AMRules::EPointIcon` (0 machine, 1 yellow, 2 red, 3 green). `MulticastPointTo(Machine, Icon)`; `AAMLocator::GetWarningIcon` searches `AFGIconDatabaseSubsystem::GetAllIconDataForType(ESIT_MapStamp, then ESIT_Monochrome)` for a name containing warning / caution / danger / exclamation / alert / hazard; logs every icon name once ("Point icons: N map stamp icons: ...") so the name can be fixed. The marker's `GetActorRepresentationColor` returns the tint (`mColour`).
+- Point icon (24 Nov 2026): Value = `AMRules::EPointIcon` (0 machine, 1 yellow, 2 red, 3 green). `MulticastPointTo(Machine, Icon)`; `AAMLocator::GetWarningIcon` searches `AFGIconDatabaseSubsystem::GetAllIconDataForType(ESIT_MapStamp, then ESIT_Monochrome)` for a name containing warning / caution / danger / exclamation / alert / hazard; logs every icon name once ("Point icons: N map stamp icons: ...") so the name can be fixed. The marker's `GetActorRepresentationColor` returns the tint (`mColour`).
 - Dropdown choices made generic: `AMRules::ActionHasChoices` / `GetActionChoiceCount / Label / Info / Index / Value` (Somersloop levels and point icons share the Play sound dropdown).
 - Layout guard: + `FIconData`, `AFGIconDatabaseSubsystem` (64 classes now).
 - 24 Nov 2026 test: the warning icon is found ("Warning" map stamp, `/Game/FactoryGame/Interface/UI/InGame/MapMarker/Icons/TXUI_Warning_Map`), but every mark was cleared as "arrived" within 0-3 s: the player stood at the machines. `FLocated::bArmed`: arriving counts only after the player has been farther than 8 m once.

@@ -11,7 +11,7 @@ A [Satisfactory](https://www.satisfactorygame.com/) mod. Machines **trigger even
 
 ## Install
 
-Install it with the [Satisfactory Mod Manager](https://smm.ficsit.app/) from its [ficsit.app page](https://ficsit.app/mod/AutomatedMachines). It needs Satisfactory 1.2.6 (build 520140) or newer.
+Install it with the [Satisfactory Mod Manager](https://smm.ficsit.app/) from its [ficsit.app page](https://ficsit.app/mod/AutomatedMachines). It needs Satisfactory build 520140 or newer and SML 3.12.1 or newer.
 
 In the game, research **Automated Machines** in the MAM's new *Automated Machines* tab (6 AI Limiters). After that, the windows of your machines get an **Automation** tab.
 
@@ -20,6 +20,9 @@ In the game, research **Automated Machines** in the MAM's new *Automated Machine
 - **Conditions** (left card): what this machine watches, e.g. *output full*, *productivity below 50%*, *fuel below 20*, *loses power*, *train arrives*, *battery below 30%*. Each condition triggers the event you name next to it.
 - **Actions** (right card): what this machine does when an event is triggered by any machine, e.g. *standby on/off*, *set clock speed*, *change recipe*, *turn a power switch on/off*, *show a message*, *play a sound*, *show a text on a sign or station*, *delete the items blocking a buffer*.
 - **AND**: an action can wait for several events, like `CONTAINER FULL and POWER LOW`.
+- **Somersloop amplification**: set a production machine's amplification (1x to 2x, in its own steps), using only the Somersloops you placed in it.
+- **Point to the machine**: show every player a machine on the compass and the map, with its own icon or one of the game's sign icons. In the HUB: the machine that triggered the event.
+- **Live state**: a condition's arrow turns green while the condition is met.
 - **Signs, lights, splitters**: signs, lights, light control panels, Smart / Programmable Splitters and the Priority Merger get one design or setting per event.
 - **The HUB**: world conditions and actions (*milestone completed*, *show a message*), and the **Events Overview**: every event in your world, who triggers it, who listens, when it was last triggered, with search, sorting and Locate.
 - **Output Overflow** (MAM, 2 High-Speed Connectors): production machines can push items that would block their input belt onto their output belt.
@@ -35,7 +38,7 @@ In the game, research **Automated Machines** in the MAM's new *Automated Machine
 
 - **No cheats**: the mod only does what you could do by hand. It creates no items, and delete actions only remove what you could throw in the trash yourself.
 - **Copy & paste**: the game's Ctrl+C / Ctrl+V and middle click copy the automation too.
-- **Safe to uninstall**: the rules live only in the mod's own save data. Without the mod your machines keep the last state the automation gave them.
+- **Safe to uninstall**: the rules live only in the mod's own save data. Without the mod your machines keep the last state the automation gave them. If a machine's Somersloop amplification was lowered, take a Somersloop out and put it back to restore it.
 - **Game updates**: if a game update changes the game code the mod reads, the mod pauses with a message instead of crashing. Your automation stays saved until the mod is updated.
 - **Limits**: machines built from a blueprint start without automation (copy it with Ctrl+C / Ctrl+V or middle click). Made for multiplayer, but not tested with several players yet. Not automated: pumps, trains, doors, Geothermal Generators, elevators.
 
@@ -61,7 +64,7 @@ Checks:
 The mod reads the game's classes with the memory layout of the headers it was built with. After a game update, rebuild on headers for the new build, then look for this line in `FactoryGame.log`:
 
 ```
-LogAutomatedMachines: Game update check: the 62 game classes the mod reads match this game version (CL520140)
+LogAutomatedMachines: Game update check: the 64 game classes the mod reads match this game version (CL520140)
 ```
 
 Any class listed as different means the headers do not match the game.
