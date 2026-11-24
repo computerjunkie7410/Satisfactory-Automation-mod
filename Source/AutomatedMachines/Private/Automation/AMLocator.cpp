@@ -426,7 +426,8 @@ UTexture2D* AAMLocator::GetWarningIcon(UWorld* World)
 	// Found once: the game's map stamps first (the map's own icons), then the sign icons; by name.
 	static TWeakObjectPtr<UTexture2D> Cached;
 	static bool bSearched = false;
-	if (bSearched || !World)
+	// Searched once per game (the texture found is rooted, so it stays).
+	if (Cached.IsValid() || bSearched || !World)
 	{
 		return Cached.Get();
 	}
@@ -456,6 +457,9 @@ UTexture2D* AAMLocator::GetWarningIcon(UWorld* World)
 				{
 					if (UTexture2D* Texture = Cast<UTexture2D>(Icon.Texture.LoadSynchronous()))
 					{
+						// Kept loaded: nothing else holds it once a mark goes, and the garbage collector
+						// freed it (24 Nov 2026: only the first warning showed, then the machine's icon).
+						Texture->AddToRoot();
 						Cached = Texture;
 						UE_LOG(LogAutomatedMachines, Log, TEXT("Point icons: warning = %s (%s)"), *Icon.IconName.ToString(), *Texture->GetPathName());
 						return Texture;

@@ -469,3 +469,4 @@ Actions card always present (18 Nov 2026): MAM and Power Storage get the card wi
 - Dropdown choices made generic: `AMRules::ActionHasChoices` / `GetActionChoiceCount / Label / Info / Index / Value` (Somersloop levels and point icons share the Play sound dropdown).
 - Layout guard: + `FIconData`, `AFGIconDatabaseSubsystem` (64 classes now).
 - 24 Nov 2026 test: the warning icon is found ("Warning" map stamp, `/Game/FactoryGame/Interface/UI/InGame/MapMarker/Icons/TXUI_Warning_Map`), but every mark was cleared as "arrived" within 0-3 s: the player stood at the machines. `FLocated::bArmed`: arriving counts only after the player has been farther than 8 m once.
+- 24 Nov 2026 test: only the first warning showed, then the machine icon: the warning texture (loaded by us, cached in a weak pointer) was garbage collected once the first mark went. Now rooted (`AddToRoot`).
