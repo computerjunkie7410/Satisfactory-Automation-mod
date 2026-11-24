@@ -17,6 +17,10 @@
 #include "UObject/UnrealType.h"
 #include "FGIconDatabaseSubsystem.h"
 #include "FGIconLibrary.h"
+#include "Kismet/KismetRenderingLibrary.h"
+#include "Engine/TextureRenderTarget2D.h"
+#include "Engine/Canvas.h"
+#include "TextureResource.h"
 
 namespace
 {
@@ -449,6 +453,103 @@ namespace
 		return Names;
 	}
 
+	/** The point icons' size, in pixels (the picture made from the circle and the symbol). */
+	constexpr int32 AMLC_IconSize = 128;
+
+	/** A new picture of Size x Size from Pixels (BGRA, rows top to bottom), kept loaded. */
+	UTexture2D* AMLC_MakeTexture(const TArray<FColor>& Pixels, int32 Size)
+	{
+		UTexture2D* Texture = UTexture2D::CreateTransient(Size, Size, PF_B8G8R8A8);
+		if (!Texture || Pixels.Num() != Size * Size)
+		{
+			return nullptr;
+		}
+		Texture->SRGB = true;
+		Texture->Filter = TF_Bilinear;
+		FTexture2DMipMap& Mip = Texture->GetPlatformData()->Mips[0];
+		void* Data = Mip.BulkData.Lock(LOCK_READ_WRITE);
+		FMemory::Memcpy(Data, Pixels.GetData(), Pixels.Num() * sizeof(FColor));
+		Mip.BulkData.Unlock();
+		Texture->UpdateResource();
+		Texture->AddToRoot();
+		return Texture;
+	}
+
+	/**
+	 * The symbol's shape: how much of each pixel it covers (0..255), at Size x Size, the symbol taking
+	 * Scale of it in the middle. The GPU draws it over black (its white shape shows as its coverage,
+	 * whether it has an alpha channel or is a grey image), then it is read back.
+	 */
+	bool AMLC_SymbolCoverage(UWorld* World, UTexture2D* Symbol, int32 Size, float Scale, TArray<uint8>& OutCoverage)
+	{
+		UTextureRenderTarget2D* Target = UKismetRenderingLibrary::CreateRenderTarget2D(World, Size, Size, RTF_RGBA8, FLinearColor::Black);
+		if (!Target)
+		{
+			return false;
+		}
+		UCanvas* Canvas = nullptr;
+		FVector2D CanvasSize;
+		FDrawToRenderTargetContext Context;
+		UKismetRenderingLibrary::BeginDrawCanvasToRenderTarget(World, Target, Canvas, CanvasSize, Context);
+		if (Canvas)
+		{
+			const FVector2D SymbolSize = CanvasSize * Scale;
+			Canvas->K2_DrawTexture(Symbol, (CanvasSize - SymbolSize) * 0.5f, SymbolSize, FVector2D::ZeroVector, FVector2D::UnitVector, FLinearColor::White, BLEND_Translucent);
+		}
+		UKismetRenderingLibrary::EndDrawCanvasToRenderTarget(World, Context);
+		TArray<FColor> Pixels;
+		FTextureRenderTargetResource* Resource = Target->GameThread_GetRenderTargetResource();
+		const bool bRead = Canvas && Resource && Resource->ReadPixels(Pixels) && Pixels.Num() == Size * Size;
+		UKismetRenderingLibrary::ReleaseRenderTarget2D(Target);
+		if (!bRead)
+		{
+			return false;
+		}
+		OutCoverage.SetNumUninitialized(Size * Size);
+		for (int32 Index = 0; Index < Pixels.Num(); ++Index)
+		{
+			OutCoverage[Index] = FMath::Max3(Pixels[Index].R, Pixels[Index].G, Pixels[Index].B);
+		}
+		return true;
+	}
+
+	/**
+	 * The point icon: a gray circle (darker rim, soft edge) with the game's white sign symbol on it, as
+	 * one picture (the compass and the map take one picture per mark). Made once per icon, kept.
+	 */
+	UTexture2D* AMLC_Compose(UWorld* World, UTexture2D* Symbol)
+	{
+		const int32 Size = AMLC_IconSize;
+		TArray<uint8> Coverage;
+		if (!World || !Symbol || !AMLC_SymbolCoverage(World, Symbol, Size, 0.62f, Coverage))
+		{
+			return nullptr;
+		}
+		TArray<FColor> Pixels;
+		Pixels.SetNumUninitialized(Size * Size);
+		const float Centre = (Size - 1) * 0.5f;
+		const float Radius = Size * 0.5f - 1.f;
+		const float Rim = Size * 0.045f;
+		for (int32 Y = 0; Y < Size; ++Y)
+		{
+			for (int32 X = 0; X < Size; ++X)
+			{
+				const int32 Index = Y * Size + X;
+				const float Distance = FVector2f(X - Centre, Y - Centre).Size();
+				const bool bRim = Distance > Radius - Rim;
+				const float CircleAlpha = FMath::Clamp((Radius - Distance) / 1.5f, 0.f, 1.f) * (bRim ? 0.96f : 0.88f);
+				const float CircleGrey = bRim ? 38.f : 72.f;
+				const float Symbol01 = Coverage[Index] / 255.f;
+				// White symbol over the circle.
+				const float Alpha = Symbol01 + CircleAlpha * (1.f - Symbol01);
+				const float Grey = Alpha > 0.f ? (255.f * Symbol01 + CircleGrey * CircleAlpha * (1.f - Symbol01)) / Alpha : 0.f;
+				const uint8 G = static_cast<uint8>(FMath::Clamp(Grey, 0.f, 255.f));
+				Pixels[Index] = FColor(G, G, G, static_cast<uint8>(FMath::Clamp(Alpha * 255.f, 0.f, 255.f)));
+			}
+		}
+		return AMLC_MakeTexture(Pixels, Size);
+	}
+
 	/** One search of the game's icons; a long word must not be matched by a short one ("no" in "nuclear"). */
 	UTexture2D* AMLC_FindIcon(const TArray<FIconData>& Data, const TArray<FString>& Wanted, FString& OutName)
 	{
@@ -480,8 +581,8 @@ namespace
 
 UTexture2D* AAMLocator::GetPointIcon(UWorld* World, uint8 Icon)
 {
-	// Each icon searched once per game; found ones are kept loaded (rooted: a mark is the only thing
-	// that holds them, and they were garbage collected once it went, 24 Nov 2026).
+	// Each icon searched once per game; the picture made (circle + symbol) is kept loaded (rooted: a mark
+	// is the only thing that holds it, and the textures were garbage collected once it went, 24 Nov 2026).
 	static TMap<uint8, TWeakObjectPtr<UTexture2D>> Found;
 	static TSet<uint8> Searched;
 	static bool bListed = false;
@@ -526,9 +627,19 @@ UTexture2D* AAMLocator::GetPointIcon(UWorld* World, uint8 Icon)
 	}
 	if (Texture)
 	{
-		Texture->AddToRoot();
+		// On the gray circle (one picture); the symbol alone if that fails.
+		const FString SymbolPath = Texture->GetPathName();
+		if (UTexture2D* Composed = AMLC_Compose(World, Texture))
+		{
+			Texture = Composed;
+		}
+		else
+		{
+			Texture->AddToRoot();
+		}
 		Found.Add(Icon, Texture);
-		UE_LOG(LogAutomatedMachines, Log, TEXT("Point icons: %s = %s (%s)"), *Names[Icon][0], *Name, *Texture->GetPathName());
+		UE_LOG(LogAutomatedMachines, Log, TEXT("Point icons: %s = %s (%s)%s"), *Names[Icon][0], *Name, *SymbolPath,
+			Texture->GetPathName() == SymbolPath ? TEXT(", without circle") : TEXT(", on the circle"));
 	}
 	else
 	{
