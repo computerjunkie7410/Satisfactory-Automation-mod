@@ -75,6 +75,8 @@ Done and tested: production machines (production window), miners, Water / Oil Ex
 
 ## Useful optional features
 
+- **Colours for point icons** (asked 24 Nov 2026): the compass took the tint, the map drew them white (as an ore, also with the beacon kind). Look at how the game's own map markers / stamps get their colour.
+
 - **Find an alarm's machines**: clicking an alarm name in the HUB overview lists the machines that ring it and listen to it (name, distance, direction), optionally with a map marker.
 - **More world events in the HUB** (Milestone completed is the first, 5 Nov 2026): night falls / day breaks, a power circuit's fuse blows / is reset, power storage low, Space Elevator phase completed, MAM research completed.
 - **More alarm logic**: ring another alarm (chains); "A and B rang"; a delay ("N seconds after"); a cooldown so a flapping machine does not ring 10 times a second; "every Nth time".

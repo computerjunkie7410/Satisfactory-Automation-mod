@@ -423,53 +423,116 @@ void AAMLocator::EndPlay(const EEndPlayReason::Type Reason)
 	Super::EndPlay(Reason);
 }
 
-UTexture2D* AAMLocator::GetWarningIcon(UWorld* World)
+namespace
 {
-	// Found once: the game's map stamps first (the map's own icons), then the sign icons; by name.
-	static TWeakObjectPtr<UTexture2D> Cached;
-	static bool bSearched = false;
-	// Searched once per game (the texture found is rooted, so it stays).
-	if (Cached.IsValid() || bSearched || !World)
+	/**
+	 * Names to look for per point icon (AMRules::EPointIcon order, Machine first): an icon whose name
+	 * equals one of them wins, else one whose name contains one (lower case, in this order).
+	 */
+	const TArray<TArray<FString>>& AMLC_PointIconNames()
 	{
-		return Cached.Get();
+		static const TArray<TArray<FString>> Names = {
+			{},
+			{ TEXT("droplet"), TEXT("drop"), TEXT("water"), TEXT("fluid") },
+			{ TEXT("radiation"), TEXT("radioactive"), TEXT("nuclear") },
+			{ TEXT("thumbs up"), TEXT("thumb up"), TEXT("thumbsup"), TEXT("like") },
+			{ TEXT("thumbs down"), TEXT("thumb down"), TEXT("thumbsdown"), TEXT("dislike") },
+			{ TEXT("stop"), TEXT("x"), TEXT("cross"), TEXT("cancel"), TEXT("no") },
+			{ TEXT("storage crate"), TEXT("crate"), TEXT("storage"), TEXT("box"), TEXT("container") },
+			{ TEXT("power"), TEXT("lightning"), TEXT("electricity"), TEXT("energy"), TEXT("bolt") },
+			{ TEXT("warning"), TEXT("caution"), TEXT("danger"), TEXT("exclamation"), TEXT("alert") },
+			{ TEXT("ficsit checkmark"), TEXT("ficsit check"), TEXT("checkmark"), TEXT("check"), TEXT("ficsit") },
+			{ TEXT("recycle"), TEXT("recycling") },
+			{ TEXT("trash"), TEXT("trash can"), TEXT("garbage"), TEXT("bin") },
+			{ TEXT("question mark"), TEXT("question") },
+		};
+		return Names;
+	}
+
+	/** One search of the game's icons; a long word must not be matched by a short one ("no" in "nuclear"). */
+	UTexture2D* AMLC_FindIcon(const TArray<FIconData>& Data, const TArray<FString>& Wanted, FString& OutName)
+	{
+		for (const bool bExact : { true, false })
+		{
+			for (const FString& Word : Wanted)
+			{
+				if (!bExact && Word.Len() < 4)
+				{
+					continue;
+				}
+				for (const FIconData& Icon : Data)
+				{
+					const FString Name = Icon.IconName.ToString().ToLower();
+					if (bExact ? Name == Word : Name.Contains(Word))
+					{
+						if (UTexture2D* Texture = Cast<UTexture2D>(Icon.Texture.LoadSynchronous()))
+						{
+							OutName = Icon.IconName.ToString();
+							return Texture;
+						}
+					}
+				}
+			}
+		}
+		return nullptr;
+	}
+}
+
+UTexture2D* AAMLocator::GetPointIcon(UWorld* World, uint8 Icon)
+{
+	// Each icon searched once per game; found ones are kept loaded (rooted: a mark is the only thing
+	// that holds them, and they were garbage collected once it went, 24 Nov 2026).
+	static TMap<uint8, TWeakObjectPtr<UTexture2D>> Found;
+	static TSet<uint8> Searched;
+	static bool bListed = false;
+	const TArray<TArray<FString>>& Names = AMLC_PointIconNames();
+	if (!World || !Names.IsValidIndex(Icon) || Names[Icon].Num() == 0)
+	{
+		return nullptr;
+	}
+	if (Searched.Contains(Icon))
+	{
+		return Found.FindRef(Icon).Get();
 	}
 	AFGIconDatabaseSubsystem* Icons = AFGIconDatabaseSubsystem::Get(World);
 	if (!Icons)
 	{
 		return nullptr;
 	}
-	bSearched = true;
-	const TCHAR* const Words[] = { TEXT("warning"), TEXT("caution"), TEXT("danger"), TEXT("exclamation"), TEXT("alert"), TEXT("hazard") };
-	for (const EIconType Type : { EIconType::ESIT_MapStamp, EIconType::ESIT_Monochrome })
+	Searched.Add(Icon);
+	TArray<FIconData> SignIcons;
+	TArray<FIconData> MapStamps;
+	Icons->GetAllIconDataForType(EIconType::ESIT_Monochrome, true, SignIcons);
+	Icons->GetAllIconDataForType(EIconType::ESIT_MapStamp, true, MapStamps);
+	if (!bListed)
 	{
-		TArray<FIconData> Data;
-		Icons->GetAllIconDataForType(Type, true, Data);
-		TArray<FString> Names;
-		for (const FIconData& Icon : Data)
+		// Once, so names can be matched exactly if a guess picks the wrong one.
+		bListed = true;
+		for (const TPair<const TCHAR*, const TArray<FIconData>*> List : { TPair<const TCHAR*, const TArray<FIconData>*>(TEXT("sign"), &SignIcons), TPair<const TCHAR*, const TArray<FIconData>*>(TEXT("map stamp"), &MapStamps) })
 		{
-			Names.Add(Icon.IconName.ToString());
-		}
-		UE_LOG(LogAutomatedMachines, Log, TEXT("Point icons: %d %s icons: %s"), Data.Num(),
-			Type == EIconType::ESIT_MapStamp ? TEXT("map stamp") : TEXT("sign"), *FString::Join(Names, TEXT(", ")));
-		for (const TCHAR* Word : Words)
-		{
-			for (const FIconData& Icon : Data)
+			TArray<FString> All;
+			for (const FIconData& Data : *List.Value)
 			{
-				if (Icon.IconName.ToString().Contains(Word))
-				{
-					if (UTexture2D* Texture = Cast<UTexture2D>(Icon.Texture.LoadSynchronous()))
-					{
-						// Kept loaded: nothing else holds it once a mark goes, and the garbage collector
-						// freed it (24 Nov 2026: only the first warning showed, then the machine's icon).
-						Texture->AddToRoot();
-						Cached = Texture;
-						UE_LOG(LogAutomatedMachines, Log, TEXT("Point icons: warning = %s (%s)"), *Icon.IconName.ToString(), *Texture->GetPathName());
-						return Texture;
-					}
-				}
+				All.Add(Data.IconName.ToString());
 			}
+			UE_LOG(LogAutomatedMachines, Log, TEXT("Point icons: %d %s icons: %s"), All.Num(), List.Key, *FString::Join(All, TEXT(", ")));
 		}
 	}
-	UE_LOG(LogAutomatedMachines, Warning, TEXT("Point icons: no warning icon found, the machine's icon is used"));
-	return nullptr;
+	FString Name;
+	UTexture2D* Texture = AMLC_FindIcon(SignIcons, Names[Icon], Name);
+	if (!Texture)
+	{
+		Texture = AMLC_FindIcon(MapStamps, Names[Icon], Name);
+	}
+	if (Texture)
+	{
+		Texture->AddToRoot();
+		Found.Add(Icon, Texture);
+		UE_LOG(LogAutomatedMachines, Log, TEXT("Point icons: %s = %s (%s)"), *Names[Icon][0], *Name, *Texture->GetPathName());
+	}
+	else
+	{
+		UE_LOG(LogAutomatedMachines, Warning, TEXT("Point icons: no icon found for %s, the machine's icon is used"), *Names[Icon][0]);
+	}
+	return Texture;
 }

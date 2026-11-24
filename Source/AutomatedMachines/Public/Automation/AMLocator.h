@@ -67,14 +67,8 @@ public:
 	UFUNCTION() virtual void SetActorRepresentationText(const FText& NewText) override { mName = NewText; }
 	UFUNCTION() virtual FLinearColor GetActorRepresentationColor() override;
 	UFUNCTION() virtual void SetActorRepresentationColor(FLinearColor NewColor) override {}
-	/**
-	 * Like an ore (white icon on the map), or, for a coloured warning, like a beacon: the map draws
-	 * beacons in their colour, ores always white (tested 24 Nov 2026).
-	 */
-	UFUNCTION() virtual ERepresentationType GetActorRepresentationType() override
-	{
-		return mColour.Equals(FLinearColor::White) ? ERepresentationType::RT_Resource : ERepresentationType::RT_Beacon;
-	}
+	/** Like an ore. (A beacon type for coloured icons was tried 24 Nov 2026: the map still drew an ore, white.) */
+	UFUNCTION() virtual ERepresentationType GetActorRepresentationType() override { return ERepresentationType::RT_Resource; }
 	UFUNCTION() virtual bool GetActorShouldShowInCompass() override { return true; }
 	UFUNCTION() virtual bool GetActorShouldShowOnMap() override { return true; }
 	UFUNCTION() virtual EFogOfWarRevealType GetActorFogOfWarRevealType() override { return EFogOfWarRevealType::FOWRT_None; }
@@ -116,8 +110,11 @@ public:
 	 */
 	bool Start(AActor* Target, UTexture2D* Icon, const FString& Name, const FLinearColor& Colour = FLinearColor::White);
 
-	/** The game's warning sign icon (map stamps, else sign icons), for the point-to actions' warnings. Null if none. */
-	static UTexture2D* GetWarningIcon(UWorld* World);
+	/**
+	 * A point-to icon (AMRules::EPointIcon, not Machine): the game's own sign icon of that name (sign
+	 * icons first, then map stamps), found once and kept loaded. Null if none: the machine's icon is used.
+	 */
+	static UTexture2D* GetPointIcon(UWorld* World, uint8 Icon);
 
 	bool IsLocating(const AActor* Target) const;
 

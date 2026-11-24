@@ -399,9 +399,9 @@ FText AMRules::GetActionDescription(EAMAction Action)
 	case EAMAction::TogglePause:
 		return AMTY_Text(TEXT("Switches standby: a running machine is paused, a paused machine is resumed. Handy for one event that turns something on and off."));
 	case EAMAction::PointToTrigger:
-		return AMTY_Text(TEXT("Shows every player the machine that triggered the event, on the compass and the map, with a ring pulsing on it, like Locate in the Events Overview. It goes when the player gets close, or after 15 minutes. Its icon: the machine's, or a yellow, red or green warning.\n\nWith \"and\": the machine whose event just completed it. Events the world triggers (milestone, research) point nowhere."));
+		return AMTY_Text(TEXT("Shows every player the machine that triggered the event, on the compass and the map, with a ring pulsing on it, like Locate in the Events Overview. It goes when the player gets close, or after 15 minutes. Its icon: the machine's, or one of the game's sign icons (warning, power, droplet...).\n\nWith \"and\": the machine whose event just completed it. Events the world triggers (milestone, research) point nowhere."));
 	case EAMAction::PointToThis:
-		return AMTY_Text(TEXT("Shows every player this machine on the compass and the map, with a ring pulsing on it, like Locate in the Events Overview. It goes when the player gets close, or after 15 minutes. Its icon: the machine's, or a yellow, red or green warning."));
+		return AMTY_Text(TEXT("Shows every player this machine on the compass and the map, with a ring pulsing on it, like Locate in the Events Overview. It goes when the player gets close, or after 15 minutes. Its icon: the machine's, or one of the game's sign icons (warning, power, droplet...)."));
 	case EAMAction::SetAmplification:
 		return AMTY_Text(TEXT("Sets how much the Somersloops in the machine amplify its production: 1x is none (normal output and power), 2x is double output from the same input, for much more power. The levels follow its Somersloop slots (one slot: 1x or 2x; four: 1x, 1.25x, 1.5x, 1.75x, 2x).\n\nOnly the Somersloops you placed in the machine count: with fewer than a level needs, it amplifies as far as they allow. Like the game, the change applies from the next item it makes."));
 	case EAMAction::SetClockSpeed:
@@ -796,14 +796,23 @@ AMRules::EPointIcon AMRules::GetPointIcon(float Value)
 	return static_cast<EPointIcon>(FMath::Clamp(FMath::RoundToInt(Value), 0, static_cast<int32>(EPointIcon::Count) - 1));
 }
 
-FLinearColor AMRules::GetPointIconColour(EPointIcon Icon)
+FString AMRules::GetPointIconLabel(EPointIcon Icon)
 {
 	switch (Icon)
 	{
-	case EPointIcon::YellowWarning: return FLinearColor(FColor(255, 204, 40));
-	case EPointIcon::RedWarning:    return FLinearColor(FColor(240, 52, 40));
-	case EPointIcon::GreenWarning:  return FLinearColor(FColor(80, 220, 90));
-	default:                        return FLinearColor::White;
+	case EPointIcon::Droplet:      return TEXT("Droplet");
+	case EPointIcon::Radiation:    return TEXT("Radiation");
+	case EPointIcon::ThumbsUp:     return TEXT("Thumbs up");
+	case EPointIcon::ThumbsDown:   return TEXT("Thumbs down");
+	case EPointIcon::Stop:         return TEXT("Stop");
+	case EPointIcon::StorageCrate: return TEXT("Storage crate");
+	case EPointIcon::Power:        return TEXT("Power");
+	case EPointIcon::Warning:      return TEXT("Warning");
+	case EPointIcon::FicsitCheck:  return TEXT("FICSIT check");
+	case EPointIcon::Recycle:      return TEXT("Recycle");
+	case EPointIcon::Trash:        return TEXT("Trash");
+	case EPointIcon::QuestionMark: return TEXT("Question mark");
+	default:                       return TEXT("Machine icon");
 	}
 }
 
@@ -827,13 +836,7 @@ FString AMRules::GetActionChoiceLabel(EAMAction Action, int32 Index, const UObje
 	{
 		return GetAmplificationLabel(GetAmplificationLevel(Index, GetAmplificationSlots(Machine)));
 	}
-	switch (GetPointIcon(static_cast<float>(Index)))
-	{
-	case EPointIcon::YellowWarning: return TEXT("Yellow warning");
-	case EPointIcon::RedWarning:    return TEXT("Red warning");
-	case EPointIcon::GreenWarning:  return TEXT("Green warning");
-	default:                        return TEXT("Machine icon");
-	}
+	return GetPointIconLabel(GetPointIcon(static_cast<float>(Index)));
 }
 
 FString AMRules::GetActionChoiceInfo(EAMAction Action, int32 Index, const UObject* Machine)
@@ -847,7 +850,7 @@ FString AMRules::GetActionChoiceInfo(EAMAction Action, int32 Index, const UObjec
 	}
 	return GetPointIcon(static_cast<float>(Index)) == EPointIcon::Machine
 		? FString(TEXT("The compass and the map show the machine's own icon."))
-		: FString(TEXT("The compass and the map show a warning sign in this colour, with the machine's name."));
+		: FString(TEXT("The compass and the map show this sign icon (the game's own), with the machine's name."));
 }
 
 int32 AMRules::GetActionChoiceIndex(EAMAction Action, float Value, const UObject* Machine)

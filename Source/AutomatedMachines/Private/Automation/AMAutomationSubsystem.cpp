@@ -2783,15 +2783,13 @@ void AAMAutomationSubsystem::MulticastPointTo_Implementation(AActor* Machine, ui
 	if (AAMLocator* Locator = AAMLocator::Get(GetWorld()))
 	{
 		// Started again if it is already shown (Locate's button toggles; this never hides it).
-		// The machine's icon, or the game's warning sign tinted (falls back to the machine's icon).
-		const AMRules::EPointIcon PointIcon = AMRules::GetPointIcon(static_cast<float>(Icon));
-		UTexture2D* Texture = PointIcon != AMRules::EPointIcon::Machine ? AAMLocator::GetWarningIcon(GetWorld()) : nullptr;
-		const bool bWarning = Texture != nullptr;
+		// The machine's icon, or the chosen sign icon (falls back to the machine's icon).
+		UTexture2D* Texture = AAMLocator::GetPointIcon(GetWorld(), Icon);
 		if (!Texture)
 		{
 			Texture = UFGItemDescriptor::GetSmallIcon(Buildable->GetBuiltWithDescriptor());
 		}
-		Locator->Start(Machine, Texture, GetMachineName(Machine), bWarning ? AMRules::GetPointIconColour(PointIcon) : FLinearColor::White);
+		Locator->Start(Machine, Texture, GetMachineName(Machine));
 		UE_LOG(LogAutomatedMachines, Log, TEXT("Pointing to %s (%s)"), *AMAS_Describe(Machine), *AMRules::GetActionChoiceLabel(EAMAction::PointToThis, Icon, nullptr));
 	}
 }

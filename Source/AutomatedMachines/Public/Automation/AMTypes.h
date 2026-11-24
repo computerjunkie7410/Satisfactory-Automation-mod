@@ -572,12 +572,16 @@ namespace AMRules
 	AUTOMATEDMACHINES_API int32 GetActionChoiceIndex(EAMAction Action, float Value, const UObject* Machine);
 	AUTOMATEDMACHINES_API float GetActionChoiceValue(EAMAction Action, int32 Index, const UObject* Machine);
 
-	/** Point-to actions: their icon (the Value): the machine's own, or a warning in a colour. */
-	enum class EPointIcon : uint8 { Machine, YellowWarning, RedWarning, GreenWarning, Count };
+	/** Point-to actions: their icon (the Value): the machine's own, or one of the game's sign icons. */
+	enum class EPointIcon : uint8
+	{
+		Machine, Droplet, Radiation, ThumbsUp, ThumbsDown, Stop, StorageCrate, Power, Warning, FicsitCheck,
+		Recycle, Trash, QuestionMark, Count
+	};
 	AUTOMATEDMACHINES_API bool IsPointAction(EAMAction Action);
 	AUTOMATEDMACHINES_API EPointIcon GetPointIcon(float Value);
-	/** The colour of a point icon on the compass and map (white: the machine's icon as it is). */
-	AUTOMATEDMACHINES_API FLinearColor GetPointIconColour(EPointIcon Icon);
+	/** "Thumbs up" */
+	AUTOMATEDMACHINES_API FString GetPointIconLabel(EPointIcon Icon);
 
 	/** A few short sounds of the game for Play sound (Wwise events). */
 	struct FSound
