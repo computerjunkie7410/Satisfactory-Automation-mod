@@ -561,6 +561,24 @@ namespace AMRules
 	/** "1.5x" */
 	AUTOMATEDMACHINES_API FString GetAmplificationLabel(float Multiplier);
 
+	/**
+	 * Actions whose value is picked in a dropdown of named choices (the Play sound dropdown): Somersloop
+	 * amplification (the machine's levels) and the point-to actions (their icon). Index <-> stored Value.
+	 */
+	AUTOMATEDMACHINES_API bool ActionHasChoices(EAMAction Action);
+	AUTOMATEDMACHINES_API int32 GetActionChoiceCount(EAMAction Action, const UObject* Machine);
+	AUTOMATEDMACHINES_API FString GetActionChoiceLabel(EAMAction Action, int32 Index, const UObject* Machine);
+	AUTOMATEDMACHINES_API FString GetActionChoiceInfo(EAMAction Action, int32 Index, const UObject* Machine);
+	AUTOMATEDMACHINES_API int32 GetActionChoiceIndex(EAMAction Action, float Value, const UObject* Machine);
+	AUTOMATEDMACHINES_API float GetActionChoiceValue(EAMAction Action, int32 Index, const UObject* Machine);
+
+	/** Point-to actions: their icon (the Value): the machine's own, or a warning in a colour. */
+	enum class EPointIcon : uint8 { Machine, YellowWarning, RedWarning, GreenWarning, Count };
+	AUTOMATEDMACHINES_API bool IsPointAction(EAMAction Action);
+	AUTOMATEDMACHINES_API EPointIcon GetPointIcon(float Value);
+	/** The colour of a point icon on the compass and map (white: the machine's icon as it is). */
+	AUTOMATEDMACHINES_API FLinearColor GetPointIconColour(EPointIcon Icon);
+
 	/** A few short sounds of the game for Play sound (Wwise events). */
 	struct FSound
 	{

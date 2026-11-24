@@ -942,6 +942,8 @@ FAMReactionRule AAMAutomationSubsystem::CleanReaction(const FAMReactionRule& Rul
 		? static_cast<float>(AMRules::GetSoundIndex(Rule.Value))
 		: AMRules::ActionNeedsAmplification(Rule.Action)
 		? FMath::Clamp(Rule.Value, 1.f, 2.f)
+		: AMRules::IsPointAction(Rule.Action)
+		? static_cast<float>(AMRules::GetPointIcon(Rule.Value))
 		: AMRules::CleanValue(AMRules::GetActionValueInfo(Rule.Action), Rule.Value);
 	if (!AMRules::ActionNeedsRecipe(Rule.Action))
 	{
@@ -1603,7 +1605,7 @@ void AAMAutomationSubsystem::FireEvent(const FString& Event, const AActor* Ringe
 		{
 			if (Rule.Action == EAMAction::PointToThis && Hears(Rule, Event))
 			{
-				MulticastPointTo(Entry.Machine);
+				MulticastPointTo(Entry.Machine, static_cast<uint8>(AMRules::GetPointIcon(Rule.Value)));
 				break;
 			}
 		}
@@ -2743,7 +2745,7 @@ void AAMAutomationSubsystem::ApplyWorldAction(const FAMReactionRule& Rule, const
 		if (AFGBuildable* Machine = Cast<AFGBuildable>(const_cast<AActor*>(Ringer));
 			Machine && !Machine->IsA<AFGBuildableTradingPost>() && !Machine->IsA<AFGBuildableMAM>())
 		{
-			MulticastPointTo(Machine);
+			MulticastPointTo(Machine, static_cast<uint8>(AMRules::GetPointIcon(Rule.Value)));
 		}
 		break;
 	default:
@@ -2771,7 +2773,7 @@ FString AAMAutomationSubsystem::GetMachineName(const AActor* Machine)
 	return Name;
 }
 
-void AAMAutomationSubsystem::MulticastPointTo_Implementation(AActor* Machine)
+void AAMAutomationSubsystem::MulticastPointTo_Implementation(AActor* Machine, uint8 Icon)
 {
 	const AFGBuildable* Buildable = Cast<AFGBuildable>(Machine);
 	if (IsRunningDedicatedServer() || !Buildable || !GetWorld())
@@ -2781,8 +2783,16 @@ void AAMAutomationSubsystem::MulticastPointTo_Implementation(AActor* Machine)
 	if (AAMLocator* Locator = AAMLocator::Get(GetWorld()))
 	{
 		// Started again if it is already shown (Locate's button toggles; this never hides it).
-		Locator->Start(Machine, UFGItemDescriptor::GetSmallIcon(Buildable->GetBuiltWithDescriptor()), GetMachineName(Machine));
-		UE_LOG(LogAutomatedMachines, Log, TEXT("Pointing to %s"), *AMAS_Describe(Machine));
+		// The machine's icon, or the game's warning sign tinted (falls back to the machine's icon).
+		const AMRules::EPointIcon PointIcon = AMRules::GetPointIcon(static_cast<float>(Icon));
+		UTexture2D* Texture = PointIcon != AMRules::EPointIcon::Machine ? AAMLocator::GetWarningIcon(GetWorld()) : nullptr;
+		const bool bWarning = Texture != nullptr;
+		if (!Texture)
+		{
+			Texture = UFGItemDescriptor::GetSmallIcon(Buildable->GetBuiltWithDescriptor());
+		}
+		Locator->Start(Machine, Texture, GetMachineName(Machine), bWarning ? AMRules::GetPointIconColour(PointIcon) : FLinearColor::White);
+		UE_LOG(LogAutomatedMachines, Log, TEXT("Pointing to %s (%s)"), *AMAS_Describe(Machine), *AMRules::GetActionChoiceLabel(EAMAction::PointToThis, Icon, nullptr));
 	}
 }
 

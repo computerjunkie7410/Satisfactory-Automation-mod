@@ -15,6 +15,8 @@
 #include "FGCompassMaterialSettings.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "UObject/UnrealType.h"
+#include "FGIconDatabaseSubsystem.h"
+#include "FGIconLibrary.h"
 
 namespace
 {
@@ -182,15 +184,16 @@ AAMLocateMarker::AAMLocateMarker()
 	SetRootComponent(CreateDefaultSubobject<USceneComponent>(TEXT("Root")));
 }
 
-void AAMLocateMarker::Setup(UTexture2D* InTexture, const FText& InName)
+void AAMLocateMarker::Setup(UTexture2D* InTexture, const FText& InName, const FLinearColor& InColour)
 {
 	mTexture = InTexture;
 	mName = InName;
+	mColour = InColour;
 }
 
 FLinearColor AAMLocateMarker::GetActorRepresentationColor()
 {
-	return AMLC_Colour;
+	return mColour;
 }
 
 bool AAMLocateMarker::AddAsRepresentation()
@@ -271,7 +274,7 @@ bool AAMLocator::Toggle(AActor* Target, UTexture2D* Icon, const FString& Name)
 	return Start(Target, Icon, Name);
 }
 
-bool AAMLocator::Start(AActor* Target, UTexture2D* Icon, const FString& Name)
+bool AAMLocator::Start(AActor* Target, UTexture2D* Icon, const FString& Name, const FLinearColor& Colour)
 {
 	UWorld* World = GetWorld();
 	if (!Target || !World)
@@ -282,6 +285,12 @@ bool AAMLocator::Start(AActor* Target, UTexture2D* Icon, const FString& Name)
 	if (FLocated* Shown = mLocated.FindByPredicate([Target](const FLocated& Entry) { return Entry.Target.Get() == Target; }))
 	{
 		Shown->Start = FPlatformTime::Seconds();
+		// Its icon may change (another event's action with another icon).
+		if (AAMLocateMarker* Marker = Shown->Marker.Get())
+		{
+			Marker->Setup(Icon, FText::FromString(Name), Colour);
+			Marker->UpdateRepresentation();
+		}
 		if (APlayerController* Player = World->GetFirstPlayerController())
 		{
 			AMSound::PlayForPlayer(Player, AMLC_PingSound);
@@ -297,7 +306,7 @@ bool AAMLocator::Start(AActor* Target, UTexture2D* Icon, const FString& Name)
 	AAMLocateMarker* Marker = World->SpawnActor<AAMLocateMarker>(Origin, FRotator::ZeroRotator, Params);
 	if (Marker)
 	{
-		Marker->Setup(Icon, FText::FromString(Name));
+		Marker->Setup(Icon, FText::FromString(Name), Colour);
 		if (!Marker->AddAsRepresentation())
 		{
 			UE_LOG(LogAutomatedMachines, Warning, TEXT("Locate: no compass / map representation for %s"), *Name);
@@ -405,4 +414,51 @@ void AAMLocator::EndPlay(const EEndPlayReason::Type Reason)
 		Stop(Index, TEXT("world ends"));
 	}
 	Super::EndPlay(Reason);
+}
+
+UTexture2D* AAMLocator::GetWarningIcon(UWorld* World)
+{
+	// Found once: the game's map stamps first (the map's own icons), then the sign icons; by name.
+	static TWeakObjectPtr<UTexture2D> Cached;
+	static bool bSearched = false;
+	if (bSearched || !World)
+	{
+		return Cached.Get();
+	}
+	AFGIconDatabaseSubsystem* Icons = AFGIconDatabaseSubsystem::Get(World);
+	if (!Icons)
+	{
+		return nullptr;
+	}
+	bSearched = true;
+	const TCHAR* const Words[] = { TEXT("warning"), TEXT("caution"), TEXT("danger"), TEXT("exclamation"), TEXT("alert"), TEXT("hazard") };
+	for (const EIconType Type : { EIconType::ESIT_MapStamp, EIconType::ESIT_Monochrome })
+	{
+		TArray<FIconData> Data;
+		Icons->GetAllIconDataForType(Type, true, Data);
+		TArray<FString> Names;
+		for (const FIconData& Icon : Data)
+		{
+			Names.Add(Icon.IconName.ToString());
+		}
+		UE_LOG(LogAutomatedMachines, Log, TEXT("Point icons: %d %s icons: %s"), Data.Num(),
+			Type == EIconType::ESIT_MapStamp ? TEXT("map stamp") : TEXT("sign"), *FString::Join(Names, TEXT(", ")));
+		for (const TCHAR* Word : Words)
+		{
+			for (const FIconData& Icon : Data)
+			{
+				if (Icon.IconName.ToString().Contains(Word))
+				{
+					if (UTexture2D* Texture = Cast<UTexture2D>(Icon.Texture.LoadSynchronous()))
+					{
+						Cached = Texture;
+						UE_LOG(LogAutomatedMachines, Log, TEXT("Point icons: warning = %s (%s)"), *Icon.IconName.ToString(), *Texture->GetPathName());
+						return Texture;
+					}
+				}
+			}
+		}
+	}
+	UE_LOG(LogAutomatedMachines, Warning, TEXT("Point icons: no warning icon found, the machine's icon is used"));
+	return nullptr;
 }

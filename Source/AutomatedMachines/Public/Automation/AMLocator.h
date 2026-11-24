@@ -52,7 +52,7 @@ class AUTOMATEDMACHINES_API AAMLocateMarker : public AActor, public IFGActorRepr
 public:
 	AAMLocateMarker();
 
-	void Setup(UTexture2D* InTexture, const FText& InName);
+	void Setup(UTexture2D* InTexture, const FText& InName, const FLinearColor& InColour = FLinearColor::White);
 
 	// Begin IFGActorRepresentationInterface
 	UFUNCTION() virtual bool AddAsRepresentation() override;
@@ -82,6 +82,9 @@ private:
 
 	FText mName;
 
+	/** The icon's colour on the compass and the map (the material multiplies the icon by it). */
+	FLinearColor mColour = FLinearColor::White;
+
 	UPROPERTY()
 	TObjectPtr<UFGActorRepresentation> mRepresentation;
 };
@@ -100,8 +103,14 @@ public:
 	/** Starts locating Target for the local player, or stops if it is being located. Returns true if it started. */
 	bool Toggle(AActor* Target, UTexture2D* Icon, const FString& Name);
 
-	/** Starts locating Target for the local player; already located: counts again from now. Point-to actions. */
-	bool Start(AActor* Target, UTexture2D* Icon, const FString& Name);
+	/**
+	 * Starts locating Target for the local player; already located: counts again from now, with this
+	 * icon and colour. Point-to actions.
+	 */
+	bool Start(AActor* Target, UTexture2D* Icon, const FString& Name, const FLinearColor& Colour = FLinearColor::White);
+
+	/** The game's warning sign icon (map stamps, else sign icons), for the point-to actions' warnings. Null if none. */
+	static UTexture2D* GetWarningIcon(UWorld* World);
 
 	bool IsLocating(const AActor* Target) const;
 

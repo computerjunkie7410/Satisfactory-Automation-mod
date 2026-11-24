@@ -224,7 +224,7 @@ private:
 
 	/** Point to the machine / Point to this machine: every player gets Machine on the compass and map. */
 	UFUNCTION(NetMulticast, Reliable)
-	void MulticastPointTo(AActor* Machine);
+	void MulticastPointTo(AActor* Machine, uint8 Icon);
 
 	/** The machine's name, e.g. "Constructor". */
 	static FString GetMachineName(const AActor* Machine);

@@ -62,6 +62,8 @@
 #include "Equipment/FGBuildGunBuild.h"
 #include "Resources/FGItemDescriptor.h"
 #include "ItemAmount.h"
+#include "FGIconLibrary.h"
+#include "FGIconDatabaseSubsystem.h"
 
 namespace
 {
@@ -121,6 +123,8 @@ namespace
 			AML_STRUCT(FInventoryStack),
 			AML_STRUCT(FInventoryItem),
 			AML_STRUCT(FItemAmount),
+			AML_STRUCT(FIconData),
+			AML_CLASS(AFGIconDatabaseSubsystem),
 			AML_CLASS(UFGPowerInfoComponent),
 			AML_CLASS(UFGPowerCircuit),
 			AML_CLASS(UFGPowerConnectionComponent),
