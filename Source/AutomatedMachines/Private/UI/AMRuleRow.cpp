@@ -15,7 +15,9 @@
 #include "Components/Image.h"
 #include "Engine/Texture2D.h"
 #include "Resources/FGItemDescriptor.h"
+#include "Buildables/FGBuildable.h"
 #include "Automation/AMAutomationSubsystem.h"
+#include "Automation/AMLocator.h"
 #include "Buildables/FGBuildableFactory.h"
 #include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
@@ -2038,6 +2040,22 @@ void UAMRuleRow::OpenPicker(EAMChoiceKind Kind, UWidget* Anchor)
 			for (int32 ChoiceIndex = 0; ChoiceIndex < AMRules::GetActionChoiceCount(Rule->Action, ChoiceMachine); ++ChoiceIndex)
 			{
 				Add(AMRules::GetActionChoiceLabel(Rule->Action, ChoiceIndex, ChoiceMachine), static_cast<uint8>(ChoiceIndex), ChoiceIndex == CurrentChoice);
+				// Point icons: a preview, as the game has the symbol (white); the machine's own icon for
+				// "Machine icon" on a machine (the HUB's points to whichever machine triggered).
+				if (AMRules::IsPointAction(Rule->Action))
+				{
+					if (ChoiceIndex == static_cast<int32>(AMRules::EPointIcon::Machine))
+					{
+						if (const AFGBuildable* Buildable = Cast<AFGBuildable>(ChoiceMachine); Buildable && Rule->Action == EAMAction::PointToThis)
+						{
+							Options.Last().Icon = UFGItemDescriptor::GetSmallIcon(Buildable->GetBuiltWithDescriptor());
+						}
+					}
+					else
+					{
+						Options.Last().Icon = AAMLocator::GetPointIconPreview(GetWorld(), static_cast<uint8>(ChoiceIndex));
+					}
+				}
 			}
 			break;
 		}

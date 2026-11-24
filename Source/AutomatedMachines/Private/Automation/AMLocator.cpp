@@ -129,43 +129,6 @@ UMaterialInterface* UAMLocateRepresentation::GetRepresentationCompassMaterial() 
 	return Material ? Material : Super::GetRepresentationCompassMaterial();
 }
 
-void UAMLocateRepresentation::UpdateRepresentationCompassMaterial(UMaterialInstanceDynamic* CompassMaterialInstance, APlayerController* OwnerPlayerController) const
-{
-	Super::UpdateRepresentationCompassMaterial(CompassMaterialInstance, OwnerPlayerController);
-	// A point icon: the compass shows the plain symbol (it takes only the outline: the circle was a
-	// white disc there, 24 Nov 2026). Whichever texture parameter got the icon gets the symbol.
-	UTexture2D* Icon = GetRepresentationTexture();
-	UTexture2D* Symbol = AAMLocator::GetPointIconSymbol(Icon);
-	if (!CompassMaterialInstance || !Symbol)
-	{
-		return;
-	}
-	TArray<FName> Names;
-	for (const FTextureParameterValue& Parameter : CompassMaterialInstance->TextureParameterValues)
-	{
-		if (Parameter.ParameterValue == Icon)
-		{
-			Names.Add(Parameter.ParameterInfo.Name);
-		}
-	}
-	for (const FName& Name : Names)
-	{
-		CompassMaterialInstance->SetTextureParameterValue(Name, Symbol);
-	}
-	static bool bLogged = false;
-	if (!bLogged)
-	{
-		// Once: which parameter took it (or which there are, if none had the icon yet).
-		bLogged = true;
-		TArray<FString> All;
-		for (const FTextureParameterValue& Parameter : CompassMaterialInstance->TextureParameterValues)
-		{
-			All.Add(FString::Printf(TEXT("%s=%s"), *Parameter.ParameterInfo.Name.ToString(), *GetNameSafe(Parameter.ParameterValue)));
-		}
-		UE_LOG(LogAutomatedMachines, Log, TEXT("Point icons: compass symbol set on %d parameter(s); texture parameters: %s"), Names.Num(), *FString::Join(All, TEXT(", ")));
-	}
-}
-
 float UAMLocateRepresentation::GetCompassHeightAlignment() const
 {
 	// The ores' row.
@@ -490,10 +453,10 @@ namespace
 		return Names;
 	}
 
-	/** Point icon (circle + symbol) -> its plain symbol, for the compass. Both are rooted. */
-	TMap<TWeakObjectPtr<const UTexture>, TWeakObjectPtr<UTexture2D>> AMLC_Symbols;
+	/** Point icon -> the game's symbol it was made from (white), for the dropdown's preview. Rooted. */
+	TMap<uint8, TWeakObjectPtr<UTexture2D>> AMLC_Symbols;
 
-	/** The point icons' size, in pixels (the picture made from the circle and the symbol). */
+	/** The point icons' size, in pixels (the black picture made from the symbol). */
 	constexpr int32 AMLC_IconSize = 128;
 
 	/** A new picture of Size x Size from Pixels (BGRA, rows top to bottom), kept loaded. */
@@ -553,39 +516,20 @@ namespace
 		return true;
 	}
 
-	/**
-	 * The point icon: a gray circle (darker rim, soft edge) with the game's white sign symbol on it, as
-	 * one picture (the compass and the map take one picture per mark). Made once per icon, kept.
-	 */
+	/** The point icon: the game's white sign symbol made black (its shape kept), as a new picture. Kept. */
 	UTexture2D* AMLC_Compose(UWorld* World, UTexture2D* Symbol)
 	{
 		const int32 Size = AMLC_IconSize;
 		TArray<uint8> Coverage;
-		if (!World || !Symbol || !AMLC_SymbolCoverage(World, Symbol, Size, 0.62f, Coverage))
+		if (!World || !Symbol || !AMLC_SymbolCoverage(World, Symbol, Size, 1.f, Coverage))
 		{
 			return nullptr;
 		}
 		TArray<FColor> Pixels;
 		Pixels.SetNumUninitialized(Size * Size);
-		const float Centre = (Size - 1) * 0.5f;
-		const float Radius = Size * 0.5f - 1.f;
-		const float Rim = Size * 0.045f;
-		for (int32 Y = 0; Y < Size; ++Y)
+		for (int32 Index = 0; Index < Pixels.Num(); ++Index)
 		{
-			for (int32 X = 0; X < Size; ++X)
-			{
-				const int32 Index = Y * Size + X;
-				const float Distance = FVector2f(X - Centre, Y - Centre).Size();
-				const bool bRim = Distance > Radius - Rim;
-				const float CircleAlpha = FMath::Clamp((Radius - Distance) / 1.5f, 0.f, 1.f) * (bRim ? 0.96f : 0.88f);
-				const float CircleGrey = bRim ? 38.f : 72.f;
-				const float Symbol01 = Coverage[Index] / 255.f;
-				// White symbol over the circle.
-				const float Alpha = Symbol01 + CircleAlpha * (1.f - Symbol01);
-				const float Grey = Alpha > 0.f ? (255.f * Symbol01 + CircleGrey * CircleAlpha * (1.f - Symbol01)) / Alpha : 0.f;
-				const uint8 G = static_cast<uint8>(FMath::Clamp(Grey, 0.f, 255.f));
-				Pixels[Index] = FColor(G, G, G, static_cast<uint8>(FMath::Clamp(Alpha * 255.f, 0.f, 255.f)));
-			}
+			Pixels[Index] = FColor(0, 0, 0, Coverage[Index]);
 		}
 		return AMLC_MakeTexture(Pixels, Size);
 	}
@@ -619,15 +563,15 @@ namespace
 	}
 }
 
-UTexture2D* AAMLocator::GetPointIconSymbol(const UTexture* Texture)
+UTexture2D* AAMLocator::GetPointIconPreview(UWorld* World, uint8 Icon)
 {
-	const TWeakObjectPtr<UTexture2D>* Symbol = Texture ? AMLC_Symbols.Find(Texture) : nullptr;
-	return Symbol ? Symbol->Get() : nullptr;
+	GetPointIcon(World, Icon);
+	return AMLC_Symbols.FindRef(Icon).Get();
 }
 
 UTexture2D* AAMLocator::GetPointIcon(UWorld* World, uint8 Icon)
 {
-	// Each icon searched once per game; the picture made (circle + symbol) is kept loaded (rooted: a mark
+	// Each icon searched once per game; the picture made (the symbol in black) is kept loaded (rooted: a mark
 	// is the only thing that holds it, and the textures were garbage collected once it went, 24 Nov 2026).
 	static TMap<uint8, TWeakObjectPtr<UTexture2D>> Found;
 	static TSet<uint8> Searched;
@@ -673,21 +617,17 @@ UTexture2D* AAMLocator::GetPointIcon(UWorld* World, uint8 Icon)
 	}
 	if (Texture)
 	{
-		// On the gray circle (one picture); the symbol alone if that fails.
+		// Made black; the white symbol as it is if that fails.
 		const FString SymbolPath = Texture->GetPathName();
+		Texture->AddToRoot();
+		AMLC_Symbols.Add(Icon, Texture);
 		if (UTexture2D* Composed = AMLC_Compose(World, Texture))
 		{
-			Texture->AddToRoot();
-			AMLC_Symbols.Add(Composed, Texture);
 			Texture = Composed;
-		}
-		else
-		{
-			Texture->AddToRoot();
 		}
 		Found.Add(Icon, Texture);
 		UE_LOG(LogAutomatedMachines, Log, TEXT("Point icons: %s = %s (%s)%s"), *Names[Icon][0], *Name, *SymbolPath,
-			Texture->GetPathName() == SymbolPath ? TEXT(", without circle") : TEXT(", on the circle"));
+			Texture->GetPathName() == SymbolPath ? TEXT(", white (making it black failed)") : TEXT(", made black"));
 	}
 	else
 	{
