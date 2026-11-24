@@ -349,7 +349,12 @@ void AAMLocator::Check()
 			Stop(Index, TEXT("gone"));
 			continue;
 		}
-		if (Pawn && Entry.Bounds.ComputeSquaredDistanceToPoint(Pawn->GetActorLocation()) < FMath::Square(AMLC_ArriveDistance))
+		const bool bNear = Pawn && Entry.Bounds.ComputeSquaredDistanceToPoint(Pawn->GetActorLocation()) < FMath::Square(AMLC_ArriveDistance);
+		if (!bNear)
+		{
+			Entry.bArmed = true;
+		}
+		else if (Entry.bArmed)
 		{
 			Stop(Index, TEXT("arrived"));
 			continue;

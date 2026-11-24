@@ -128,6 +128,11 @@ private:
 		float Radius = 0.f;
 		/** The machine's box when located: "arrived" is measured from its edge. */
 		FBox Bounds;
+		/**
+		 * Arriving only counts once the player has been farther away: a point-to action triggered while
+		 * the player stands at the machine (flipping its switch) must not vanish at once.
+		 */
+		bool bArmed = false;
 	};
 	TArray<FLocated> mLocated;
 	FTimerHandle mTimer;
