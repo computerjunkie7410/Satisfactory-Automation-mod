@@ -457,7 +457,7 @@ FText AMRules::GetActionDescription(EAMAction Action)
 	case EAMAction::FlushBuffer:
 		return AMTY_Text(TEXT("Empties this fluid buffer only, like its own Flush button: its fluid is destroyed. The pipes around it keep theirs."));
 	case EAMAction::HoldVehicles:
-		return AMTY_Text(TEXT("On: a vehicle that docks at this station stays here: its autopilot is switched off, as you can do in the vehicle's window. Off: the vehicles it held get their autopilot back and go on with their route.\n\nVehicles behind a held one wait for the docking spot. Uninstalling the mod: a held vehicle keeps its autopilot off, switch it on in its window."));
+		return AMTY_Text(TEXT("On: a vehicle that reaches this station's parking spot stops there, before loading or unloading: its autopilot is switched off, as you can do in the vehicle's window. Off: the vehicles parked there get their autopilot back, dock as usual and go on with their route.\n\nVehicles behind a held one wait for the docking spot. Uninstalling the mod: a held vehicle keeps its autopilot off, switch it on in its window."));
 	case EAMAction::ReleaseVehicles:
 		return AMTY_Text(TEXT("Off: the vehicles this station held get their autopilot back and go on with their route."));
 	case EAMAction::SetPriority:
