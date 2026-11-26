@@ -283,6 +283,11 @@ private:
 	/** States left by actions that are gone: a signal unblocked, a station's display text cleared. */
 	void ReleaseActionStates(FAMMachineRules& Entry);
 
+	/** Truck stations with Hold vehicles here on: the vehicles docked there get their autopilot off. Every check. */
+	void UpdateHeldVehicles();
+	/** Gives back the autopilot to the vehicles a station held (only those), and forgets them. */
+	static void ReleaseHeldVehicles(FAMMachineRules& Entry, const TCHAR* Why);
+
 	/**
 	 * Last known value of each fire rule's condition, per machine (not saved: after loading, a
 	 * condition that is already true fires once, so reacting machines catch up).

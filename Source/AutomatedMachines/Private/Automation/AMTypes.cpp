@@ -223,6 +223,8 @@ FText AMRules::GetActionText(EAMAction Action)
 	case EAMAction::SetAmplification: return AMTY_Text(TEXT("Somersloop amplification"));
 	case EAMAction::PointToTrigger: return AMTY_Text(TEXT("Point to the machine"));
 	case EAMAction::PointToThis:    return AMTY_Text(TEXT("Point to this machine"));
+	case EAMAction::HoldVehicles:   return AMTY_Text(TEXT("Hold vehicles here"));
+	case EAMAction::ReleaseVehicles: return AMTY_Text(TEXT("Release vehicles"));
 	default:                       return FText::GetEmpty();
 	}
 }
@@ -454,6 +456,10 @@ FText AMRules::GetActionDescription(EAMAction Action)
 		return AMTY_Text(TEXT("Off: the signal works normally again when the event is triggered."));
 	case EAMAction::FlushBuffer:
 		return AMTY_Text(TEXT("Empties this fluid buffer only, like its own Flush button: its fluid is destroyed. The pipes around it keep theirs."));
+	case EAMAction::HoldVehicles:
+		return AMTY_Text(TEXT("On: a vehicle that docks at this station stays here: its autopilot is switched off, as you can do in the vehicle's window. Off: the vehicles it held get their autopilot back and go on with their route.\n\nVehicles behind a held one wait for the docking spot. Uninstalling the mod: a held vehicle keeps its autopilot off, switch it on in its window."));
+	case EAMAction::ReleaseVehicles:
+		return AMTY_Text(TEXT("Off: the vehicles this station held get their autopilot back and go on with their route."));
 	case EAMAction::SetPriority:
 		return AMTY_Text(TEXT("Sets the priority of the switch, like the priority in its window. During a power shortage the game turns off the switches with the highest number first; 0 means the game never turns this one off."));
 	default:
@@ -664,6 +670,8 @@ bool AMRules::ActionsConflict(EAMAction A, EAMAction B)
 		case EAMAction::OverflowOff:   return 6;
 		case EAMAction::ReplaceFuelOn:
 		case EAMAction::ReplaceFuelOff: return 7;
+		case EAMAction::HoldVehicles:
+		case EAMAction::ReleaseVehicles: return 8;
 		default:                      return 100 + static_cast<int32>(Action);
 		}
 	};
@@ -1280,9 +1288,11 @@ bool AMRules::IsActionAvailable(EAMAction Action, const UObject* Machine)
 	if (Machine->IsA<AFGBuildableDockingStation>())
 	{
 		return bPlatformAction || Action == EAMAction::DeleteContents
-			|| Action == EAMAction::ReplaceFuelOn || Action == EAMAction::ReplaceFuelOff;
+			|| Action == EAMAction::ReplaceFuelOn || Action == EAMAction::ReplaceFuelOff
+			|| Action == EAMAction::HoldVehicles || Action == EAMAction::ReleaseVehicles;
 	}
-	if (Action == EAMAction::ReplaceFuelOn || Action == EAMAction::ReplaceFuelOff)
+	if (Action == EAMAction::ReplaceFuelOn || Action == EAMAction::ReplaceFuelOff
+		|| Action == EAMAction::HoldVehicles || Action == EAMAction::ReleaseVehicles)
 	{
 		return false;
 	}

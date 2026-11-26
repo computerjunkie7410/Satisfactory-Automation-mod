@@ -29,6 +29,10 @@
 #include "Buildables/FGBuildableRailroadStation.h"
 #include "Buildables/FGBuildableTrainPlatformCargo.h"
 #include "Buildables/FGBuildableDockingStation.h"
+#include "WheeledVehicles/FGWheeledVehicle.h"
+#include "WheeledVehicles/FGWheeledVehicleIdentifier.h"
+#include "WheeledVehicles/FGVehicleSubsystem.h"
+#include "WheeledVehicles/FGDockingStationIdentifier.h"
 #include "Buildables/FGBuildableDroneStation.h"
 #include "FGBuildablePowerBooster.h"
 #include "Buildables/FGBuildableFrackingActivator.h"
@@ -704,6 +708,8 @@ void AAMAutomationSubsystem::SetRules(AFGBuildable* Machine, const TArray<FAMFir
 		NewRules.BeltNormal = Existing->BeltNormal;
 		NewRules.BeltShowing = Existing->BeltShowing;
 		NewRules.bSignalBlocked = Existing->bSignalBlocked;
+		NewRules.bHoldVehicles = Existing->bHoldVehicles;
+		NewRules.HeldVehicles = Existing->HeldVehicles;
 		NewRules.StationTextShown = Existing->StationTextShown;
 	}
 	NewRules.Options.bPassWrongItems = Options.bPassWrongItems && AMRules::HasPassWrongItems(Machine);
@@ -918,8 +924,90 @@ void AAMAutomationSubsystem::MergeBatteryGrids()
 	}
 }
 
+namespace
+{
+	/** A vehicle's identifier (where its autopilot switch lives). */
+	AFGWheeledVehicleIdentifier* AMAS_VehicleIdentifier(AActor* Vehicle)
+	{
+		const AFGWheeledVehicle* Wheeled = Cast<AFGWheeledVehicle>(Vehicle);
+		return Wheeled ? Wheeled->GetVehicleIdentifier() : nullptr;
+	}
+}
+
+void AAMAutomationSubsystem::ReleaseHeldVehicles(FAMMachineRules& Entry, const TCHAR* Why)
+{
+	for (AActor* Vehicle : Entry.HeldVehicles)
+	{
+		if (AFGWheeledVehicleIdentifier* Identifier = AMAS_VehicleIdentifier(Vehicle))
+		{
+			if (!Identifier->IsAutopilotEnabled() && Identifier->CanEnableAutopilot())
+			{
+				Identifier->SetAutopilotEnabled(true);
+			}
+			UE_LOG(LogAutomatedMachines, Log, TEXT("%s releases %s (%s): autopilot %s"), *AMAS_Describe(Entry.Machine),
+				*Identifier->GetVehicleName().ToString(), Why, Identifier->IsAutopilotEnabled() ? TEXT("on") : TEXT("could not be switched on"));
+		}
+	}
+	Entry.HeldVehicles.Reset();
+}
+
+void AAMAutomationSubsystem::UpdateHeldVehicles()
+{
+	const AFGVehicleSubsystem* Vehicles = AFGVehicleSubsystem::Get(this);
+	for (FAMMachineRules& Entry : mMachines)
+	{
+		AFGBuildableDockingStation* Station = Entry.bHoldVehicles ? Cast<AFGBuildableDockingStation>(Entry.Machine) : nullptr;
+		if (!Station)
+		{
+			continue;
+		}
+		// The vehicle docked here; also a vehicle still docking at this station (its route's current stop
+		// is this station, and it is within 15 m), in case the station let go of it between two checks.
+		TArray<AActor*> AtStation;
+		if (AActor* Docked = Station->GetDockedActor())
+		{
+			AtStation.Add(Docked);
+		}
+		const AFGDockingStationIdentifier* StationIdentifier = Station->GetStationIdentifier();
+		if (Vehicles && StationIdentifier && StationIdentifier->GetPathNodeGUID().IsValid())
+		{
+			const FGuid StationNode = StationIdentifier->GetPathNodeGUID();
+			const FVector Location = Station->GetActorLocation();
+			for (AFGWheeledVehicleIdentifier* Identifier : Vehicles->GetAllVehicles())
+			{
+				AFGWheeledVehicle* Owner = Identifier ? Identifier->GetOwnerVehicle() : nullptr;
+				const TArray<FGuid>& Route = Identifier ? Identifier->GetVehicleRoute() : TArray<FGuid>();
+				const int32 Stop = Identifier ? Identifier->GetCurrentTargetWaypointIndex() : INDEX_NONE;
+				if (Owner && Identifier->IsCurrentlyDocking() && Route.IsValidIndex(Stop) && Route[Stop] == StationNode
+					&& FVector::DistSquared(Owner->GetActorLocation(), Location) < FMath::Square(1500.f))
+				{
+					AtStation.AddUnique(Owner);
+				}
+			}
+		}
+		for (AActor* Vehicle : AtStation)
+		{
+			AFGWheeledVehicleIdentifier* Identifier = AMAS_VehicleIdentifier(Vehicle);
+			if (Identifier && Identifier->IsAutopilotEnabled())
+			{
+				Identifier->SetAutopilotEnabled(false);
+				Entry.HeldVehicles.AddUnique(Vehicle);
+				UE_LOG(LogAutomatedMachines, Log, TEXT("%s holds %s (loading / unloading: %s)"), *AMAS_Describe(Station),
+					*Identifier->GetVehicleName().ToString(), Station->IsLoadUnloading() ? TEXT("yes") : TEXT("no"));
+			}
+		}
+	}
+}
+
 void AAMAutomationSubsystem::ReleaseActionStates(FAMMachineRules& Entry)
 {
+	// A truck station with no Hold vehicles here action any more lets its vehicles go.
+	if ((Entry.bHoldVehicles || Entry.HeldVehicles.Num() > 0) && !Entry.Reactions.ContainsByPredicate([](const FAMReactionRule& Rule)
+		{ return Rule.Action == EAMAction::HoldVehicles || Rule.Action == EAMAction::ReleaseVehicles; }))
+	{
+		Entry.bHoldVehicles = false;
+		ReleaseHeldVehicles(Entry, TEXT("no Hold vehicles action left"));
+	}
 	// A signal with no Blocked action any more works normally again.
 	if (Entry.bSignalBlocked && !Entry.Reactions.ContainsByPredicate([](const FAMReactionRule& Rule) { return AMRules::IsSignalAction(Rule.Action); }))
 	{
@@ -1131,6 +1219,12 @@ bool AAMAutomationSubsystem::RemoveInvalidEntries()
 			// A signal without automation is never held red.
 			AMSignal::SetBlocked(Cast<AFGBuildableRailroadSignal>(Entry.Machine), false);
 		}
+		if (bRemove && Entry.HeldVehicles.Num() > 0)
+		{
+			// A dismantled station (or one with no automation left) lets its vehicles go.
+			FAMMachineRules& Mutable = const_cast<FAMMachineRules&>(Entry);
+			ReleaseHeldVehicles(Mutable, TEXT("station gone"));
+		}
 
 		return bRemove;
 	});
@@ -1330,6 +1424,7 @@ void AAMAutomationSubsystem::Tick(float DeltaSeconds)
 		return;
 	}
 	EvaluateFireRules();
+	UpdateHeldVehicles();
 
 	// Options (Output overflow: its own research).
 	const bool bOverflow = AMResearch::IsOverflowUnlocked(this);
@@ -1607,6 +1702,22 @@ void AAMAutomationSubsystem::FireEvent(const FString& Event, const AActor* Ringe
 			{
 				MulticastPointTo(Entry.Machine, static_cast<uint8>(AMRules::GetPointIcon(Rule.Value)));
 				break;
+			}
+		}
+		// Truck stations: Hold vehicles here on / off (kept in the entry, saved).
+		if (Cast<AFGBuildableDockingStation>(Entry.Machine))
+		{
+			for (const FAMReactionRule& Rule : Entry.Reactions)
+			{
+				if ((Rule.Action == EAMAction::HoldVehicles || Rule.Action == EAMAction::ReleaseVehicles) && Hears(Rule, Event))
+				{
+					Entry.bHoldVehicles = Rule.Action == EAMAction::HoldVehicles;
+					UE_LOG(LogAutomatedMachines, Log, TEXT("%s holds vehicles: %s"), *AMAS_Describe(Entry.Machine), Entry.bHoldVehicles ? TEXT("on") : TEXT("off"));
+					if (!Entry.bHoldVehicles)
+					{
+						ReleaseHeldVehicles(Entry, TEXT("released"));
+					}
+				}
 			}
 		}
 		// Railway signals: Block / Unblock (kept in the entry, saved).

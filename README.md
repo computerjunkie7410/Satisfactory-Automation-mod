@@ -64,7 +64,7 @@ Checks:
 The mod reads the game's classes with the memory layout of the headers it was built with. After a game update, rebuild on headers for the new build, then look for this line in `FactoryGame.log`:
 
 ```
-LogAutomatedMachines: Game update check: the 64 game classes the mod reads match this game version (CL520140)
+LogAutomatedMachines: Game update check: the 67 game classes the mod reads match this game version (CL520140)
 ```
 
 Any class listed as different means the headers do not match the game.

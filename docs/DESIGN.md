@@ -359,3 +359,11 @@ Two actions that show a machine to every player on the compass and the map, with
 - Added with "+ action" on the event's header, AND headers too; no new button.
 - Started while the player is already within 8 m (e.g. flipping the machine's own switch): it stays until the player has walked away and come back, or 15 minutes (tested 24 Nov 2026: it vanished at once). Locate too.
 - **Icon (24 Nov 2026, second version):** both actions have a dropdown: **Machine icon** (default) or one of the game's own sign icons: Droplet, Radiation, Thumbs up, Thumbs down, Stop, Storage crate, Power, Warning, FICSIT check, Recycle, Trash, Question mark (found by name among the sign icons, then the map stamps; not found: the machine's icon). The game's sign symbols are white: invisible on the compass, which draws its own white circle behind icons, and faint on the map. The mod makes each one **black** (same shape) the first time it is used. The dropdown shows each choice's symbol as a white preview (the machine's own icon for "Machine icon" on machines). Colours were dropped for now: the map draws these marks white (an ore's kind; a beacon's kind did not change it). Colours: a later version.
+
+## Hold vehicles here (decided 26 Nov 2026, GitHub issue #2)
+- A truck station action with the on / off switch: **Hold vehicles here**. On: a vehicle that docks at this station stays there: the mod switches its autopilot off (the player can do the same in the vehicle's window, so it is not a cheat). Off: the vehicles this station held get their autopilot back and go on with their route; vehicles whose autopilot the player switched off are not touched.
+- Only docked vehicles: no area around the station. Vehicles behind a held one wait on the road for the docking spot (they burn no fuel waiting: in the current game vehicles use fuel per distance).
+- Loading / unloading is not waited for (the game does it on its own while docked).
+- Example: the destination station's "Filled above 90%" -> DEPOT FULL -> source station Hold vehicles here on; "Filled below 50%" -> DEPOT HAS ROOM -> off.
+- Why not the station's power: since the game's new vehicle system (1.2) a truck no longer waits at an unpowered station; its autopilot switch is the only thing that stops it.
+- Uninstall: a held vehicle keeps its autopilot off; switch it on in its window.

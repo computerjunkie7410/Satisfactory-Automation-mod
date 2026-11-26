@@ -162,6 +162,9 @@ enum class EAMAction : uint8
 	PointToTrigger UMETA(DisplayName = "Point to the machine"),
 	// Machine action: every player gets this machine on the compass and map.
 	PointToThis    UMETA(DisplayName = "Point to this machine"),
+	// Truck stations: hold the vehicles that dock here (their autopilot off), release them (on).
+	HoldVehicles   UMETA(DisplayName = "Hold vehicles here"),
+	ReleaseVehicles UMETA(DisplayName = "Release vehicles"),
 	Count          UMETA(Hidden)
 };
 
@@ -445,6 +448,14 @@ struct AUTOMATEDMACHINES_API FAMMachineRules
 	/** Railway signals: held red by our Block action. */
 	UPROPERTY(SaveGame)
 	bool bSignalBlocked = false;
+
+	/** Truck stations: Hold vehicles here is on (a vehicle docking here gets its autopilot off). */
+	UPROPERTY(SaveGame)
+	bool bHoldVehicles = false;
+
+	/** Truck stations: the vehicles we turned the autopilot off of (only these are turned on again). */
+	UPROPERTY(SaveGame)
+	TArray<TObjectPtr<AActor>> HeldVehicles;
 
 	bool IsEmpty() const { return Fires.Num() == 0 && Reactions.Num() == 0 && Options.IsDefault() && SignDesigns.Num() == 0 && LightSettings.Num() == 0 && BeltSettings.Num() == 0; }
 };

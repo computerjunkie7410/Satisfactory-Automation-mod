@@ -64,6 +64,9 @@
 #include "ItemAmount.h"
 #include "FGIconLibrary.h"
 #include "FGIconDatabaseSubsystem.h"
+#include "WheeledVehicles/FGWheeledVehicle.h"
+#include "WheeledVehicles/FGWheeledVehicleIdentifier.h"
+#include "WheeledVehicles/FGVehicleSubsystem.h"
 
 namespace
 {
@@ -125,6 +128,9 @@ namespace
 			AML_STRUCT(FItemAmount),
 			AML_STRUCT(FIconData),
 			AML_CLASS(AFGIconDatabaseSubsystem),
+			AML_CLASS(AFGWheeledVehicle),
+			AML_CLASS(AFGWheeledVehicleIdentifier),
+			AML_CLASS(AFGVehicleSubsystem),
 			AML_CLASS(UFGPowerInfoComponent),
 			AML_CLASS(UFGPowerCircuit),
 			AML_CLASS(UFGPowerConnectionComponent),
