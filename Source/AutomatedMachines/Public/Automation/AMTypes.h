@@ -449,13 +449,12 @@ struct AUTOMATEDMACHINES_API FAMMachineRules
 	UPROPERTY(SaveGame)
 	bool bSignalBlocked = false;
 
-	/** Truck stations: Hold vehicles here is on (a vehicle docking here gets its autopilot off). */
+	/**
+	 * Truck stations: Hold vehicles here is on (a vehicle docking here gets its autopilot off). No list
+	 * of vehicles is kept: releasing finds them at the station (see UpdateHeldVehicles).
+	 */
 	UPROPERTY(SaveGame)
 	bool bHoldVehicles = false;
-
-	/** Truck stations: the vehicles we turned the autopilot off of (only these are turned on again). */
-	UPROPERTY(SaveGame)
-	TArray<TObjectPtr<AActor>> HeldVehicles;
 
 	bool IsEmpty() const { return Fires.Num() == 0 && Reactions.Num() == 0 && Options.IsDefault() && SignDesigns.Num() == 0 && LightSettings.Num() == 0 && BeltSettings.Num() == 0; }
 };

@@ -285,8 +285,11 @@ private:
 
 	/** Truck stations with Hold vehicles here on: the vehicles docked there get their autopilot off. Every check. */
 	void UpdateHeldVehicles();
-	/** Gives back the autopilot to the vehicles a station held (only those), and forgets them. */
-	static void ReleaseHeldVehicles(FAMMachineRules& Entry, const TCHAR* Why);
+	/**
+	 * Gives the autopilot back to the vehicles waiting at a station: autopilot off, no driver, this
+	 * station their route's current stop, within 30 m of it.
+	 */
+	void ReleaseHeldVehicles(FAMMachineRules& Entry, const TCHAR* Why);
 
 	/**
 	 * Last known value of each fire rule's condition, per machine (not saved: after loading, a
