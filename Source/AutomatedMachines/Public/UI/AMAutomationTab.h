@@ -115,7 +115,7 @@ public:
 	void RebuildRowsLater();
 
 	/** Card layout: a condition picked with "+ condition" becomes a new row. */
-	void AddCondition(EAMCondition Condition);
+	void AddCondition(EAMCondition Condition, FName ModFunction = NAME_None);
 
 	/** Card layout: pointing at "+ condition" / "+ event" explains them. */
 	UFUNCTION()
@@ -153,7 +153,10 @@ public:
 	 * Actions grouped by alarm: one more action for the alarm (the first one that does not clash
 	 * with the alarm's others), all of an alarm's actions moved to another alarm, or removed.
 	 */
-	void AddActionToGroup(const FString& Event, EAMAction Action = EAMAction::Count);
+	void AddActionToGroup(const FString& Event, EAMAction Action = EAMAction::Count, FName ModFunction = NAME_None);
+
+	/** The group (its key) already has another mod's action with this function. */
+	bool ModActionInGroup(const FString& GroupKey, FName ModFunction) const;
 	void RenameActionGroup(const FString& OldEvent, const FString& NewEvent);
 	void RemoveActionGroup(const FString& Event);
 	bool HasActionGroup(const FString& Event) const;

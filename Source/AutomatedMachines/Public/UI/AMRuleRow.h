@@ -77,6 +77,9 @@ public:
 	UPROPERTY()
 	TObjectPtr<UClass> ItemClass;
 
+	/** Another mod's condition / action: its function (docs/MODDING.md). */
+	FName ModFunction;
+
 	UFUNCTION()
 	void OnClicked();
 

@@ -108,6 +108,8 @@ enum class EAMCondition : uint8
 	IncomingRateBelow  UMETA(DisplayName = "Incoming rate below"),
 	DepotCountAbove    UMETA(DisplayName = "Depot items above"),
 	DepotCountBelow    UMETA(DisplayName = "Depot items below"),
+	// Another mod's condition (a building function named AM_Condition_<Name>, the rule's ModFunction).
+	ModCondition       UMETA(DisplayName = "Mod condition"),
 	Count              UMETA(Hidden)
 };
 
@@ -165,6 +167,10 @@ enum class EAMAction : uint8
 	// Truck stations: hold the vehicles that dock here (their autopilot off), release them (on).
 	HoldVehicles   UMETA(DisplayName = "Hold vehicles here"),
 	ReleaseVehicles UMETA(DisplayName = "Release vehicles"),
+	// Another mod's action (a building function named AM_Action_<Name>, the rule's ModFunction); with an
+	// on / off switch: ModAction is on, ModActionOff off.
+	ModAction      UMETA(DisplayName = "Mod action"),
+	ModActionOff   UMETA(DisplayName = "Mod action (off)"),
 	Count          UMETA(Hidden)
 };
 
@@ -187,6 +193,10 @@ struct AUTOMATEDMACHINES_API FAMFireRule
 	/** The item of conditions that count one (Item count above / below), else null. */
 	UPROPERTY(SaveGame, BlueprintReadWrite, Category = "Automation")
 	TSubclassOf<UFGItemDescriptor> Item;
+
+	/** Mod condition: the building's function (AM_Condition_<Name>). */
+	UPROPERTY(SaveGame, BlueprintReadWrite, Category = "Automation")
+	FName ModFunction;
 };
 
 /** "<Action> when event <Event>" */
@@ -212,6 +222,10 @@ struct AUTOMATEDMACHINES_API FAMReactionRule
 	/** The text of "Show message" (empty: machine and alarm), else unused. */
 	UPROPERTY(SaveGame, BlueprintReadWrite, Category = "Automation")
 	FString Message;
+
+	/** Mod action: the building's function (AM_Action_<Name>). */
+	UPROPERTY(SaveGame, BlueprintReadWrite, Category = "Automation")
+	FName ModFunction;
 
 	/**
 	 * AND (18 Nov 2026): more events that must be active too. The action runs when one of
@@ -562,6 +576,15 @@ namespace AMRules
 
 	/** Somersloop amplification: its value is picked from the machine's levels (a dropdown). */
 	AUTOMATEDMACHINES_API bool ActionNeedsAmplification(EAMAction Action);
+
+	/** Another mod's action or condition (docs/MODDING.md). */
+	AUTOMATEDMACHINES_API bool IsModAction(EAMAction Action);
+	AUTOMATEDMACHINES_API bool IsModCondition(EAMCondition Condition);
+	/** A rule's name as shown: a mod's own name for its condition / action, else the usual one. */
+	AUTOMATEDMACHINES_API FText GetRuleConditionText(const FAMFireRule& Rule, const UObject* Machine);
+	AUTOMATEDMACHINES_API FText GetRuleConditionDescription(const FAMFireRule& Rule, UObject* Machine);
+	AUTOMATEDMACHINES_API FText GetRuleActionText(const FAMReactionRule& Rule, const UObject* Machine);
+	AUTOMATEDMACHINES_API FText GetRuleActionDescription(const FAMReactionRule& Rule, UObject* Machine);
 	/** How many Somersloop slots the machine has (0: none, or not a production machine). */
 	AUTOMATEDMACHINES_API int32 GetAmplificationSlots(const UObject* Machine);
 	/** The multiplier of level Step of Slots (1 + Step / Slots: 1x, 1.25x ... 2x). */

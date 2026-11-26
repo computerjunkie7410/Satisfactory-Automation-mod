@@ -1,5 +1,6 @@
 #include "Automation/AMAutomationSubsystem.h"
 #include "Automation/AMLayoutCheck.h"
+#include "Automation/AMModHooks.h"
 #include "Automation/AMLocator.h"
 #include "Buildables/FGBuildableMAM.h"
 #include "Buildables/FGBuildableTradingPost.h"
@@ -724,16 +725,39 @@ void AAMAutomationSubsystem::SetRules(AFGBuildable* Machine, const TArray<FAMFir
 		{
 			Clean.Item = nullptr;
 		}
-		if (!Clean.Event.IsEmpty() && Clean.Condition < EAMCondition::Count && AMRules::IsConditionAvailable(Clean.Condition, Machine))
+		// Another mod's condition: only while its building has that function (and it is a condition).
+		const AMModHooks::FHook* Hook = AMRules::IsModCondition(Clean.Condition) ? AMModHooks::FindHook(Machine, Clean.ModFunction) : nullptr;
+		if (!AMRules::IsModCondition(Clean.Condition))
+		{
+			Clean.ModFunction = NAME_None;
+		}
+		else if (Hook && Hook->Value == AMModHooks::EValue::None)
+		{
+			Clean.Value = 0.f;
+		}
+		const bool bModOk = !AMRules::IsModCondition(Clean.Condition) || (Hook && Hook->bCondition);
+		if (!Clean.Event.IsEmpty() && Clean.Condition < EAMCondition::Count && bModOk && AMRules::IsConditionAvailable(Clean.Condition, Machine))
 		{
 			NewRules.Fires.Add(Clean);
 		}
 	}
 	for (const FAMReactionRule& Rule : Reactions)
 	{
-		const FAMReactionRule Clean = CleanReaction(Rule);
+		FAMReactionRule Clean = CleanReaction(Rule);
+		// Another mod's action: only while its building has that function (an action); "off" only for
+		// an on / off one, and the value only for a number one.
+		const AMModHooks::FHook* Hook = AMRules::IsModAction(Clean.Action) ? AMModHooks::FindHook(Machine, Clean.ModFunction) : nullptr;
+		bool bModOk = true;
+		if (AMRules::IsModAction(Clean.Action))
+		{
+			bModOk = Hook && !Hook->bCondition && (Clean.Action == EAMAction::ModAction || Hook->Value == AMModHooks::EValue::Switch);
+			if (Hook && Hook->Value != AMModHooks::EValue::Number)
+			{
+				Clean.Value = 0.f;
+			}
+		}
 		// World actions belong to the HUB, not to machines.
-		if (!Clean.Event.IsEmpty() && Clean.Action < EAMAction::Count && !AMRules::IsWorldAction(Clean.Action) && AMRules::IsActionAvailable(Clean.Action, Machine))
+		if (bModOk && !Clean.Event.IsEmpty() && Clean.Action < EAMAction::Count && !AMRules::IsWorldAction(Clean.Action) && AMRules::IsActionAvailable(Clean.Action, Machine))
 		{
 			NewRules.Reactions.Add(Clean);
 		}
@@ -1047,6 +1071,10 @@ FAMReactionRule AAMAutomationSubsystem::CleanReaction(const FAMReactionRule& Rul
 	{
 		Clean.Recipe = nullptr;
 	}
+	if (!AMRules::IsModAction(Rule.Action))
+	{
+		Clean.ModFunction = NAME_None;
+	}
 	Clean.Message = AMRules::ActionNeedsMessage(Rule.Action) ? Rule.Message.TrimStartAndEnd().Left(AMRules::MaxMessageLength) : FString();
 	// AND events: named like events, not the action's own event, once each, sorted.
 	Clean.AndEvents.Reset();
@@ -1216,7 +1244,9 @@ bool AAMAutomationSubsystem::CanAutomate(const AActor* Machine)
 		|| AMRules::IsValve(Machine) || Machine->IsA<AFGBuildablePipeReservoir>() || Machine->IsA<AFGBuildableResourceSink>()
 		|| Machine->IsA<AFGBuildableRailroadSignal>() || Machine->IsA<AFGBuildableRailroadStation>()
 		|| Machine->IsA<AFGBuildableTrainPlatformCargo>() || Machine->IsA<AFGBuildableDockingStation>()
-		|| Machine->IsA<AFGBuildablePowerStorage>() || Machine->IsA<AFGBuildableDroneStation>() || Machine->IsA<AFGBuildablePowerBooster>() || Machine->IsA<AFGBuildableFrackingActivator>() || AMBelt::IsBelt(Machine));
+		|| Machine->IsA<AFGBuildablePowerStorage>() || Machine->IsA<AFGBuildableDroneStation>() || Machine->IsA<AFGBuildablePowerBooster>() || Machine->IsA<AFGBuildableFrackingActivator>() || AMBelt::IsBelt(Machine)
+		// Other mods' buildings with AM_Condition_ / AM_Action_ functions (docs/MODDING.md).
+		|| (Machine->IsA<AFGBuildable>() && AMModHooks::HasHooks(Machine)));
 }
 
 bool AAMAutomationSubsystem::RemoveInvalidEntries()
@@ -1533,7 +1563,8 @@ void AAMAutomationSubsystem::EvaluateFireRules()
 		const AFGBuildableCircuitSwitch* Switch = Cast<AFGBuildableCircuitSwitch>(Entry.Machine);
 		AFGBuildableRailroadSignal* Signal = Cast<AFGBuildableRailroadSignal>(Entry.Machine);
 		const AFGBuildable* Machine = Entry.Machine;
-		if ((!Factory && !Switch && !Signal) || Entry.Fires.Num() == 0)
+		const bool bModConditions = Entry.Fires.ContainsByPredicate([](const FAMFireRule& Rule) { return AMRules::IsModCondition(Rule.Condition); });
+		if ((!Factory && !Switch && !Signal && !bModConditions) || Entry.Fires.Num() == 0)
 		{
 			continue;
 		}
@@ -1564,7 +1595,17 @@ void AAMAutomationSubsystem::EvaluateFireRules()
 		{
 			const FAMFireRule& Rule = Entry.Fires[Index];
 			bool bNow = false;
-			if (Signal)
+			if (AMRules::IsModCondition(Rule.Condition))
+			{
+				// Another mod's condition: its building's function says (docs/MODDING.md).
+				bNow = AMModHooks::CallCondition(Entry.Machine.Get(), Rule.ModFunction, Rule.Value);
+			}
+			else if (!Factory && !Switch && !Signal)
+			{
+				// Another mod's building: only its own conditions.
+				bNow = false;
+			}
+			else if (Signal)
 			{
 				switch (Rule.Condition)
 				{
@@ -1639,6 +1680,8 @@ void AAMAutomationSubsystem::FireEvent(const FString& Event, const AActor* Ringe
 	{
 		return;
 	}
+	// Other mods listening (docs/MODDING.md).
+	OnEventTriggered.Broadcast(Event, const_cast<AActor*>(Ringer));
 	// A world event (milestone, research) is active at the moment it is triggered (for AND).
 	mActiveEvents.Add(Event);
 	// When (the Events Overview shows it).
@@ -1713,6 +1756,16 @@ void AAMAutomationSubsystem::FireEvent(const FString& Event, const AActor* Ringe
 			{
 				MulticastPointTo(Entry.Machine, static_cast<uint8>(AMRules::GetPointIcon(Rule.Value)));
 				break;
+			}
+		}
+		// Other mods' actions (docs/MODDING.md): on any building.
+		for (const FAMReactionRule& Rule : Entry.Reactions)
+		{
+			if (AMRules::IsModAction(Rule.Action) && Hears(Rule, Event))
+			{
+				UE_LOG(LogAutomatedMachines, Log, TEXT("%s: mod action %s%s"), *AMAS_Describe(Entry.Machine), *Rule.ModFunction.ToString(),
+					Rule.Action == EAMAction::ModActionOff ? TEXT(" (off)") : TEXT(""));
+				AMModHooks::CallAction(Entry.Machine.Get(), Rule.ModFunction, Rule.Value, Rule.Action == EAMAction::ModAction);
 			}
 		}
 		// Truck stations: Hold vehicles here on / off (kept in the entry, saved).

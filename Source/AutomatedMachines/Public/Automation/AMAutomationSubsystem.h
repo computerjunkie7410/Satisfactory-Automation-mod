@@ -17,6 +17,9 @@
 class AFGBuildable;
 class AFGBuildableFactory;
 
+/** An event was triggered (the event's name, the machine that triggered it or null). Server only. */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FAMOnEventTriggered, const FString&, Event, AActor*, Source);
+
 UCLASS()
 class AUTOMATEDMACHINES_API AAMAutomationSubsystem : public AModSubsystem, public IFGSaveInterface
 {
@@ -119,6 +122,13 @@ public:
 
 	/** Broadcast whenever any machine's rules change (on the server and, through replication, on clients). */
 	FSimpleMulticastDelegate OnRulesChanged;
+
+	/** Every event triggered, by anything (other mods can listen: docs/MODDING.md). Server only. */
+	UPROPERTY(BlueprintAssignable, Category = "Automated Machines")
+	FAMOnEventTriggered OnEventTriggered;
+
+	/** The event is active right now (a condition triggering it is met, or it was triggered this check). */
+	bool IsEventActive(const FString& Event) const { return mActiveEvents.Contains(Event); }
 
 protected:
 	virtual void BeginPlay() override;

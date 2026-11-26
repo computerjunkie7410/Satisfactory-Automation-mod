@@ -18,6 +18,7 @@
 #include "Buildables/FGBuildable.h"
 #include "Automation/AMAutomationSubsystem.h"
 #include "Automation/AMLocator.h"
+#include "Automation/AMModHooks.h"
 #include "Buildables/FGBuildableFactory.h"
 #include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
@@ -74,6 +75,52 @@ namespace
 			|| Action == EAMAction::OverflowOn || Action == EAMAction::OverflowOff
 			|| Action == EAMAction::ReplaceFuelOn || Action == EAMAction::ReplaceFuelOff
 			|| Action == EAMAction::HoldVehicles || Action == EAMAction::ReleaseVehicles;
+	}
+
+	/** Another mod's hook of a rule on Machine, or null. */
+	const AMModHooks::FHook* AMRR_Hook(FName Function, const UObject* Machine)
+	{
+		return AMModHooks::FindHook(Machine, Function);
+	}
+
+	/** A one-line action row's name: another mod's own name for its action, else the compact name. */
+	FString AMRR_RuleName(const FAMReactionRule& Rule, const UObject* Machine)
+	{
+		return AMRules::IsModAction(Rule.Action) ? AMModHooks::GetLabel(Machine, Rule.ModFunction) : AMRR_CompactName(Rule.Action);
+	}
+
+	/** The row has the on / off switch: the usual pairs, or another mod's action taking a Boolean. */
+	bool AMRR_RuleSwitch(const FAMReactionRule& Rule, const UObject* Machine)
+	{
+		if (AMRules::IsModAction(Rule.Action))
+		{
+			const AMModHooks::FHook* Hook = AMRR_Hook(Rule.ModFunction, Machine);
+			return Hook && Hook->Value == AMModHooks::EValue::Switch;
+		}
+		return AMRR_HasSwitch(Rule.Action);
+	}
+
+	/** The value field of an action / condition: another mod's only if its function takes a number. */
+	AMRules::FValueInfo AMRR_ActionInfo(const FAMReactionRule& Rule, const UObject* Machine)
+	{
+		AMRules::FValueInfo Info = AMRules::GetActionValueInfo(Rule.Action);
+		if (AMRules::IsModAction(Rule.Action))
+		{
+			const AMModHooks::FHook* Hook = AMRR_Hook(Rule.ModFunction, Machine);
+			Info.bNeeded = Hook && Hook->Value == AMModHooks::EValue::Number;
+		}
+		return Info;
+	}
+
+	AMRules::FValueInfo AMRR_ConditionInfo(const FAMFireRule& Rule, const UObject* Machine)
+	{
+		AMRules::FValueInfo Info = AMRules::GetConditionValueInfo(Rule.Condition);
+		if (AMRules::IsModCondition(Rule.Condition))
+		{
+			const AMModHooks::FHook* Hook = AMRR_Hook(Rule.ModFunction, Machine);
+			Info.bNeeded = Hook && Hook->Value == AMModHooks::EValue::Number;
+		}
+		return Info;
 	}
 
 	constexpr float AMRR_CompactHeight = 34.f;
@@ -517,7 +564,7 @@ void UAMRuleRow::BuildCompact()
 	UHorizontalBox* Line = Tree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass());
 	Box->AddChild(Line);
 
-	UTextBlock* Name = AMUI::MakeText(Tree, AMRR_CompactName(Action), Font, AMUI::White);
+	UTextBlock* Name = AMUI::MakeText(Tree, Rule ? AMRR_RuleName(*Rule, mTab->GetMachineObject()) : AMRR_CompactName(Action), Font, AMUI::White);
 	Name->SetTextOverflowPolicy(ETextOverflowPolicy::Ellipsis);
 	if (UHorizontalBoxSlot* NameSlot = Line->AddChildToHorizontalBox(Name))
 	{
@@ -534,8 +581,8 @@ void UAMRuleRow::BuildCompact()
 		}
 	};
 
-	const AMRules::FValueInfo Info = AMRules::GetActionValueInfo(Action);
-	if (AMRR_HasSwitch(Action))
+	const AMRules::FValueInfo Info = Rule ? AMRR_ActionInfo(*Rule, mTab->GetMachineObject()) : AMRules::GetActionValueInfo(Action);
+	if (Rule ? AMRR_RuleSwitch(*Rule, mTab->GetMachineObject()) : AMRR_HasSwitch(Action))
 	{
 		// The options' switch: on = Standby / Power on.
 		UButton* StateButton = Tree->ConstructWidget<UButton>(UButton::StaticClass());
@@ -669,7 +716,7 @@ void UAMRuleRow::UpdateCompact()
 	{
 		const bool bOn = Rule->Action == EAMAction::Resume || Rule->Action == EAMAction::SwitchOn || Rule->Action == EAMAction::BlockSignal
 			|| Rule->Action == EAMAction::LoadMode || Rule->Action == EAMAction::OverflowOn || Rule->Action == EAMAction::ReplaceFuelOn
-			|| Rule->Action == EAMAction::HoldVehicles;
+			|| Rule->Action == EAMAction::HoldVehicles || Rule->Action == EAMAction::ModAction;
 		AMUI::SetImage(mStateImage, bOn ? AMUI::SwitchOnPath : AMUI::SwitchOffPath);
 	}
 	if (mValueText)
@@ -722,17 +769,19 @@ void UAMRuleRow::OnStateClicked()
 	case EAMAction::ReplaceFuelOff: Rule->Action = EAMAction::ReplaceFuelOn; break;
 	case EAMAction::HoldVehicles:  Rule->Action = EAMAction::ReleaseVehicles; break;
 	case EAMAction::ReleaseVehicles: Rule->Action = EAMAction::HoldVehicles; break;
+	case EAMAction::ModAction:     Rule->Action = EAMAction::ModActionOff; break;
+	case EAMAction::ModActionOff:  Rule->Action = EAMAction::ModAction; break;
 	default: return;
 	}
 	mBuiltAction = Rule->Action;
 	if (AMRules::IsSignalAction(Rule->Action) || Rule->Action == EAMAction::LoadMode || Rule->Action == EAMAction::UnloadMode
 		|| Rule->Action == EAMAction::OverflowOn || Rule->Action == EAMAction::OverflowOff
 		|| Rule->Action == EAMAction::ReplaceFuelOn || Rule->Action == EAMAction::ReplaceFuelOff
-		|| Rule->Action == EAMAction::HoldVehicles || Rule->Action == EAMAction::ReleaseVehicles)
+		|| Rule->Action == EAMAction::HoldVehicles || Rule->Action == EAMAction::ReleaseVehicles || AMRules::IsModAction(Rule->Action))
 	{
 		mTab->OnRulesEdited();
 		UpdateCompact();
-		mTab->ShowInfo(FText::FromString(AMRR_CompactName(Rule->Action)), AMRules::GetActionDescription(Rule->Action));
+		mTab->ShowInfo(FText::FromString(AMRR_RuleName(*Rule, mTab->GetMachineObject())), AMRules::GetRuleActionDescription(*Rule, mTab->GetMachineObject()));
 		return;
 	}
 	mTab->OnRulesEdited();
@@ -1094,7 +1143,7 @@ void UAMRuleRow::BuildConditionCard()
 	UHorizontalBox* ValueLine = Tree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass());
 	mValueLine = ValueLine;
 	const FAMFireRule* Rule = mTab->GetFireRule(mIndex);
-	const AMRules::FValueInfo Info = Rule ? AMRules::GetConditionValueInfo(Rule->Condition) : AMRules::FValueInfo();
+	const AMRules::FValueInfo Info = Rule ? AMRR_ConditionInfo(*Rule, mTab->GetMachineObject()) : AMRules::FValueInfo();
 	const bool bNeedsItem = Rule && AMRules::ConditionNeedsItem(Rule->Condition);
 	const bool bBar = FCString::Strcmp(Info.Unit, TEXT("%")) == 0;
 	if (UHorizontalBoxSlot* NumberSlot = ValueLine->AddChildToHorizontalBox(
@@ -1235,9 +1284,9 @@ void UAMRuleRow::UpdateConditionCard()
 	SetAlarmNameText(Rule->Event);
 	if (mSecondLabel)
 	{
-		mSecondLabel->SetText(AMRules::GetConditionText(Rule->Condition));
+		mSecondLabel->SetText(AMRules::GetRuleConditionText(*Rule, mTab->GetMachineObject()));
 	}
-	const AMRules::FValueInfo Info = AMRules::GetConditionValueInfo(Rule->Condition);
+	const AMRules::FValueInfo Info = AMRR_ConditionInfo(*Rule, mTab->GetMachineObject());
 	if (mValueLine)
 	{
 		mValueLine->SetVisibility(Info.bNeeded ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
@@ -1291,7 +1340,7 @@ void UAMRuleRow::UpdateLabels()
 			SetAlarmNameText(Rule->Event);
 			if (mSecondLabel)
 			{
-				mSecondLabel->SetText(AMRules::GetConditionText(Rule->Condition));
+				mSecondLabel->SetText(AMRules::GetRuleConditionText(*Rule, mTab->GetMachineObject()));
 			}
 		}
 	}
@@ -1390,10 +1439,10 @@ AMRules::FValueInfo UAMRuleRow::GetValueInfo() const
 	if (bIsAlarm)
 	{
 		const FAMFireRule* Rule = mTab->GetFireRule(mIndex);
-		return Rule ? AMRules::GetConditionValueInfo(Rule->Condition) : AMRules::FValueInfo();
+		return Rule ? AMRR_ConditionInfo(*Rule, mTab->GetMachineObject()) : AMRules::FValueInfo();
 	}
 	const FAMReactionRule* Rule = mTab->GetReactionRule(mIndex);
-	return Rule ? AMRules::GetActionValueInfo(Rule->Action) : AMRules::FValueInfo();
+	return Rule ? AMRR_ActionInfo(*Rule, mTab->GetMachineObject()) : AMRules::FValueInfo();
 }
 
 float UAMRuleRow::GetRuleValue() const
@@ -1497,6 +1546,10 @@ void UAMRuleRow::ShowChoices(EAMChoiceKind Kind, const TArray<FString>& Alarms, 
 			{
 				continue;
 			}
+			if (AMRules::IsModCondition(Condition))
+			{
+				continue;
+			}
 			AddChoice(AMRules::GetConditionText(Condition).ToString(), FString(), Value, Rule && Rule->Condition == Condition);
 		}
 	}
@@ -1512,6 +1565,10 @@ void UAMRuleRow::ShowChoices(EAMChoiceKind Kind, const TArray<FString>& Alarms, 
 				continue;
 			}
 			if (!AMRules::IsActionAvailable(Action, mTab->GetMachineObject()) && !(Rule && Rule->Action == Action))
+			{
+				continue;
+			}
+			if (AMRules::IsModAction(Action))
 			{
 				continue;
 			}
@@ -1702,7 +1759,7 @@ void UAMRuleRow::Choose(const UAMChoice& Choice)
 			// "+ condition": the row comes with the picked condition.
 			HideChoices();
 			mTab->ClosePicker(true);
-			mTab->AddCondition(static_cast<EAMCondition>(Choice.Value));
+			mTab->AddCondition(static_cast<EAMCondition>(Choice.Value), Choice.ModFunction);
 			return;
 		}
 		if (Choice.Kind == EAMChoiceKind::Alarm)
@@ -1763,8 +1820,9 @@ void UAMRuleRow::Choose(const UAMChoice& Choice)
 		if (FAMFireRule* Rule = mTab->GetFireRule(mIndex))
 		{
 			const EAMCondition Condition = static_cast<EAMCondition>(Choice.Value);
-			if (Rule->Condition != Condition)
+			if (Rule->Condition != Condition || Rule->ModFunction != Choice.ModFunction)
 			{
+				Rule->ModFunction = Choice.ModFunction;
 				// Above <-> below keeps the item; anything else clears it.
 				if (!AMRules::ConditionNeedsItem(Condition))
 				{
@@ -1830,14 +1888,15 @@ void UAMRuleRow::Choose(const UAMChoice& Choice)
 			// "+ action": this action, added under the alarm.
 			HideChoices();
 			mTab->ClosePicker(true);
-			mTab->AddActionToGroup(mGroupEvent, static_cast<EAMAction>(Choice.Value));
+			mTab->AddActionToGroup(mGroupEvent, static_cast<EAMAction>(Choice.Value), Choice.ModFunction);
 			return;
 		}
 		if (FAMReactionRule* Rule = mTab->GetReactionRule(mIndex))
 		{
 			const EAMAction Action = static_cast<EAMAction>(Choice.Value);
-			if (Rule->Action != Action)
+			if (Rule->Action != Action || Rule->ModFunction != Choice.ModFunction)
 			{
+				Rule->ModFunction = Choice.ModFunction;
 				Rule->Action = Action;
 				mBuiltAction = Action;
 				const AMRules::FValueInfo Info = AMRules::GetActionValueInfo(Action);
@@ -1865,12 +1924,22 @@ void UAMRuleRow::Explain(const UAMChoice& Choice)
 	case EAMChoiceKind::MachineEvent:
 	{
 		const EAMCondition Condition = static_cast<EAMCondition>(Choice.Value);
+		if (AMRules::IsModCondition(Condition))
+		{
+			mTab->ShowInfo(FText::FromString(AMModHooks::GetLabel(mTab->GetMachineObject(), Choice.ModFunction)), AMModHooks::GetInfo(mTab->GetMachineObject(), Choice.ModFunction));
+			break;
+		}
 		mTab->ShowInfo(AMRules::GetConditionText(Condition), AMRules::GetConditionDescription(Condition));
 		break;
 	}
 	case EAMChoiceKind::Action:
 	{
 		const EAMAction Action = static_cast<EAMAction>(Choice.Value);
+		if (AMRules::IsModAction(Action))
+		{
+			mTab->ShowInfo(FText::FromString(AMModHooks::GetLabel(mTab->GetMachineObject(), Choice.ModFunction)), AMModHooks::GetInfo(mTab->GetMachineObject(), Choice.ModFunction));
+			break;
+		}
 		mTab->ShowInfo(AMRules::GetActionText(Action), AMRules::GetActionDescription(Action));
 		break;
 	}
@@ -1914,12 +1983,13 @@ void UAMRuleRow::ExplainCurrent()
 	{
 		if (const FAMFireRule* Rule = mTab->GetFireRule(mIndex))
 		{
-			mTab->ShowInfo(AMRules::GetConditionText(Rule->Condition), AMRules::GetConditionDescription(Rule->Condition));
+			mTab->ShowInfo(AMRules::GetRuleConditionText(*Rule, mTab->GetMachineObject()), AMRules::GetRuleConditionDescription(*Rule, mTab->GetMachineObject()));
 		}
 	}
 	else if (const FAMReactionRule* Rule = mTab->GetReactionRule(mIndex))
 	{
-		mTab->ShowInfo(bCompact ? FText::FromString(AMRR_CompactName(Rule->Action)) : AMRules::GetActionText(Rule->Action), AMRules::GetActionDescription(Rule->Action));
+		mTab->ShowInfo(bCompact ? FText::FromString(AMRR_RuleName(*Rule, mTab->GetMachineObject())) : AMRules::GetRuleActionText(*Rule, mTab->GetMachineObject()),
+			AMRules::GetRuleActionDescription(*Rule, mTab->GetMachineObject()));
 	}
 }
 
@@ -1951,9 +2021,21 @@ void UAMRuleRow::OpenPicker(EAMChoiceKind Kind, UWidget* Anchor)
 		{
 			const EAMCondition Condition = static_cast<EAMCondition>(Value);
 			const bool bCurrent = Rule && Rule->Condition == Condition;
-			if (mTab->IsConditionAvailableHere(Condition) || bCurrent)
+			if (!AMRules::IsModCondition(Condition) && (mTab->IsConditionAvailableHere(Condition) || bCurrent))
 			{
 				Add(AMRules::GetConditionText(Condition).ToString(), Value, bCurrent);
+			}
+		}
+		// Another mod's conditions on this building (docs/MODDING.md), one choice each.
+		if (!mTab->IsWorldMode())
+		{
+			for (const AMModHooks::FHook& Hook : AMModHooks::GetHooks(mTab->GetMachineObject() ? mTab->GetMachineObject()->GetClass() : nullptr))
+			{
+				if (Hook.bCondition)
+				{
+					const bool bCurrent = Rule && AMRules::IsModCondition(Rule->Condition) && Rule->ModFunction == Hook.Function;
+					Add(Hook.Label, static_cast<uint8>(EAMCondition::ModCondition), bCurrent)->ModFunction = Hook.Function;
+				}
 			}
 		}
 		break;
@@ -1967,13 +2049,25 @@ void UAMRuleRow::OpenPicker(EAMChoiceKind Kind, UWidget* Anchor)
 			for (uint8 Value = 0; Value < static_cast<uint8>(EAMAction::Count); ++Value)
 			{
 				const EAMAction Action = static_cast<EAMAction>(Value);
-				if (Action == EAMAction::Resume || Action == EAMAction::SwitchOff || Action == EAMAction::UnblockSignal || Action == EAMAction::UnloadMode || Action == EAMAction::OverflowOff || Action == EAMAction::ReplaceFuelOff || Action == EAMAction::ReleaseVehicles)
+				if (Action == EAMAction::Resume || Action == EAMAction::SwitchOff || Action == EAMAction::UnblockSignal || Action == EAMAction::UnloadMode || Action == EAMAction::OverflowOff || Action == EAMAction::ReplaceFuelOff || Action == EAMAction::ReleaseVehicles
+					|| AMRules::IsModAction(Action))
 				{
 					continue;
 				}
 				if (mTab->IsActionAvailableHere(Action) && !mTab->ActionClashesWithAlarm(mGroupEvent, Action))
 				{
 					Add(AMRR_CompactName(Action), Value, false);
+				}
+			}
+			// Another mod's actions on this building, one choice each (each once per event).
+			if (!mTab->IsWorldMode())
+			{
+				for (const AMModHooks::FHook& Hook : AMModHooks::GetHooks(mTab->GetMachineObject() ? mTab->GetMachineObject()->GetClass() : nullptr))
+				{
+					if (!Hook.bCondition && !mTab->ModActionInGroup(mGroupEvent, Hook.Function))
+					{
+						Add(Hook.Label, static_cast<uint8>(EAMAction::ModAction), false)->ModFunction = Hook.Function;
+					}
 				}
 			}
 			EmptyMessage = TEXT("Every action is already used for this event.");
@@ -1990,7 +2084,7 @@ void UAMRuleRow::OpenPicker(EAMChoiceKind Kind, UWidget* Anchor)
 			{
 				continue;
 			}
-			if (AMRules::IsWorldAction(Action) == mTab->IsWorldMode() && (AMRules::IsActionAvailable(Action, mTab->GetMachineObject()) || bCurrent))
+			if (!AMRules::IsModAction(Action) && AMRules::IsWorldAction(Action) == mTab->IsWorldMode() && (AMRules::IsActionAvailable(Action, mTab->GetMachineObject()) || bCurrent))
 			{
 				Add(AMRules::GetActionText(Action).ToString(), Value, bCurrent);
 			}

@@ -1237,15 +1237,17 @@ void UAMAutomationTab::StartEventHold(const FString& Event, UAMHoldRing* Ring)
 	bHoldAll = true;
 }
 
-void UAMAutomationTab::AddCondition(EAMCondition Condition)
+void UAMAutomationTab::AddCondition(EAMCondition Condition, FName ModFunction)
 {
 	FAMFireRule& NewRule = mFires.AddDefaulted_GetRef();
 	NewRule.Condition = Condition;
+	NewRule.ModFunction = AMRules::IsModCondition(Condition) ? ModFunction : NAME_None;
 	NewRule.Value = AMRules::GetConditionValueInfo(Condition).Default;
+	const FText Name = AMRules::GetRuleConditionText(NewRule, GetMachineObject());
 	// No event name yet: nothing is sent until one is typed (a condition without one does nothing).
 	RebuildRows();
 	ScrollToEndLater(mFireRowsBox);
-	ShowInfo(AMRules::GetConditionText(Condition), FText::FromString(TEXT("Now type the name of the event it triggers, on the right.")));
+	ShowInfo(Name, FText::FromString(TEXT("Now type the name of the event it triggers, on the right.")));
 }
 
 void UAMAutomationTab::OnAddFireHovered()
@@ -2236,13 +2238,46 @@ bool UAMAutomationTab::IsActionAvailableHere(EAMAction Action) const
 	return bWorldMode ? AMRules::IsWorldAction(Action) : (!AMRules::IsWorldAction(Action) && AMRules::IsActionAvailable(Action, GetMachine()));
 }
 
-void UAMAutomationTab::AddActionToGroup(const FString& Event, EAMAction Chosen)
+bool UAMAutomationTab::ModActionInGroup(const FString& GroupKey, FName ModFunction) const
 {
+	FString Event;
+	TArray<FString> AndEvents;
+	AMRules::SplitGroupKey(GroupKey, Event, AndEvents);
+	AndEvents.Sort();
+	return mReactions.ContainsByPredicate([&](const FAMReactionRule& Rule)
+	{
+		TArray<FString> RuleAnd = Rule.AndEvents;
+		RuleAnd.Sort();
+		return AMRules::IsModAction(Rule.Action) && Rule.ModFunction == ModFunction && Rule.Event == Event && RuleAnd == AndEvents;
+	});
+}
+
+void UAMAutomationTab::AddActionToGroup(const FString& Event, EAMAction Chosen, FName ModFunction)
+{
+	// Another mod's action: once per function in the group.
+	if (AMRules::IsModAction(Chosen))
+	{
+		if (ModFunction.IsNone() || ModActionInGroup(Event, ModFunction))
+		{
+			return;
+		}
+		FAMReactionRule& NewRule = mReactions.AddDefaulted_GetRef();
+		AMRules::SplitGroupKey(Event, NewRule.Event, NewRule.AndEvents);
+		NewRule.Action = EAMAction::ModAction;
+		NewRule.ModFunction = ModFunction;
+		NewRule.Value = 0.f;
+		OnRulesEdited();
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateUObject(this, &UAMAutomationTab::RebuildRows));
+		}
+		return;
+	}
 	// The chosen action, or the first of this machine (or the HUB) that clashes with none of the alarm's.
 	for (uint8 Value = 0; Value < static_cast<uint8>(EAMAction::Count); ++Value)
 	{
 		const EAMAction Action = Chosen != EAMAction::Count ? Chosen : static_cast<EAMAction>(Value);
-		if (!IsActionAvailableHere(Action) || ActionClashesWithAlarm(Event, Action))
+		if (AMRules::IsModAction(Action) || !IsActionAvailableHere(Action) || ActionClashesWithAlarm(Event, Action))
 		{
 			if (Chosen != EAMAction::Count)
 			{
@@ -2388,7 +2423,7 @@ void UAMAutomationTab::OnAddFireClicked()
 	// The first machine event this machine has (a container has no "Output full").
 	for (uint8 Value = 0; Value < static_cast<uint8>(EAMCondition::Count); ++Value)
 	{
-		if (IsConditionAvailableHere(static_cast<EAMCondition>(Value)))
+		if (!AMRules::IsModCondition(static_cast<EAMCondition>(Value)) && IsConditionAvailableHere(static_cast<EAMCondition>(Value)))
 		{
 			NewRule.Condition = static_cast<EAMCondition>(Value);
 			NewRule.Value = AMRules::GetConditionValueInfo(NewRule.Condition).Default;

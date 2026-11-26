@@ -27,6 +27,7 @@
 #include "FGFactoryConnectionComponent.h"
 #include "GameFramework/Actor.h"
 #include "Resources/FGPowerShardDescriptor.h"
+#include "Automation/AMModHooks.h"
 #include "Buildables/FGBuildableMAM.h"
 #include "Buildables/FGBuildableTradingPost.h"
 #include "FGInventoryComponent.h"
@@ -470,6 +471,16 @@ FText AMRules::GetActionDescription(EAMAction Action)
 AMRules::FValueInfo AMRules::GetConditionValueInfo(EAMCondition Condition)
 {
 	FValueInfo Info;
+	if (Condition == EAMCondition::ModCondition)
+	{
+		// A number for another mod's condition (shown only if its function takes one).
+		Info.bNeeded = true;
+		Info.Label = TEXT("Value");
+		Info.Min = -1000000000.f;
+		Info.Max = 1000000000.f;
+		Info.Unit = TEXT("");
+		return Info;
+	}
 	if (Condition == EAMCondition::ProductivityBelow || Condition == EAMCondition::ProductivityAbove)
 	{
 		Info.bNeeded = true;
@@ -590,6 +601,16 @@ AMRules::FValueInfo AMRules::GetActionValueInfo(EAMAction Action)
 		Info.Max = 250.f;
 		Info.Default = 100.f;
 	}
+	else if (IsModAction(Action))
+	{
+		// A number for another mod's action (shown only if its function takes one).
+		Info.bNeeded = true;
+		Info.Label = TEXT("Value");
+		Info.Min = -1000000000.f;
+		Info.Max = 1000000000.f;
+		Info.Default = 0.f;
+		Info.Unit = TEXT("");
+	}
 	else if (Action == EAMAction::SetAmplification)
 	{
 		// Picked in a dropdown (not a number field); a new action starts at full amplification.
@@ -675,6 +696,11 @@ bool AMRules::ActionsConflict(EAMAction A, EAMAction B)
 		default:                      return 100 + static_cast<int32>(Action);
 		}
 	};
+	if (IsModAction(A) || IsModAction(B))
+	{
+		// Several of another mod's actions can go together (one per function: checked with the rule).
+		return false;
+	}
 	return Family(A) == Family(B);
 }
 
@@ -720,6 +746,36 @@ bool AMRules::ActionNeedsSound(EAMAction Action)
 bool AMRules::ActionNeedsAmplification(EAMAction Action)
 {
 	return Action == EAMAction::SetAmplification;
+}
+
+bool AMRules::IsModAction(EAMAction Action)
+{
+	return Action == EAMAction::ModAction || Action == EAMAction::ModActionOff;
+}
+
+bool AMRules::IsModCondition(EAMCondition Condition)
+{
+	return Condition == EAMCondition::ModCondition;
+}
+
+FText AMRules::GetRuleConditionText(const FAMFireRule& Rule, const UObject* Machine)
+{
+	return IsModCondition(Rule.Condition) ? FText::FromString(AMModHooks::GetLabel(Machine, Rule.ModFunction)) : GetConditionText(Rule.Condition);
+}
+
+FText AMRules::GetRuleConditionDescription(const FAMFireRule& Rule, UObject* Machine)
+{
+	return IsModCondition(Rule.Condition) ? AMModHooks::GetInfo(Machine, Rule.ModFunction) : GetConditionDescription(Rule.Condition);
+}
+
+FText AMRules::GetRuleActionText(const FAMReactionRule& Rule, const UObject* Machine)
+{
+	return IsModAction(Rule.Action) ? FText::FromString(AMModHooks::GetLabel(Machine, Rule.ModFunction)) : GetActionText(Rule.Action);
+}
+
+FText AMRules::GetRuleActionDescription(const FAMReactionRule& Rule, UObject* Machine)
+{
+	return IsModAction(Rule.Action) ? AMModHooks::GetInfo(Machine, Rule.ModFunction) : GetActionDescription(Rule.Action);
 }
 
 namespace
@@ -954,6 +1010,11 @@ float AMRules::CleanValue(const FValueInfo& Info, float Value)
 
 bool AMRules::IsConditionAvailable(EAMCondition Condition, const UObject* Machine)
 {
+	if (Condition == EAMCondition::ModCondition)
+	{
+		// Another mod's conditions: its building has some (which one: the rule's ModFunction).
+		return Machine && AMModHooks::HasConditions(Machine);
+	}
 	// World events belong to the HUB, never to a machine.
 	if (IsWorldCondition(Condition))
 	{
@@ -1236,6 +1297,11 @@ bool AMRules::IsActionAvailable(EAMAction Action, const UObject* Machine)
 	if (!Machine || IsWorldAction(Action))
 	{
 		return true;
+	}
+	if (IsModAction(Action))
+	{
+		// Another mod's actions: its building has some (which one: the rule's ModFunction).
+		return AMModHooks::HasActions(Machine);
 	}
 	if (Action == EAMAction::PointToThis)
 	{

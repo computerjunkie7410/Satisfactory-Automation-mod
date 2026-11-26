@@ -69,12 +69,17 @@ LogAutomatedMachines: Game update check: the 67 game classes the mod reads match
 
 Any class listed as different means the headers do not match the game.
 
+## For mod makers
+
+Your mod's buildings can add their own conditions and actions to the Automation tab just by naming functions `AM_Condition_<Name>` / `AM_Action_<Name>` (no dependency on this mod), and your code can trigger and hear events. See [docs/MODDING.md](docs/MODDING.md).
+
 ## Docs
 
 - [Design](docs/DESIGN.md): what the mod does and why, decision by decision.
 - [Game UI guide](docs/GAME-UI-GUIDE.md): how the mod hooks into the game's windows.
 - [Dev notes](docs/DEV-NOTES.md): implementation notes, what was tested, known issues.
 - [Roadmap](docs/ROADMAP.md): releases and ideas.
+- [Modding](docs/MODDING.md): conditions and actions for other mods' buildings, events from other mods.
 
 ## Feedback
 

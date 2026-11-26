@@ -367,3 +367,10 @@ Two actions that show a machine to every player on the compass and the map, with
 - Example: the destination station's "Filled above 90%" -> DEPOT FULL -> source station Hold vehicles here on; "Filled below 50%" -> DEPOT HAS ROOM -> off.
 - Why not the station's power: since the game's new vehicle system (1.2) a truck no longer waits at an unpowered station; its autopilot switch is the only thing that stops it.
 - Uninstall, or the station dismantled while holding: the held vehicles keep their autopilot off; switch it on in their window.
+
+## Other mods (decided 27 Nov 2026)
+Full rules for mod makers: `docs/MODDING.md`.
+- **Naming convention, no dependency:** functions on a building class named `AM_Condition_<Name>` (returns Boolean; no input or one number), `AM_Action_<Name>` (no input, one Boolean = on / off switch, or one number), `AM_Info_<Name>` (Text / String, the explanation) become conditions and actions in that building's Automation tab, named `<Name>` with underscores as spaces. Found by name, called on the server once a second (conditions) or when the event is triggered (actions).
+- **Blueprint library, optional dependency:** AM Trigger Event, AM Get Automation Subsystem (its On Event Triggered), AM Is Event Active.
+- The tab only appears in the game's windows the mod hooks; a building with a window of its own: later (part 3, a function to make the panel).
+- Not cheats on our side: the other mod's functions decide what happens to its own building.

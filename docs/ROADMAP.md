@@ -4,6 +4,7 @@ Done and tested so far: see the table in `DEV-NOTES.md` ("What works").
 
 ## Next: 1.2.0 (in progress)
 
+- **Other mods** (27 Nov 2026, to test with a test mod): naming convention `AM_Condition_` / `AM_Action_` / `AM_Info_` on buildings, and a Blueprint library for events. See `docs/MODDING.md`. Later (part 3): a function to make the Automation panel for buildings with a window of their own.
 - **Hold vehicles here** (truck stations, GitHub issue #2): done and tested 27 Nov 2026 (docked or within 3 m of the parking spot; no saved list; stops the vehicle before loading).
 
 ## Release 1.1.0 (24 Nov 2026)
