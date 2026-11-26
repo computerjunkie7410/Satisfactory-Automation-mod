@@ -975,13 +975,13 @@ void AAMAutomationSubsystem::UpdateHeldVehicles()
 			const FVector Location = Station->GetActorLocation();
 			for (AFGWheeledVehicleIdentifier* Identifier : Vehicles->GetAllVehicles())
 			{
-				AFGWheeledVehicle* Owner = Identifier ? Identifier->GetOwnerVehicle() : nullptr;
+				AFGWheeledVehicle* Truck = Identifier ? Identifier->GetOwnerVehicle() : nullptr;
 				const TArray<FGuid>& Route = Identifier ? Identifier->GetVehicleRoute() : TArray<FGuid>();
 				const int32 Stop = Identifier ? Identifier->GetCurrentTargetWaypointIndex() : INDEX_NONE;
-				if (Owner && Identifier->IsCurrentlyDocking() && Route.IsValidIndex(Stop) && Route[Stop] == StationNode
-					&& FVector::DistSquared(Owner->GetActorLocation(), Location) < FMath::Square(1500.f))
+				if (Truck && Identifier->IsCurrentlyDocking() && Route.IsValidIndex(Stop) && Route[Stop] == StationNode
+					&& FVector::DistSquared(Truck->GetActorLocation(), Location) < FMath::Square(1500.f))
 				{
-					AtStation.AddUnique(Owner);
+					AtStation.AddUnique(Truck);
 				}
 			}
 		}
