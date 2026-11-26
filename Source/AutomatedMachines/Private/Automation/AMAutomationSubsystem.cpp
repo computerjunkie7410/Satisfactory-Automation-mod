@@ -956,6 +956,16 @@ void AAMAutomationSubsystem::UpdateHeldVehicles()
 	const AFGVehicleSubsystem* Vehicles = AFGVehicleSubsystem::Get(this);
 	for (FAMMachineRules& Entry : mMachines)
 	{
+		// Forget vehicles that are gone (dismantled: the pointer is cleared) or whose autopilot a player
+		// switched on again by hand: they are not held by us any more, and must not be switched on later.
+		if (Entry.HeldVehicles.Num() > 0)
+		{
+			Entry.HeldVehicles.RemoveAll([](const TObjectPtr<AActor>& Vehicle)
+			{
+				const AFGWheeledVehicleIdentifier* Identifier = IsValid(Vehicle) ? AMAS_VehicleIdentifier(Vehicle) : nullptr;
+				return !Identifier || Identifier->IsAutopilotEnabled();
+			});
+		}
 		AFGBuildableDockingStation* Station = Entry.bHoldVehicles ? Cast<AFGBuildableDockingStation>(Entry.Machine) : nullptr;
 		if (!Station)
 		{

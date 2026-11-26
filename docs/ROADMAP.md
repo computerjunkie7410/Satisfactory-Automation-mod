@@ -4,7 +4,7 @@ Done and tested so far: see the table in `DEV-NOTES.md` ("What works").
 
 ## Next: 1.2.0 (in progress)
 
-- **Hold vehicles here** (truck stations, GitHub issue #2): code in 26 Nov 2026, to test.
+- **Hold vehicles here** (truck stations, GitHub issue #2): done and tested 26 Nov 2026.
 
 ## Release 1.1.0 (24 Nov 2026)
 
