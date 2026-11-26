@@ -34,6 +34,7 @@
 #include "WheeledVehicles/FGWheeledVehicleIdentifier.h"
 #include "WheeledVehicles/FGVehicleSubsystem.h"
 #include "WheeledVehicles/FGDockingStationIdentifier.h"
+#include "WheeledVehicles/FGVehiclePathNode.h"
 #include "Buildables/FGBuildableDroneStation.h"
 #include "FGBuildablePowerBooster.h"
 #include "Buildables/FGBuildableFrackingActivator.h"
@@ -927,41 +928,45 @@ void AAMAutomationSubsystem::MergeBatteryGrids()
 
 namespace
 {
-	/** How far from the station a held vehicle can be (its docking spot is in or next to the building). */
-	constexpr float AMAS_StationReach = 3000.f;
+	/** How far from the station's parking point a vehicle counts as parked there (stations can be close together). */
+	constexpr float AMAS_ParkingReach = 300.f;
+
+	/** Where vehicles park at a truck station (the game's docking target), else its docking node, else the station. */
+	FVector AMAS_ParkingPoint(const AFGBuildableDockingStation* Station)
+	{
+		if (const USceneComponent* Target = Station->GetDockingTargetNodeLocation())
+		{
+			return Target->GetComponentLocation();
+		}
+		if (const AActor* Node = Station->GetDockingPathNode())
+		{
+			return Node->GetActorLocation();
+		}
+		return Station->GetActorLocation();
+	}
 
 	/**
-	 * The vehicles at a truck station: within 30 m of it, this station their route's current stop (so a
-	 * vehicle at a station next door, or one only passing by, is not taken), nobody driving it. With
-	 * bDockingOnly, only those docked or docking (to hold); else any of them (to release).
+	 * The vehicles parked at a truck station: docked there, or within 3 m of its parking point, with
+	 * nobody driving them. Nothing is remembered between calls.
 	 */
-	TArray<AFGWheeledVehicleIdentifier*> AMAS_VehiclesAtStation(const UObject* WorldContext, const AFGBuildableDockingStation* Station, bool bDockingOnly)
+	TArray<AFGWheeledVehicleIdentifier*> AMAS_VehiclesAtStation(const UObject* WorldContext, const AFGBuildableDockingStation* Station)
 	{
 		TArray<AFGWheeledVehicleIdentifier*> Found;
 		const AFGVehicleSubsystem* Vehicles = AFGVehicleSubsystem::Get(WorldContext);
-		const AFGDockingStationIdentifier* StationIdentifier = Station ? Station->GetStationIdentifier() : nullptr;
-		if (!Vehicles || !StationIdentifier || !StationIdentifier->GetPathNodeGUID().IsValid())
+		if (!Vehicles || !Station)
 		{
 			return Found;
 		}
-		const FGuid StationNode = StationIdentifier->GetPathNodeGUID();
-		const FVector Location = Station->GetActorLocation();
+		const FVector Parking = AMAS_ParkingPoint(Station);
 		const AActor* Docked = Station->GetDockedActor();
 		for (AFGWheeledVehicleIdentifier* Identifier : Vehicles->GetAllVehicles())
 		{
-			AFGWheeledVehicle* Truck = Identifier ? Identifier->GetOwnerVehicle() : nullptr;
-			if (!Truck || Truck->GetDriver() || FVector::DistSquared(Truck->GetActorLocation(), Location) > FMath::Square(AMAS_StationReach))
+			const AFGWheeledVehicle* Truck = Identifier ? Identifier->GetOwnerVehicle() : nullptr;
+			if (Truck && !Truck->GetDriver()
+				&& (Truck == Docked || FVector::DistSquared(Truck->GetActorLocation(), Parking) <= FMath::Square(AMAS_ParkingReach)))
 			{
-				continue;
+				Found.Add(Identifier);
 			}
-			const TArray<FGuid>& Route = Identifier->GetVehicleRoute();
-			const int32 Stop = Identifier->GetCurrentTargetWaypointIndex();
-			const bool bHere = Truck == Docked || (Route.IsValidIndex(Stop) && Route[Stop] == StationNode);
-			if (!bHere || (bDockingOnly && Truck != Docked && !Identifier->IsCurrentlyDocking()))
-			{
-				continue;
-			}
-			Found.Add(Identifier);
 		}
 		return Found;
 	}
@@ -970,7 +975,7 @@ namespace
 void AAMAutomationSubsystem::ReleaseHeldVehicles(FAMMachineRules& Entry, const TCHAR* Why)
 {
 	const AFGBuildableDockingStation* Station = Cast<AFGBuildableDockingStation>(Entry.Machine);
-	for (AFGWheeledVehicleIdentifier* Identifier : AMAS_VehiclesAtStation(this, Station, false))
+	for (AFGWheeledVehicleIdentifier* Identifier : AMAS_VehiclesAtStation(this, Station))
 	{
 		if (!Identifier->IsAutopilotEnabled() && Identifier->CanEnableAutopilot())
 		{
@@ -989,13 +994,16 @@ void AAMAutomationSubsystem::UpdateHeldVehicles()
 		{
 			continue;
 		}
-		for (AFGWheeledVehicleIdentifier* Identifier : AMAS_VehiclesAtStation(this, Station, true))
+		for (AFGWheeledVehicleIdentifier* Identifier : AMAS_VehiclesAtStation(this, Station))
 		{
 			if (Identifier->IsAutopilotEnabled())
 			{
 				Identifier->SetAutopilotEnabled(false);
-				UE_LOG(LogAutomatedMachines, Log, TEXT("%s holds %s (loading / unloading: %s)"), *AMAS_Describe(Station),
-					*Identifier->GetVehicleName().ToString(), Station->IsLoadUnloading() ? TEXT("yes") : TEXT("no"));
+				// The distance tells if 3 m around the parking point is right.
+				const AFGWheeledVehicle* Truck = Identifier->GetOwnerVehicle();
+				UE_LOG(LogAutomatedMachines, Log, TEXT("%s holds %s (%.1f m from the parking point, docked: %s)"), *AMAS_Describe(Station),
+					*Identifier->GetVehicleName().ToString(), Truck ? FVector::Dist(Truck->GetActorLocation(), AMAS_ParkingPoint(Station)) / 100.f : -1.f,
+					Truck && Truck == Station->GetDockedActor() ? TEXT("yes") : TEXT("no"));
 			}
 		}
 	}
