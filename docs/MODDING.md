@@ -22,10 +22,12 @@ Add functions with these names to your **building class** (a Blueprint function,
 | `AM_Action_<Name>` | none | nothing | an action |
 | `AM_Action_<Name>` | one Boolean | nothing | an action with the on / off switch |
 | `AM_Action_<Name>` | one number | nothing | an action with a number field |
+| `AM_Action_<Name>` | one enum (`UENUM`) | nothing | an action with a dropdown of the enum's names |
 | `AM_Info_<Name>` | none | Text or String | the explanation of `<Name>` at the bottom of the tab *(optional)* |
 
 - **The name shown** is `<Name>` with its underscores as spaces: `AM_Condition_Tank_Empty` shows as **Tank Empty**. Use the words you want players to read; capitals as you like.
 - **A number** can be Float, Double (Blueprint's "Float") or Integer. The player types it; no range, no unit.
+- **An enum** shows its entries' names in a dropdown, written as words: `AlwaysOpen` or `Always_Open` shows as **Always Open**. In C++ it must be a `UENUM()`; a Blueprint enum shows the names you typed in it. `UMETA(DisplayName = ...)` does not reach the released game, so name the entries themselves the way players should read them. The rule saves the entry's value: keep the values stable between versions (add new entries at the end).
 - **`AM_Info_<Name>`** goes with the condition or action of the same `<Name>`: `AM_Info_Tank_Empty` explains `AM_Condition_Tank_Empty`. Without it the tab says "A condition / An action added by the mod of this building."
 - A function whose inputs or result do not match the table is skipped, with a warning in the game log.
 
@@ -56,6 +58,7 @@ public:
     UFUNCTION() bool AM_Condition_Pressure_Above(float Value) const { return mPressure > Value; }
     UFUNCTION() void AM_Action_Vent() { Vent(); }
     UFUNCTION() void AM_Action_Lid_Open(bool On) { SetLidOpen(On); }
+    UFUNCTION() void AM_Action_Mode(ETankMode Mode) { SetMode(Mode); }   // a UENUM: Automatic, Fill, Drain
     UFUNCTION() FText AM_Info_Vent() const { return FText::FromString(TEXT("Releases all the pressure of the tank.")); }
 };
 ```

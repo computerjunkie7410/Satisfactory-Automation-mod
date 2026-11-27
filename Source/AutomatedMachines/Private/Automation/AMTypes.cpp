@@ -880,13 +880,27 @@ FString AMRules::GetPointIconLabel(EPointIcon Icon)
 	}
 }
 
-bool AMRules::ActionHasChoices(EAMAction Action)
+namespace
 {
-	return ActionNeedsAmplification(Action) || IsPointAction(Action);
+	/** Another mod's action taking an enum (its names as choices), or null. */
+	const AMModHooks::FHook* AMTY_ChoiceHook(EAMAction Action, const UObject* Machine, FName ModFunction)
+	{
+		const AMModHooks::FHook* Hook = AMRules::IsModAction(Action) ? AMModHooks::FindHook(Machine, ModFunction) : nullptr;
+		return Hook && Hook->Value == AMModHooks::EValue::Choice ? Hook : nullptr;
+	}
 }
 
-int32 AMRules::GetActionChoiceCount(EAMAction Action, const UObject* Machine)
+bool AMRules::ActionHasChoices(EAMAction Action, const UObject* Machine, FName ModFunction)
 {
+	return ActionNeedsAmplification(Action) || IsPointAction(Action) || AMTY_ChoiceHook(Action, Machine, ModFunction);
+}
+
+int32 AMRules::GetActionChoiceCount(EAMAction Action, const UObject* Machine, FName ModFunction)
+{
+	if (const AMModHooks::FHook* Hook = AMTY_ChoiceHook(Action, Machine, ModFunction))
+	{
+		return Hook->Choices.Num();
+	}
 	if (ActionNeedsAmplification(Action))
 	{
 		return GetAmplificationSlots(Machine) + 1;
@@ -894,8 +908,12 @@ int32 AMRules::GetActionChoiceCount(EAMAction Action, const UObject* Machine)
 	return IsPointAction(Action) ? static_cast<int32>(EPointIcon::Count) : 0;
 }
 
-FString AMRules::GetActionChoiceLabel(EAMAction Action, int32 Index, const UObject* Machine)
+FString AMRules::GetActionChoiceLabel(EAMAction Action, int32 Index, const UObject* Machine, FName ModFunction)
 {
+	if (const AMModHooks::FHook* Hook = AMTY_ChoiceHook(Action, Machine, ModFunction))
+	{
+		return Hook->Choices.IsValidIndex(Index) ? Hook->Choices[Index] : FString();
+	}
 	if (ActionNeedsAmplification(Action))
 	{
 		return GetAmplificationLabel(GetAmplificationLevel(Index, GetAmplificationSlots(Machine)));
@@ -903,8 +921,13 @@ FString AMRules::GetActionChoiceLabel(EAMAction Action, int32 Index, const UObje
 	return GetPointIconLabel(GetPointIcon(static_cast<float>(Index)));
 }
 
-FString AMRules::GetActionChoiceInfo(EAMAction Action, int32 Index, const UObject* Machine)
+FString AMRules::GetActionChoiceInfo(EAMAction Action, int32 Index, const UObject* Machine, FName ModFunction)
 {
+	if (const AMModHooks::FHook* Hook = AMTY_ChoiceHook(Action, Machine, ModFunction))
+	{
+		// The action's own explanation (AM_Info_), the same for each of its choices.
+		return AMModHooks::GetInfo(const_cast<UObject*>(Machine), ModFunction).ToString();
+	}
 	if (ActionNeedsAmplification(Action))
 	{
 		const int32 Slots = GetAmplificationSlots(Machine);
@@ -917,8 +940,12 @@ FString AMRules::GetActionChoiceInfo(EAMAction Action, int32 Index, const UObjec
 		: FString(TEXT("The compass and the map show this sign icon (the game's own), with the machine's name."));
 }
 
-int32 AMRules::GetActionChoiceIndex(EAMAction Action, float Value, const UObject* Machine)
+int32 AMRules::GetActionChoiceIndex(EAMAction Action, float Value, const UObject* Machine, FName ModFunction)
 {
+	if (const AMModHooks::FHook* Hook = AMTY_ChoiceHook(Action, Machine, ModFunction))
+	{
+		return AMModHooks::GetChoiceIndex(*Hook, Value);
+	}
 	if (ActionNeedsAmplification(Action))
 	{
 		return GetAmplificationStep(Value, GetAmplificationSlots(Machine));
@@ -926,8 +953,13 @@ int32 AMRules::GetActionChoiceIndex(EAMAction Action, float Value, const UObject
 	return static_cast<int32>(GetPointIcon(Value));
 }
 
-float AMRules::GetActionChoiceValue(EAMAction Action, int32 Index, const UObject* Machine)
+float AMRules::GetActionChoiceValue(EAMAction Action, int32 Index, const UObject* Machine, FName ModFunction)
 {
+	if (const AMModHooks::FHook* Hook = AMTY_ChoiceHook(Action, Machine, ModFunction))
+	{
+		// The enum's value (saved in the rule), not its place in the list.
+		return Hook->ChoiceValues.IsValidIndex(Index) ? static_cast<float>(Hook->ChoiceValues[Index]) : 0.f;
+	}
 	if (ActionNeedsAmplification(Action))
 	{
 		return GetAmplificationLevel(Index, GetAmplificationSlots(Machine));

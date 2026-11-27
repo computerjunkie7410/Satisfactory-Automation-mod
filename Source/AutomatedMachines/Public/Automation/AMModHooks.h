@@ -6,7 +6,8 @@
  * Other mods' conditions and actions, by naming convention (docs/MODDING.md). A building class (C++ or
  * Blueprint) that has functions named
  *     AM_Condition_<Name>   returns a Boolean; no input, or one number (Float / Double / Integer)
- *     AM_Action_<Name>      returns nothing;  no input, one number, or one Boolean (an on / off switch)
+ *     AM_Action_<Name>      returns nothing;  no input, one number, one Boolean (an on / off switch),
+ *                           or one enum (a dropdown of its names)
  *     AM_Info_<Name>        returns Text or String, no input: the explanation of <Name> (optional)
  * gets them in its Automation tab: "<Name>" with its underscores as spaces. Nothing of the other mod is
  * needed at build time: the functions are found by name in the game's reflection data and called with
@@ -19,6 +20,7 @@ namespace AMModHooks
 		None,    // no input
 		Number,  // one number: a number field
 		Switch,  // one Boolean: the on / off switch (actions only)
+		Choice,  // one enum: a dropdown of its names (actions only)
 	};
 
 	struct FHook
@@ -31,7 +33,13 @@ namespace AMModHooks
 		EValue Value = EValue::None;
 		/** AM_Info_<Name>, if the class has it. */
 		FName InfoFunction;
+		/** EValue::Choice: the enum's names as shown ("Always Open"), and their values (saved in the rule). */
+		TArray<FString> Choices;
+		TArray<int64> ChoiceValues;
 	};
+
+	/** EValue::Choice: the index of Value among the hook's choices (0 if none matches). */
+	AUTOMATEDMACHINES_API int32 GetChoiceIndex(const FHook& Hook, float Value);
 
 	/** The hooks of Class (found once per class, then cached). */
 	AUTOMATEDMACHINES_API const TArray<FHook>& GetHooks(const UClass* Class);

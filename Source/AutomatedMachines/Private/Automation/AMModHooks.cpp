@@ -39,6 +39,42 @@ namespace
 		}
 	}
 
+	/** The enum of an enum input (a byte with an enum, or an enum property), or null. */
+	const UEnum* AMMH_Enum(const FProperty* Property)
+	{
+		if (const FEnumProperty* EnumProperty = CastField<FEnumProperty>(Property))
+		{
+			return EnumProperty->GetEnum();
+		}
+		if (const FByteProperty* Byte = CastField<FByteProperty>(Property))
+		{
+			return Byte->Enum;
+		}
+		return nullptr;
+	}
+
+	/** "AlwaysOpen" / "Always_Open" -> "Always Open". */
+	FString AMMH_Words(const FString& Name)
+	{
+		FString Result;
+		for (int32 Index = 0; Index < Name.Len(); ++Index)
+		{
+			const TCHAR Char = Name[Index];
+			if (Char == TEXT('_'))
+			{
+				Result += TEXT(' ');
+				continue;
+			}
+			if (Index > 0 && FChar::IsUpper(Char) && FChar::IsLower(Name[Index - 1]))
+			{
+				Result += TEXT(' ');
+			}
+			Result += Char;
+		}
+		Result.TrimStartAndEndInline();
+		return Result;
+	}
+
 	FString AMMH_Label(const FString& Rest)
 	{
 		FString Label = Rest.Replace(TEXT("_"), TEXT(" "));
@@ -149,6 +185,23 @@ const TArray<AMModHooks::FHook>& AMModHooks::GetHooks(const UClass* Class)
 			{
 				Hook.Value = EValue::Switch;
 			}
+			else if (const UEnum* Enum = bAction ? AMMH_Enum(Inputs[0]) : nullptr)
+			{
+				// Its entries' names (a Blueprint enum: the names typed in it), not the hidden _MAX.
+				Hook.Value = EValue::Choice;
+				const int32 Count = Enum->NumEnums() - (Enum->ContainsExistingMax() ? 1 : 0);
+				for (int32 Index = 0; Index < Count; ++Index)
+				{
+					FString Shown = Enum->GetDisplayNameTextByIndex(Index).ToString();
+					if (Shown.IsEmpty())
+					{
+						Shown = Enum->GetNameStringByIndex(Index);
+					}
+					Hook.Choices.Add(Shown.Contains(TEXT(" ")) ? Shown : AMMH_Words(Shown));
+					Hook.ChoiceValues.Add(Enum->GetValueByIndex(Index));
+				}
+				bValid = Count > 0;
+			}
 			else
 			{
 				bValid = false;
@@ -180,7 +233,8 @@ const TArray<AMModHooks::FHook>& AMModHooks::GetHooks(const UClass* Class)
 		for (const FHook& Hook : Hooks)
 		{
 			Names.Add(FString::Printf(TEXT("%s %s%s"), Hook.bCondition ? TEXT("condition") : TEXT("action"), *Hook.Label,
-				Hook.Value == EValue::Number ? TEXT(" (number)") : Hook.Value == EValue::Switch ? TEXT(" (on / off)") : TEXT("")));
+				Hook.Value == EValue::Number ? TEXT(" (number)") : Hook.Value == EValue::Switch ? TEXT(" (on / off)")
+				: Hook.Value == EValue::Choice ? *FString::Printf(TEXT(" (%s)"), *FString::Join(Hook.Choices, TEXT(" / "))) : TEXT("")));
 		}
 		UE_LOG(LogAutomatedMachines, Log, TEXT("Mod hooks: %s: %s"), *Class->GetName(), *FString::Join(Names, TEXT(", ")));
 	}
@@ -251,6 +305,14 @@ void AMModHooks::CallAction(UObject* Object, FName Function, float Value, bool b
 			{
 				Bool->SetPropertyValue_InContainer(Params, bOn);
 			}
+			else if (const FEnumProperty* EnumProperty = CastField<FEnumProperty>(Inputs[0]))
+			{
+				EnumProperty->GetUnderlyingProperty()->SetIntPropertyValue(EnumProperty->ContainerPtrToValuePtr<void>(Params), static_cast<int64>(FMath::RoundToInt(Value)));
+			}
+			else if (const FByteProperty* Byte = CastField<FByteProperty>(Inputs[0]))
+			{
+				Byte->SetPropertyValue_InContainer(Params, static_cast<uint8>(FMath::Clamp(FMath::RoundToInt(Value), 0, 255)));
+			}
 			else
 			{
 				AMMH_SetNumber(Inputs[0], Params, Value);
@@ -292,4 +354,10 @@ FString AMModHooks::GetLabel(const UObject* Object, FName Function)
 {
 	const FHook* Hook = FindHook(Object, Function);
 	return Hook ? Hook->Label : Function.ToString();
+}
+
+int32 AMModHooks::GetChoiceIndex(const FHook& Hook, float Value)
+{
+	const int32 Index = Hook.ChoiceValues.IndexOfByKey(static_cast<int64>(FMath::RoundToInt(Value)));
+	return Index != INDEX_NONE ? Index : 0;
 }

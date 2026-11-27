@@ -751,7 +751,12 @@ void AAMAutomationSubsystem::SetRules(AFGBuildable* Machine, const TArray<FAMFir
 		if (AMRules::IsModAction(Clean.Action))
 		{
 			bModOk = Hook && !Hook->bCondition && (Clean.Action == EAMAction::ModAction || Hook->Value == AMModHooks::EValue::Switch);
-			if (Hook && Hook->Value != AMModHooks::EValue::Number)
+			if (Hook && Hook->Value == AMModHooks::EValue::Choice)
+			{
+				// One of the enum's values; else its first.
+				Clean.Value = static_cast<float>(Hook->ChoiceValues[AMModHooks::GetChoiceIndex(*Hook, Clean.Value)]);
+			}
+			else if (Hook && Hook->Value != AMModHooks::EValue::Number)
 			{
 				Clean.Value = 0.f;
 			}

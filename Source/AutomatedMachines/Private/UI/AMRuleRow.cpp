@@ -626,7 +626,7 @@ void UAMRuleRow::BuildCompact()
 		mValueUnit = AMUI::MakeText(Tree, Info.Unit, Font, AMUI::Grey);
 		AddValue(AMRR_Cell(Tree, FMath::Max(16.f, 9.f * FCString::Strlen(Info.Unit)), mValueUnit), 6.f);
 	}
-	else if (AMRules::ActionNeedsRecipe(Action) || AMRules::ActionNeedsSound(Action) || AMRules::ActionHasChoices(Action))
+	else if (AMRules::ActionNeedsRecipe(Action) || AMRules::ActionNeedsSound(Action) || AMRules::ActionHasChoices(Action, mTab->GetMachineObject(), Rule ? Rule->ModFunction : NAME_None))
 	{
 		UTextBlock* ValueLabel = nullptr;
 		UButton* ValueButton = AMUI::MakeDropdown(Tree, Font, ValueLabel);
@@ -731,8 +731,8 @@ void UAMRuleRow::UpdateCompact()
 	if (mSoundLabel)
 	{
 		// The same dropdown shows a sound, or a choice (Somersloop amplification's level, a point icon).
-		AMUI::SetFittedText(mSoundLabel, AMRules::ActionHasChoices(Rule->Action)
-			? AMRules::GetActionChoiceLabel(Rule->Action, AMRules::GetActionChoiceIndex(Rule->Action, Rule->Value, mTab->GetMachineObject()), mTab->GetMachineObject())
+		AMUI::SetFittedText(mSoundLabel, AMRules::ActionHasChoices(Rule->Action, mTab->GetMachineObject(), Rule->ModFunction)
+			? AMRules::GetActionChoiceLabel(Rule->Action, AMRules::GetActionChoiceIndex(Rule->Action, Rule->Value, mTab->GetMachineObject(), Rule->ModFunction), mTab->GetMachineObject(), Rule->ModFunction)
 			: FString(AMRules::GetSounds()[AMRules::GetSoundIndex(Rule->Value)].Label), AMRR_CompactDropdownText);
 	}
 	if (mMessageText)
@@ -1575,15 +1575,15 @@ void UAMRuleRow::ShowChoices(EAMChoiceKind Kind, const TArray<FString>& Alarms, 
 			AddChoice(AMRules::GetActionText(Action).ToString(), FString(), Value, Rule && Rule->Action == Action);
 		}
 	}
-	else if (Kind == EAMChoiceKind::Sound && mTab->GetReactionRule(mIndex) && AMRules::ActionHasChoices(mTab->GetReactionRule(mIndex)->Action))
+	else if (Kind == EAMChoiceKind::Sound && mTab->GetReactionRule(mIndex) && AMRules::ActionHasChoices(mTab->GetReactionRule(mIndex)->Action, mTab->GetMachineObject(), mTab->GetReactionRule(mIndex)->ModFunction))
 	{
 		// Named choices: Somersloop amplification's levels, a point icon.
 		const FAMReactionRule* Rule = mTab->GetReactionRule(mIndex);
 		UObject* ChoiceMachine = mTab->GetMachineObject();
-		const int32 Current = AMRules::GetActionChoiceIndex(Rule->Action, Rule->Value, ChoiceMachine);
-		for (int32 ChoiceIndex = 0; ChoiceIndex < AMRules::GetActionChoiceCount(Rule->Action, ChoiceMachine); ++ChoiceIndex)
+		const int32 Current = AMRules::GetActionChoiceIndex(Rule->Action, Rule->Value, ChoiceMachine, Rule->ModFunction);
+		for (int32 ChoiceIndex = 0; ChoiceIndex < AMRules::GetActionChoiceCount(Rule->Action, ChoiceMachine, Rule->ModFunction); ++ChoiceIndex)
 		{
-			AddChoice(AMRules::GetActionChoiceLabel(Rule->Action, ChoiceIndex, ChoiceMachine), FString(), static_cast<uint8>(ChoiceIndex), ChoiceIndex == Current);
+			AddChoice(AMRules::GetActionChoiceLabel(Rule->Action, ChoiceIndex, ChoiceMachine, Rule->ModFunction), FString(), static_cast<uint8>(ChoiceIndex), ChoiceIndex == Current);
 		}
 	}
 	else if (Kind == EAMChoiceKind::Sound)
@@ -1841,10 +1841,10 @@ void UAMRuleRow::Choose(const UAMChoice& Choice)
 		}
 		break;
 	case EAMChoiceKind::Sound:
-		if (FAMReactionRule* ChoiceRule = mTab->GetReactionRule(mIndex); ChoiceRule && AMRules::ActionHasChoices(ChoiceRule->Action))
+		if (FAMReactionRule* ChoiceRule = mTab->GetReactionRule(mIndex); ChoiceRule && AMRules::ActionHasChoices(ChoiceRule->Action, mTab->GetMachineObject(), ChoiceRule->ModFunction))
 		{
-			// A named choice: its stored value (Somersloop level, point icon).
-			const float Picked = AMRules::GetActionChoiceValue(ChoiceRule->Action, Choice.Value, mTab->GetMachineObject());
+			// A named choice: its stored value (Somersloop level, point icon, another mod's enum value).
+			const float Picked = AMRules::GetActionChoiceValue(ChoiceRule->Action, Choice.Value, mTab->GetMachineObject(), ChoiceRule->ModFunction);
 			if (!FMath::IsNearlyEqual(ChoiceRule->Value, Picked))
 			{
 				ChoiceRule->Value = Picked;
@@ -1944,10 +1944,10 @@ void UAMRuleRow::Explain(const UAMChoice& Choice)
 		break;
 	}
 	case EAMChoiceKind::Sound:
-		if (const FAMReactionRule* ChoiceRule = mTab->GetReactionRule(mIndex); ChoiceRule && AMRules::ActionHasChoices(ChoiceRule->Action))
+		if (const FAMReactionRule* ChoiceRule = mTab->GetReactionRule(mIndex); ChoiceRule && AMRules::ActionHasChoices(ChoiceRule->Action, mTab->GetMachineObject(), ChoiceRule->ModFunction))
 		{
-			mTab->ShowInfo(FText::FromString(AMRules::GetActionChoiceLabel(ChoiceRule->Action, Choice.Value, mTab->GetMachineObject())),
-				FText::FromString(AMRules::GetActionChoiceInfo(ChoiceRule->Action, Choice.Value, mTab->GetMachineObject())));
+			mTab->ShowInfo(FText::FromString(AMRules::GetActionChoiceLabel(ChoiceRule->Action, Choice.Value, mTab->GetMachineObject(), ChoiceRule->ModFunction)),
+				FText::FromString(AMRules::GetActionChoiceInfo(ChoiceRule->Action, Choice.Value, mTab->GetMachineObject(), ChoiceRule->ModFunction)));
 		}
 		else if (AMRules::GetSounds().IsValidIndex(Choice.Value))
 		{
@@ -2133,14 +2133,14 @@ void UAMRuleRow::OpenPicker(EAMChoiceKind Kind, UWidget* Anchor)
 	case EAMChoiceKind::Sound:
 	{
 		const FAMReactionRule* Rule = mTab->GetReactionRule(mIndex);
-		if (Rule && AMRules::ActionHasChoices(Rule->Action))
+		if (Rule && AMRules::ActionHasChoices(Rule->Action, mTab->GetMachineObject(), Rule->ModFunction))
 		{
 			// Named choices: Somersloop amplification's levels, a point icon.
 			UObject* ChoiceMachine = mTab->GetMachineObject();
-			const int32 CurrentChoice = AMRules::GetActionChoiceIndex(Rule->Action, Rule->Value, ChoiceMachine);
-			for (int32 ChoiceIndex = 0; ChoiceIndex < AMRules::GetActionChoiceCount(Rule->Action, ChoiceMachine); ++ChoiceIndex)
+			const int32 CurrentChoice = AMRules::GetActionChoiceIndex(Rule->Action, Rule->Value, ChoiceMachine, Rule->ModFunction);
+			for (int32 ChoiceIndex = 0; ChoiceIndex < AMRules::GetActionChoiceCount(Rule->Action, ChoiceMachine, Rule->ModFunction); ++ChoiceIndex)
 			{
-				Add(AMRules::GetActionChoiceLabel(Rule->Action, ChoiceIndex, ChoiceMachine), static_cast<uint8>(ChoiceIndex), ChoiceIndex == CurrentChoice);
+				Add(AMRules::GetActionChoiceLabel(Rule->Action, ChoiceIndex, ChoiceMachine, Rule->ModFunction), static_cast<uint8>(ChoiceIndex), ChoiceIndex == CurrentChoice);
 				// Point icons: a preview, as the game has the symbol (white); the machine's own icon for
 				// "Machine icon" on a machine (the HUB's points to whichever machine triggered).
 				if (AMRules::IsPointAction(Rule->Action))

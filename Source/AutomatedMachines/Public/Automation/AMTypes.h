@@ -598,12 +598,13 @@ namespace AMRules
 	 * Actions whose value is picked in a dropdown of named choices (the Play sound dropdown): Somersloop
 	 * amplification (the machine's levels) and the point-to actions (their icon). Index <-> stored Value.
 	 */
-	AUTOMATEDMACHINES_API bool ActionHasChoices(EAMAction Action);
-	AUTOMATEDMACHINES_API int32 GetActionChoiceCount(EAMAction Action, const UObject* Machine);
-	AUTOMATEDMACHINES_API FString GetActionChoiceLabel(EAMAction Action, int32 Index, const UObject* Machine);
-	AUTOMATEDMACHINES_API FString GetActionChoiceInfo(EAMAction Action, int32 Index, const UObject* Machine);
-	AUTOMATEDMACHINES_API int32 GetActionChoiceIndex(EAMAction Action, float Value, const UObject* Machine);
-	AUTOMATEDMACHINES_API float GetActionChoiceValue(EAMAction Action, int32 Index, const UObject* Machine);
+	// Another mod's action taking an enum (ModFunction on Machine) has its names as choices too.
+	AUTOMATEDMACHINES_API bool ActionHasChoices(EAMAction Action, const UObject* Machine = nullptr, FName ModFunction = NAME_None);
+	AUTOMATEDMACHINES_API int32 GetActionChoiceCount(EAMAction Action, const UObject* Machine, FName ModFunction = NAME_None);
+	AUTOMATEDMACHINES_API FString GetActionChoiceLabel(EAMAction Action, int32 Index, const UObject* Machine, FName ModFunction = NAME_None);
+	AUTOMATEDMACHINES_API FString GetActionChoiceInfo(EAMAction Action, int32 Index, const UObject* Machine, FName ModFunction = NAME_None);
+	AUTOMATEDMACHINES_API int32 GetActionChoiceIndex(EAMAction Action, float Value, const UObject* Machine, FName ModFunction = NAME_None);
+	AUTOMATEDMACHINES_API float GetActionChoiceValue(EAMAction Action, int32 Index, const UObject* Machine, FName ModFunction = NAME_None);
 
 	/** Point-to actions: their icon (the Value): the machine's own, or one of the game's sign icons. */
 	enum class EPointIcon : uint8
