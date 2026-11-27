@@ -1,6 +1,9 @@
 #include "Automation/AMBlueprintLibrary.h"
 #include "Automation/AMAutomationSubsystem.h"
 #include "Automation/AMTypes.h"
+#include "UI/AMAutomationWindow.h"
+#include "Kismet/GameplayStatics.h"
+#include "Engine/World.h"
 
 void UAMBlueprintLibrary::TriggerEvent(const UObject* WorldContext, const FString& Event, AActor* Source)
 {
@@ -21,4 +24,14 @@ bool UAMBlueprintLibrary::IsEventActive(const UObject* WorldContext, const FStri
 {
 	const AAMAutomationSubsystem* Subsystem = AAMAutomationSubsystem::Get(WorldContext);
 	return Subsystem && Subsystem->IsEventActive(AMRules::NormalizeEventName(Event));
+}
+
+bool UAMBlueprintLibrary::OpenAutomationWindow(AActor* Building)
+{
+	UWorld* World = Building ? Building->GetWorld() : nullptr;
+	if (!World || IsRunningDedicatedServer())
+	{
+		return false;
+	}
+	return UAMAutomationWindow::Open(World->GetFirstPlayerController(), Building) != nullptr;
 }

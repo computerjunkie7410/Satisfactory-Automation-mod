@@ -385,6 +385,18 @@ private:
 	/** True in windows with one page and no sliding pages (miners). */
 	bool bSinglePageMode = false;
 
+public:
+	/**
+	 * The next tab created is standalone (in UAMAutomationWindow, not in a game window): for Machine.
+	 * Set just before CreateWidget, read in NativeOnInitialized.
+	 */
+	static void SetNextStandaloneMachine(UObject* Machine);
+	bool IsStandalone() const { return bStandalone; }
+private:
+	/** In our own window (another mod's building with no game window): no host, no frame, no tab button. */
+	bool bStandalone = false;
+	TWeakObjectPtr<UObject> mStandaloneMachine;
+
 	/** SetupSinglePage tries again on the next tick while the window's tab list is still empty. */
 	int32 mSetupTries = 0;
 

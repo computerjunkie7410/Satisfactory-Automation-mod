@@ -77,7 +77,35 @@ The tab is added to **the game's own windows**. Your building gets it if its win
 
 Manufacturing (`Widget_Manufacturing`), extractors (`Widget_ResourceExtractorUI`, `BPW_ExtractorPump`, `BPW_FrackingExtractor`, `BPW_FrackingSmasher`), storage (`Widget_Storage`, `BPW_CentralStorage`, `Widget_PipeStorageTank`), generators (`Widget_Generator`, `BPW_AlienPower`), `BPW_PowerStorage`, `BPW_PowerSwitch`, `BPW_PipeValve`, `BPW_ResourceSink`, train and truck stations (`Widget_TrainStationNew`, `Widget_Train_DockingStation`, `BPW_Train_DockingStation_Fluid`, `Widget_DockingStation`), `Widget_RailroadSignal`, `BPW_Drone_Port`, signs, lights, splitters, mergers, the HUB and the MAM.
 
-A building with a window of its own does not get the tab yet. *Planned (part 3): a function to make the Automation panel and put it in your own window.*
+A building with **a window of its own, or no window at all**, opens Automated Machines' own **Automation window** instead (next section).
+
+### Opening the Automation window (buildings without a game window)
+
+`OpenAutomationWindow(Building)` opens a window with the building's Automation tab, on the local player's screen. Escape or its X closes it; it closes by itself if the building is dismantled. It returns false (and opens nothing) when Automated Machines is not researched yet, or the building has no `AM_` functions.
+
+Call it **on the player's own game**, where the use or key press happens (for example in your `OnUse` when `byCharacter->IsLocallyControlled()`), not on the server.
+
+**Without depending on Automated Machines** (C++), call it by name; if the mod is not installed it does nothing:
+
+```cpp
+// Opens Automated Machines' Automation window for Building, if that mod is installed.
+static bool OpenAutomationWindow(AActor* Building)
+{
+    UClass* Library = FindObject<UClass>(nullptr, TEXT("/Script/AutomatedMachines.AMBlueprintLibrary"));
+    UFunction* Function = Library ? Library->FindFunctionByName(TEXT("OpenAutomationWindow")) : nullptr;
+    if (!Function || !Building)
+    {
+        return false;
+    }
+    struct { AActor* Building; bool ReturnValue; } Params{ Building, false };
+    Library->GetDefaultObject()->ProcessEvent(Function, &Params);
+    return Params.ReturnValue;
+}
+```
+
+**With the optional dependency** (Blueprint or C++): the node **AM Open Automation Window**.
+
+How players reach it is up to you: a key held while using the building, a button in your own window, a second use action. The player must be able to tell (your look-at text, your mod page).
 
 Your building's game-type conditions and actions (for example a production building's Input full, Standby) stay; yours are listed after them.
 
@@ -98,6 +126,7 @@ Add Automated Machines as an **optional** dependency in your `.uplugin`, so your
 | **AM Trigger Event** (Event, Source) | Triggers an event as if a condition had: every machine listening to it acts. Source: your building, or nothing. The name is made uppercase. Server only; does nothing until Automated Machines is researched in the MAM. |
 | **AM Get Automation Subsystem** | The mod's subsystem. Bind to its **On Event Triggered** (Event, Source) to hear every event, from any machine. Server only. |
 | **AM Is Event Active** (Event) | True while one of the event's conditions is met. Server only. |
+| **AM Open Automation Window** (Building) | Opens the Automation window for your building on the local player's screen (see Part 1). |
 
 Example: a defence mod calls **AM Trigger Event** `RAID INCOMING`; players then make lights turn red and machines stop with the mod's own actions.
 
@@ -109,5 +138,6 @@ Example: a defence mod calls **AM Trigger Event** `RAID INCOMING`; players then 
 2. The game log (`%LOCALAPPDATA%\FactoryGame\Saved\Logs\FactoryGame.log`) has, the first time your building's tab opens:
    `LogAutomatedMachines: Mod hooks: Build_PressureTank_C: condition Tank Empty, condition Pressure Above (number), action Vent, action Lid Open (on / off)`
    and a warning for every `AM_` function it skipped, with the reason.
-3. Open your building's window: the Automation tab lists your conditions under **+ condition** and your actions under **+ event** / **+ action**. Pointing at one shows your `AM_Info_` text.
-4. Each action run writes `<building>: mod action AM_Action_Vent` (and `(off)` for a switch turned off).
+3. Open your building's window (or the Automation window): the Automation tab lists your conditions under **+ condition** and your actions under **+ event** / **+ action**. Pointing at one shows your `AM_Info_` text.
+4. Opening the Automation window writes `Automation window opened for <building>`.
+5. Each action run writes `<building>: mod action AM_Action_Vent` (and `(off)` for a switch turned off).

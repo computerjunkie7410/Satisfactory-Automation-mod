@@ -493,3 +493,9 @@ Actions card always present (18 Nov 2026): MAM and Power Storage get the card wi
 - Server: `EvaluateFireRules` checks mod conditions on any building (other conditions only on the known types); `FireEvent` runs mod actions on any building (after signs / lights / belts, before the type branches), log "<machine>: mod action <function>".
 - UI: pickers list one choice per hook (`UAMChoice::ModFunction`); rows use `AMRR_RuleName / AMRR_RuleSwitch / AMRR_ActionInfo / AMRR_ConditionInfo` and `AMRules::GetRule*Text / Description`.
 - Part 2: `UAMBlueprintLibrary` (TriggerEvent, GetAutomationSubsystem, IsEventActive); `AAMAutomationSubsystem::OnEventTriggered` (BlueprintAssignable) broadcast at the start of `FireEvent`.
+
+## Automation window (27 Nov 2026, to test)
+- `UAMAutomationWindow` (UI/AMAutomationWindow.*): our own window (dark backdrop, 1240 x 760 frame, "AUTOMATION" + X) holding a `UAMAutomationTab` in **standalone** mode: `SetNextStandaloneMachine(Machine)` just before `CreateWidget`, read in `NativeOnInitialized` (`bStandalone`, `mStandaloneMachine`): `GetHostWindow()` returns null, `GetMachine()` the machine, no tab entry / frame / pages / single-page setup; card layout as usual.
+- Input: `FInputModeUIOnly` focused on the window, mouse cursor shown; Escape (`NativeOnKeyDown`, window focusable), the X, or the building gone (`NativeTick`) close it and give the game its input back (also in `NativeDestruct`).
+- Opened by `UAMBlueprintLibrary::OpenAutomationWindow(Building)` (first player controller; false on a dedicated server, not researched, layout mismatch, or not automatable). Other mods call it by name (docs/MODDING.md has the snippet).
+- No game font without a host window: the tab uses the default font there.

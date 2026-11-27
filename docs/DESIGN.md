@@ -372,5 +372,5 @@ Two actions that show a machine to every player on the compass and the map, with
 Full rules for mod makers: `docs/MODDING.md`.
 - **Naming convention, no dependency:** functions on a building class named `AM_Condition_<Name>` (returns Boolean; no input or one number), `AM_Action_<Name>` (no input, one Boolean = on / off switch, or one number), `AM_Info_<Name>` (Text / String, the explanation) become conditions and actions in that building's Automation tab, named `<Name>` with underscores as spaces. Found by name, called on the server once a second (conditions) or when the event is triggered (actions).
 - **Blueprint library, optional dependency:** AM Trigger Event, AM Get Automation Subsystem (its On Event Triggered), AM Is Event Active.
-- The tab only appears in the game's windows the mod hooks; a building with a window of its own: later (part 3, a function to make the panel).
+- The tab appears in the game's windows the mod hooks. A building with a window of its own or none (Road Maker's boom barrier) opens our **Automation window** instead: a dark backdrop, a frame titled AUTOMATION with an X, the building's Automation tab inside; Escape closes it. The other mod decides how players open it (it calls `OpenAutomationWindow` by name, no dependency).
 - Not cheats on our side: the other mod's functions decide what happens to its own building.

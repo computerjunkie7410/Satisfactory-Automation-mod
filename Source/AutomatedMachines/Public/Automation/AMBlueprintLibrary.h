@@ -28,6 +28,15 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Automated Machines", meta = (WorldContext = "WorldContext", DisplayName = "AM Get Automation Subsystem"))
 	static AAMAutomationSubsystem* GetAutomationSubsystem(const UObject* WorldContext);
 
+	/**
+	 * Opens the Automation window for Building on the local player's screen (for buildings with no game
+	 * window the tab can be in: docs/MODDING.md). Call it on the player's own game (where the use / key
+	 * press happens), not on the server. False if it cannot (no AM_ functions or automation for it, not
+	 * researched yet, a dedicated server). Can be called by name without depending on this mod.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Automated Machines", meta = (DisplayName = "AM Open Automation Window"))
+	static bool OpenAutomationWindow(AActor* Building);
+
 	/** True if an event is active right now (a condition triggering it is met). Server only. */
 	UFUNCTION(BlueprintPure, Category = "Automated Machines", meta = (WorldContext = "WorldContext", DisplayName = "AM Is Event Active"))
 	static bool IsEventActive(const UObject* WorldContext, const FString& Event);

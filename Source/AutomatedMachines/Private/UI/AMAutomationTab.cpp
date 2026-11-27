@@ -241,8 +241,24 @@ namespace
 	};
 }
 
+namespace
+{
+	/** UAMAutomationTab::SetNextStandaloneMachine. */
+	TWeakObjectPtr<UObject> GAMAT_NextStandaloneMachine;
+}
+
+void UAMAutomationTab::SetNextStandaloneMachine(UObject* Machine)
+{
+	GAMAT_NextStandaloneMachine = Machine;
+}
+
 UUserWidget* UAMAutomationTab::GetHostWindow() const
 {
+	// Standalone: no game window around us (its frame, tabs and machine property do not exist).
+	if (bStandalone)
+	{
+		return nullptr;
+	}
 	// We sit in the window's widget tree, whose outer is the window.
 	if (const UWidgetTree* Tree = Cast<UWidgetTree>(GetOuter()))
 	{
@@ -2548,6 +2564,10 @@ void UAMAutomationTab::AddTabEntry()
 
 UObject* UAMAutomationTab::GetMachine() const
 {
+	if (bStandalone)
+	{
+		return mStandaloneMachine.Get();
+	}
 	return AMAT_GetObject(GetHostWindow(), AMAT_MachineProperty);
 }
 
@@ -2690,6 +2710,15 @@ void UAMAutomationTab::ApplyGameFonts()
 void UAMAutomationTab::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
+	if (GAMAT_NextStandaloneMachine.IsValid())
+	{
+		// In our own window (UAMAutomationWindow): a machine's card layout, nothing of a game window.
+		bStandalone = true;
+		mStandaloneMachine = GAMAT_NextStandaloneMachine;
+		GAMAT_NextStandaloneMachine.Reset();
+		BuildLayout();
+		return;
+	}
 	// In the HUB terminal: world actions only.
 	const UUserWidget* Host = GetHostWindow();
 	bMamMode = Host && Host->GetClass()->GetName() == AMAT_MamWindowClass;
@@ -2731,7 +2760,7 @@ void UAMAutomationTab::NativeConstruct()
 		}
 	}
 
-	if (TabIndex == INDEX_NONE && !bSinglePageMode)
+	if (TabIndex == INDEX_NONE && !bSinglePageMode && !bStandalone)
 	{
 		AddTabEntry();
 	}
@@ -2750,7 +2779,7 @@ void UAMAutomationTab::NativeConstruct()
 
 	// The frame may make its buttons after us (then it picks up our entry by itself) or may have made
 	// them already: check one frame later, when all of the window has been constructed.
-	if (UWorld* World = GetWorld())
+	if (UWorld* World = GetWorld(); World && !bStandalone)
 	{
 		World->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateUObject(this, &UAMAutomationTab::EnsureTabButtonExists));
 		if (bSinglePageMode)
