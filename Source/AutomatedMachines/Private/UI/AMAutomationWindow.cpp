@@ -140,6 +140,18 @@ void UAMAutomationWindow::NativeTick(const FGeometry& MyGeometry, float InDeltaT
 	if (!mMachine.IsValid())
 	{
 		Close();
+		return;
+	}
+	// Opened from another window that closes right after (Road Maker's barrier window: the game then
+	// gives the player the game's controls back and hides the mouse): take them again.
+	APlayerController* Player = mPlayer.Get();
+	if (Player && !bClosed && !Player->ShouldShowMouseCursor())
+	{
+		FInputModeUIOnly Mode;
+		Mode.SetWidgetToFocus(TakeWidget());
+		Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		Player->SetInputMode(Mode);
+		Player->SetShowMouseCursor(true);
 	}
 }
 

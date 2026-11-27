@@ -499,3 +499,4 @@ Actions card always present (18 Nov 2026): MAM and Power Storage get the card wi
 - Input: `FInputModeUIOnly` focused on the window, mouse cursor shown; Escape (`NativeOnKeyDown`, window focusable), the X, or the building gone (`NativeTick`) close it and give the game its input back (also in `NativeDestruct`).
 - Opened by `UAMBlueprintLibrary::OpenAutomationWindow(Building)` (first player controller; false on a dedicated server, not researched, layout mismatch, or not automatable). Other mods call it by name (docs/MODDING.md has the snippet).
 - No game font without a host window: the tab uses the default font there.
+- 27 Nov 2026: Road Maker opens the window from its own barrier window (a UFGInteractWidget), then closes that one: the game then restores the game input and hides the mouse. `UAMAutomationWindow::NativeTick` takes the UI input and the mouse again whenever the cursor is hidden while it is open.
